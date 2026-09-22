@@ -185,9 +185,12 @@ tr:hover td{background:var(--blue-light);}
           <div class="kpi-card"><div class="kpi-value" id="k-recv"></div><div class="kpi-label">Total disbursed</div></div>
           <div class="kpi-card green"><div class="kpi-value" id="k-paid"></div><div class="kpi-label">Total repaid</div><div class="kpi-label" id="k-paid-note" style="font-weight:400;font-size:10.5px;margin-top:2px;"></div></div>
           <div class="kpi-card amber"><div class="kpi-value" id="k-torepay"></div><div class="kpi-label">Total to repay (principal+interest)</div></div>
-          <div class="kpi-card amber"><div class="kpi-value" id="k-gap"></div><div class="kpi-label">Repayment gap</div></div>
-          <div class="kpi-card amber"><div class="kpi-value" id="k-zero"></div><div class="kpi-label">Never made a repayment</div></div>
-          <div class="kpi-card red"><div class="kpi-value" id="k-moratorium"></div><div class="kpi-label">Missed moratorium period</div></div>
+          <div class="kpi-card amber"><div class="kpi-value" id="k-gap"></div><div class="kpi-label">Repayment gap</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">Total to repay minus total repaid — the full remaining obligation over the whole loan life, not just what's due today</div></div>
+          <div class="kpi-card"><div class="kpi-value" id="k-duetodate"></div><div class="kpi-label">Should have been repaid by now</div><div class="kpi-label" id="k-duetodate-note" style="font-weight:400;font-size:10.5px;margin-top:2px;"></div></div>
+          <div class="kpi-card red"><div class="kpi-value" id="k-overduetodate"></div><div class="kpi-label">Overdue as of today</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">Sum of (amount each member should have paid by now − what they've actually paid), for members behind schedule only</div></div>
+          <div class="kpi-card amber"><div class="kpi-value" id="k-zero"></div><div class="kpi-label">Never made a repayment</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">Zero months with a repayment date or amount entered — includes members still inside their moratorium, where nothing is due yet</div></div>
+          <div class="kpi-card" id="k-inmoratorium-card"><div class="kpi-value" id="k-inmoratorium"></div><div class="kpi-label">In moratorium period</div><div class="kpi-label" id="k-inmoratorium-note" style="font-weight:400;font-size:10.5px;margin-top:2px;"></div></div>
+          <div class="kpi-card red"><div class="kpi-value" id="k-moratorium"></div><div class="kpi-label">Missed moratorium period</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">Zero repayments AND it's been ≥3 months since first disbursement — the grace period is over</div></div>
           <div class="kpi-card red"><div class="kpi-value" id="k-def"></div><div class="kpi-label">Defaulting members</div></div>
           <div class="kpi-card"><div class="kpi-value" id="k-completed"></div><div class="kpi-label">Loans completed (paid ≥ received)</div></div>
         </div>
@@ -371,6 +374,8 @@ tr:hover td{background:var(--blue-light);}
               <th data-key="sanctioned" style="text-align:right">Received</th>
               <th data-key="paid" style="text-align:right">Paid</th>
               <th data-key="totalToRepay" style="text-align:right">Total to repay</th>
+              <th data-key="cumulativeExpected" style="text-align:right">Should have paid by now (incl. interest)</th>
+              <th data-key="dueVsPaid" style="text-align:right">Paid vs Due</th>
               <th data-key="monthsSince" style="text-align:right">Months since loan</th>
               <th data-key="repaymentsMade" style="text-align:right">Repayments made</th>
               <th data-key="statusLabel">Status</th>
@@ -1380,9 +1385,15 @@ function render(){
   const paid = filtered.reduce((s,m)=>s+m.paid,0);
   const totalToRepay = filtered.reduce((s,m)=>s+m.totalToRepay,0);
   const repaymentGap = filtered.reduce((s,m)=>s+Math.max(m.totalToRepay-m.paid,0),0);
+  const dueToDateMembers = filtered.filter(m=>m.cumulativeExpected!=null);
+  const dueToDate = dueToDateMembers.reduce((s,m)=>s+m.cumulativeExpected,0);
+  const overdueToDate = dueToDateMembers.reduce((s,m)=>s+Math.max(m.cumulativeExpected-m.paid,0),0);
   const started = filtered.filter(m=>m.startedRepayment).length;
   const zeroRepay = filtered.filter(m=>m.zeroRepayments).length;
   const missedMoratorium = filtered.filter(m=>m.missedMoratorium).length;
+  const inMoratorium = filtered.filter(m=>m.monthsSince!=null && m.monthsSince<MORATORIUM_MONTHS).length;
+  const inMoratoriumUnpaid = filtered.filter(m=>m.monthsSince!=null && m.monthsSince<MORATORIUM_MONTHS && m.zeroRepayments).length;
+  const noDisbDate = filtered.filter(m=>m.monthsSince==null).length;
   const defaulters = filtered.filter(m=>m.isDefaulter).length;
   const completed = filtered.filter(m=>m.isCompleted).length;
   const zeroNotDefaulting = filtered.filter(m=>m.zeroRepayments && !m.isDefaulter && !m.isCompleted).length;
@@ -1403,7 +1414,12 @@ function render(){
     ? `Includes ${fmtRs(orphanPaid)} repaid on ${orphanRows.length} row(s) with no disbursed amount (see Anomalies)` : '';
   document.getElementById('k-torepay').textContent = fmtRs(totalToRepay);
   document.getElementById('k-gap').textContent = fmtRs(repaymentGap);
+  document.getElementById('k-duetodate').textContent = fmtRs(dueToDate);
+  document.getElementById('k-duetodate-note').textContent = `As of today, incl. interest, across ${dueToDateMembers.length} member(s) with a usable schedule (excludes ${filtered.length-dueToDateMembers.length} with no disbursement date or tenure recorded)`;
+  document.getElementById('k-overduetodate').textContent = fmtRs(overdueToDate);
   document.getElementById('k-zero').textContent = zeroRepay;
+  document.getElementById('k-inmoratorium').textContent = inMoratorium;
+  document.getElementById('k-inmoratorium-note').textContent = `Less than ${MORATORIUM_MONTHS} months since first disbursement, so nothing is due yet — ${inMoratoriumUnpaid} haven't paid, ${inMoratorium-inMoratoriumUnpaid} already paid early. (${noDisbDate} more have no disbursement date recorded, so can't be placed here.)`;
   document.getElementById('k-moratorium').textContent = missedMoratorium;
   document.getElementById('k-def').textContent = defaulters;
   document.getElementById('k-completed').textContent = completed;
@@ -1451,7 +1467,7 @@ function render(){
     if(m.isCompleted) a.completedCount++;
   });
   window._pgRows = Object.values(pgAgg).map(p=>({...p, subCategory:[...(subs[pgKey(p)]||[])].sort().join(', '), pgStartedRepayment: p.startedCount>0, repaymentGap: Math.max(p.totalToRepay-p.paid,0), pgId: lookupPgId(p.block, p.pg)}));
-  window._memberRows = filtered.map(m=>({...m, statusLabel: memberStatus(m), reason: defaultReason(m), pgId: lookupPgId(m.block, m.pg)}));
+  window._memberRows = filtered.map(m=>({...m, statusLabel: memberStatus(m), reason: defaultReason(m), pgId: lookupPgId(m.block, m.pg), dueVsPaid: m.cumulativeExpected!=null ? Math.round(m.paid - m.cumulativeExpected) : null}));
   window._defRows = window._memberRows.filter(m=>m.isDefaulter);
   window._memberByKey = {};
   filtered.forEach(m=>{ window._memberByKey[m.member+'||'+m.pg+'||'+m.district+'||'+m.block+'||'+m.vc] = m; });
@@ -1683,6 +1699,8 @@ function renderMemberTable(){
     <td style="text-align:right">${fmtRs(m.received)}</td>
     <td style="text-align:right">${fmtRs(m.paid)}${shortfallIcon(m)}</td>
     <td style="text-align:right">${fmtRs(m.totalToRepay)}</td>
+    <td style="text-align:right">${m.cumulativeExpected!=null?fmtRs(m.cumulativeExpected):'-'}</td>
+    <td style="text-align:right;${m.dueVsPaid==null?'':m.dueVsPaid<0?'color:var(--red);font-weight:600;':'color:var(--green);font-weight:600;'}">${m.dueVsPaid!=null?(m.dueVsPaid>=0?'+':'')+fmtRs(m.dueVsPaid):'-'}</td>
     <td style="text-align:right">${m.monthsSince!=null?Math.round(m.monthsSince):'-'}</td>
     <td style="text-align:right">${m.repaymentsMade}</td>
     <td>${statusPill(m.statusLabel)}</td>
@@ -1882,7 +1900,7 @@ function exportTable(which){
     rows = window._pgRows.map(p=>({PG:p.pg,'PG ID':p.pgId||'',District:p.district,Block:p.block,Category:p.category,'Sub-category':p.subCategory,VC:p.vc,CLF:p.clf,Members:p.members,'Repayment Started':p.pgStartedRepayment?'Yes':'No',Disbursed:p.received,Repaid:p.paid,'Total To Repay':p.totalToRepay,'Repayment Gap':p.repaymentGap,'Never Repaid':p.zeroCount,'Missed Moratorium':p.missedMoratoriumCount,Defaulting:p.defaulters,Completed:p.completedCount}));
     filename = 'TRESP_PG_Summary';
   } else if(which==='members'){
-    rows = window._memberRows.map(m=>({Member:m.member,PG:m.pg,'PG ID':m.pgId||'',District:m.district,Block:m.block,Category:m.pgCategory,'Sub-category':m.subCategory,'Loan Type (Tenure)':m.activity,'Repay Window (months)':m.tenureMonths,'Total Loan Period (months)':m.totalLoanPeriod,Received:m.received,Paid:m.paid,'Total To Repay':m.totalToRepay,'Amount Due To Date':m.cumulativeExpected,Shortfall:m.shortfall,'Months Since Loan':m.monthsSince,'Repayments Made':m.repaymentsMade,'Started Repayment':m.startedRepayment?'Yes':'No','Missed Moratorium':m.missedMoratorium?'Yes':'No',Completed:m.isCompleted?'Yes':'No',Status:m.statusLabel}));
+    rows = window._memberRows.map(m=>({Member:m.member,PG:m.pg,'PG ID':m.pgId||'',District:m.district,Block:m.block,Category:m.pgCategory,'Sub-category':m.subCategory,'Loan Type (Tenure)':m.activity,'Repay Window (months)':m.tenureMonths,'Total Loan Period (months)':m.totalLoanPeriod,Received:m.received,Paid:m.paid,'Total To Repay':m.totalToRepay,'Amount Due To Date (incl. interest)':m.cumulativeExpected,'Paid vs Due':m.dueVsPaid,Shortfall:m.shortfall,'Months Since Loan':m.monthsSince,'Repayments Made':m.repaymentsMade,'Started Repayment':m.startedRepayment?'Yes':'No','Missed Moratorium':m.missedMoratorium?'Yes':'No',Completed:m.isCompleted?'Yes':'No',Status:m.statusLabel}));
     filename = 'TRESP_Members';
   } else if(which==='defaulters'){
     rows = window._defRows.map(m=>({Member:m.member,PG:m.pg,District:m.district,Block:m.block,Category:m.pgCategory,'Sub-category':m.subCategory,'Loan Type (Tenure)':m.activity,Received:m.received,'Months Since Loan':m.monthsSince,'Repayments Made':m.repaymentsMade,Shortfall:m.shortfall,Reason:m.reason}));
