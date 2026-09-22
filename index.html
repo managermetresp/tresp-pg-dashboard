@@ -1,0 +1,1976 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TRESP Combined PG Loan Monitoring Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="dashboard_snapshot.js" onerror="void 0"></script>
+<style>
+:root{
+  --navy:#0b2447; --navy-2:#13315c; --blue:#1a5f9e; --blue-light:#e8f1fa;
+  --green:#1e7d3c; --green-bg:#e7f5eb; --amber:#b8720a; --amber-bg:#fdf1de;
+  --red:#b3261e; --red-bg:#fbe9e8; --grey:#6b7280; --grey-bg:#f3f4f6;
+  --border:#dfe3e8; --bg:#f5f6f8; --card:#ffffff; --text:#1c2530; --text-dim:#5b6572; --radius:8px;
+}
+*{box-sizing:border-box;}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:14px;}
+.app{display:flex;min-height:100vh;}
+.sidebar{width:230px;background:var(--navy);color:#dbe4f0;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;}
+.sidebar-header{padding:18px 16px;border-bottom:1px solid rgba(255,255,255,0.12);}
+.sidebar-header .title{font-size:14px;font-weight:700;color:#fff;line-height:1.3;}
+.sidebar-header .subtitle{font-size:11px;color:#93a6c2;margin-top:4px;}
+.nav-group{padding:10px 0;}
+.nav-item{display:flex;align-items:center;gap:8px;padding:9px 16px;cursor:pointer;font-size:13px;color:#c3d1e5;border-left:3px solid transparent;}
+.nav-item:hover{background:rgba(255,255,255,0.06);color:#fff;}
+.nav-item.active{background:rgba(255,255,255,0.1);color:#fff;border-left-color:#4f9cf0;font-weight:600;}
+.main{flex:1;min-width:0;}
+.topbar{background:var(--card);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10;flex-wrap:wrap;gap:8px;}
+.topbar h1{font-size:17px;margin:0;font-weight:700;color:var(--navy);}
+.datasource{display:flex;gap:14px;align-items:center;font-size:11.5px;color:var(--text-dim);flex-wrap:wrap;}
+.badge{padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;}
+.badge-live{background:var(--green-bg);color:var(--green);}
+.badge-stale{background:var(--amber-bg);color:var(--amber);}
+.badge-error{background:var(--red-bg);color:var(--red);}
+.refresh-btn{background:var(--navy);color:#fff;border:none;padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600;}
+.refresh-btn:hover{background:var(--navy-2);}
+.refresh-btn:disabled{opacity:0.6;cursor:default;}
+.content{padding:20px 24px 60px;}
+.page{display:none;}
+.page.active{display:block;}
+.changeBanner{background:var(--amber-bg);border:1px solid #f0d9ad;border-radius:var(--radius);padding:10px 14px;margin-bottom:16px;font-size:12.5px;color:var(--amber);}
+.filterbar{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;margin-bottom:18px;display:flex;flex-wrap:wrap;gap:10px;align-items:end;}
+.filterbar .fgroup{display:flex;flex-direction:column;gap:4px;min-width:150px;}
+.filterbar label{font-size:10.5px;text-transform:uppercase;letter-spacing:0.03em;color:var(--text-dim);font-weight:600;}
+.filterbar select, .filterbar input{padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12.5px;background:#fff;color:var(--text);min-width:140px;}
+.filter-clear{background:none;border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;color:var(--text-dim);}
+.filter-clear:hover{background:var(--grey-bg);}
+.filter-count{font-size:12px;color:var(--text-dim);margin-left:auto;padding:6px 0;}
+.filter-count b{color:var(--navy);}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:22px;}
+.kpi-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;border-top:3px solid var(--blue);}
+.kpi-card.green{border-top-color:var(--green);}
+.kpi-card.amber{border-top-color:var(--amber);}
+.kpi-card.red{border-top-color:var(--red);}
+.kpi-value{font-size:24px;font-weight:800;color:var(--navy);line-height:1.1;}
+.kpi-label{font-size:11.5px;color:var(--text-dim);margin-top:4px;font-weight:600;}
+.section-title{font-size:15px;font-weight:700;color:var(--navy);margin:26px 0 12px;padding-bottom:6px;border-bottom:2px solid var(--border);}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+@media(max-width:1000px){.grid-2{grid-template-columns:1fr;} .grid-3{grid-template-columns:1fr;}}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;}
+.card h3{font-size:13px;margin:0 0 12px;color:var(--navy);font-weight:700;}
+.chart-wrap{position:relative;height:260px;}
+.pill{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;}
+.pill-green{background:var(--green-bg);color:var(--green);}
+.pill-amber{background:var(--amber-bg);color:var(--amber);}
+.pill-red{background:var(--red-bg);color:var(--red);}
+.pill-blue{background:#e3edfa;color:var(--blue);}
+.pill-grey{background:var(--grey-bg);color:var(--text-dim);}
+.member-link{color:var(--blue);cursor:pointer;text-decoration:underline;text-decoration-style:dotted;}
+.member-link:hover{color:var(--navy);}
+.info-icon-wrap{position:relative;display:inline-flex;align-items:center;margin-left:5px;}
+.info-icon{width:14px;height:14px;border-radius:50%;background:var(--grey);color:#fff;font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;cursor:default;}
+.info-icon.warn{background:var(--amber);}
+.info-tooltip{display:none;position:absolute;left:50%;top:120%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:8px 10px;border-radius:6px;font-size:11px;white-space:normal;width:220px;z-index:50;box-shadow:0 4px 14px rgba(0,0,0,0.25);line-height:1.5;}
+.info-icon-wrap:hover .info-tooltip{display:block;}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(10,20,35,0.55);z-index:100;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal-box{background:#fff;border-radius:10px;max-width:720px;width:92%;max-height:85vh;overflow-y:auto;padding:20px 24px;box-shadow:0 20px 60px rgba(0,0,0,0.3);}
+.modal-header{display:flex;justify-content:space-between;align-items:start;margin-bottom:12px;}
+.modal-header h2{font-size:16px;margin:0;color:var(--navy);}
+.modal-header .sub{font-size:12px;color:var(--text-dim);margin-top:3px;}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-dim);line-height:1;padding:4px;}
+.modal-close:hover{color:var(--text);}
+.modal-kpis{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+.modal-kpi{background:var(--grey-bg);border-radius:6px;padding:8px 12px;font-size:12px;}
+.modal-kpi b{display:block;font-size:15px;color:var(--navy);}
+table{width:100%;border-collapse:collapse;font-size:12.5px;}
+th{text-align:left;padding:8px 10px;background:var(--grey-bg);color:var(--text-dim);font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:0.02em;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;white-space:nowrap;}
+th:hover{color:var(--navy);}
+td{padding:7px 10px;border-bottom:1px solid var(--border);white-space:nowrap;}
+tr:hover td{background:var(--blue-light);}
+.table-wrap{max-height:480px;overflow:auto;border:1px solid var(--border);border-radius:6px;}
+.table-toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;}
+.search-input{padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12.5px;min-width:220px;}
+.export-btn{background:var(--green);color:#fff;border:none;padding:7px 14px;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600;}
+.export-btn:hover{opacity:0.9;}
+.pagination{display:flex;gap:6px;align-items:center;justify-content:flex-end;margin-top:10px;font-size:12px;}
+.pagination button{border:1px solid var(--border);background:#fff;border-radius:5px;padding:4px 10px;cursor:pointer;font-size:12px;}
+.pagination button:disabled{opacity:0.4;cursor:default;}
+.attn-card{background:var(--card);border:1px solid var(--border);border-left:4px solid var(--amber);border-radius:6px;padding:12px 14px;margin-bottom:10px;}
+.attn-card.crit{border-left-color:var(--red);}
+.attn-card .cnt{font-size:20px;font-weight:800;color:var(--amber);}
+.attn-card.crit .cnt{color:var(--red);}
+.attn-card .label{font-size:12.5px;font-weight:600;margin:4px 0 2px;}
+.attn-card .desc{font-size:11px;color:var(--text-dim);}
+.legend-row{display:flex;gap:16px;font-size:11.5px;color:var(--text-dim);margin-top:8px;flex-wrap:wrap;}
+.legend-row span{display:inline-flex;align-items:center;gap:5px;}
+.legend-dot{width:9px;height:9px;border-radius:2px;display:inline-block;}
+.hint-box{background:var(--blue-light);border:1px solid #c6ddf0;border-radius:6px;padding:10px 12px;font-size:12px;color:var(--navy-2);margin-bottom:14px;}
+.progress-outer{background:var(--grey-bg);border-radius:20px;height:8px;overflow:hidden;width:100%;}
+.progress-inner{background:var(--blue);height:100%;transition:width 0.2s;}
+.sync-summary{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px;}
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <div class="title">TRESP PG Loan Monitor</div>
+      <div class="subtitle">All Districts — Combined MPR Tracking</div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-item active" data-page="overview">📊 Overview</div>
+      <div class="nav-item" data-page="geography">🗺️ District / Block / Category</div>
+      <div class="nav-item" data-page="pgwise">🏘️ PG-wise</div>
+      <div class="nav-item" data-page="members">👥 Members</div>
+      <div class="nav-item" data-page="defaulters">⚠️ Defaulters</div>
+      <div class="nav-item" data-page="pending">⏳ Sanctioned vs Disbursed</div>
+      <div class="nav-item" data-page="anomalies">🔍 Anomalies</div>
+      <div class="nav-item" data-page="dataquality">🔍 Data Quality</div>
+      <div class="nav-item" data-page="syncstatus">🔄 Sync Status</div>
+    </div>
+  </nav>
+  <div class="main">
+    <div class="topbar">
+      <h1 id="pageTitle">Overview</h1>
+      <div class="datasource">
+        <span class="badge" id="liveBadge">● Loading…</span>
+        <span>Sources: <b id="sourceCountTop">0</b> sheets (DPMU West: 5 blocks × 3 categories)</span>
+        <span>As of: <b id="asofTop"></b></span>
+        <button class="refresh-btn" onclick="syncAll(true)" id="refreshBtn">⟳ Sync now</button>
+      </div>
+    </div>
+    <div class="content">
+      <div id="changeBanner" class="changeBanner" style="display:none;"></div>
+      <div id="syncProgressBox" class="hint-box" style="display:none;"><div id="syncProgressText" style="margin-bottom:6px;">Syncing…</div><div class="progress-outer"><div class="progress-inner" id="syncProgressBar" style="width:0%;"></div></div></div>
+
+<div class="filterbar">
+        <div class="fgroup"><label>District / DPMU Zone</label><select id="fDistrict"><option value="">All Districts / Zones</option></select></div>
+        <div class="fgroup"><label>Block</label><select id="fBlock"><option value="">All Blocks</option></select></div>
+        <div class="fgroup"><label>Category</label>
+          <select id="fCategory">
+            <option value="">All Categories</option>
+            <option value="Fishery">Fishery</option>
+            <option value="Livestock">Livestock</option>
+            <option value="Agri-Horti">Agri-Horti</option>
+          </select>
+        </div>
+        <div class="fgroup"><label>Sub-category (type of PG)</label><select id="fActivity"><option value="">All Sub-categories</option></select></div>
+        <div class="fgroup"><label>CLF</label><select id="fClf"><option value="">All CLFs</option></select></div>
+        <div class="fgroup"><label>VC</label><select id="fVc"><option value="">All VCs</option></select></div>
+        <div class="fgroup"><label>PG</label><select id="fPg"><option value="">All PGs</option></select></div>
+        <div class="fgroup"><label>Member status</label>
+          <select id="fStatus">
+            <option value="">All members</option>
+            <option value="defaulter">Defaulting</option>
+            <option value="nonstarter">Not started</option>
+            <option value="completed">Completed</option>
+            <option value="ontrack">On track</option>
+          </select>
+        </div>
+        <button class="filter-clear" onclick="clearFilters()">Clear filters</button>
+        <div class="filter-count">Showing <b id="filterCount">0</b> of <b id="filterTotal">0</b> members</div>
+      </div>
+
+      <!-- OVERVIEW PAGE -->
+      <div class="page active" id="page-overview">
+        <div class="kpi-grid">
+          <div class="kpi-card"><div class="kpi-value" id="k-mem"></div><div class="kpi-label">Members w/ loan</div></div>
+          <div class="kpi-card"><div class="kpi-value" id="k-pg"></div><div class="kpi-label">PGs tracked</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">Producer Groups that have at least one member with money disbursed</div></div>
+          <div class="kpi-card"><div class="kpi-value" id="k-pgstarted"></div><div class="kpi-label">PGs where repayment started</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">PGs where at least one member has a repayment entered (a date or an amount), out of all PGs tracked</div></div>
+          <div class="kpi-card"><div class="kpi-value" id="k-memstarted"></div><div class="kpi-label">Members who started repaying</div></div>
+          <div class="kpi-card"><div class="kpi-value" id="k-recv"></div><div class="kpi-label">Total disbursed</div></div>
+          <div class="kpi-card green"><div class="kpi-value" id="k-paid"></div><div class="kpi-label">Total repaid</div><div class="kpi-label" id="k-paid-note" style="font-weight:400;font-size:10.5px;margin-top:2px;"></div></div>
+          <div class="kpi-card amber"><div class="kpi-value" id="k-torepay"></div><div class="kpi-label">Total to repay (principal+interest)</div></div>
+          <div class="kpi-card amber"><div class="kpi-value" id="k-gap"></div><div class="kpi-label">Repayment gap</div></div>
+          <div class="kpi-card amber"><div class="kpi-value" id="k-zero"></div><div class="kpi-label">Never made a repayment</div></div>
+          <div class="kpi-card red"><div class="kpi-value" id="k-moratorium"></div><div class="kpi-label">Missed moratorium period</div></div>
+          <div class="kpi-card red"><div class="kpi-value" id="k-def"></div><div class="kpi-label">Defaulting members</div></div>
+          <div class="kpi-card"><div class="kpi-value" id="k-completed"></div><div class="kpi-label">Loans completed (paid ≥ received)</div></div>
+        </div>
+
+        <div class="section-title">Loan tenure by activity type</div>
+        <div class="hint-box" id="tenureUnknownHint" style="display: block;"></div>
+        <div class="table-wrap" style="margin-bottom:22px;">
+          <table>
+            <thead><tr><th>Activity</th><th style="text-align:right">Moratorium</th><th style="text-align:right">Repayment tenure</th><th style="text-align:right">Total loan period</th></tr></thead>
+            <tbody id="tenureRefBody"></tbody>
+          </table>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3>Repayment status breakdown</h3>
+            <div class="chart-wrap" style="height:220px;"><canvas id="statusDonut" style="box-sizing: border-box; display: block; height: 220px; width: 490px;" width="490" height="220"></canvas></div>
+            <div class="legend-row" id="donutLegend"></div>
+          </div>
+          <div class="card">
+            <h3>Top PGs — disbursed vs repaid vs outstanding</h3>
+            <div class="chart-wrap"><canvas id="pgChart" style="box-sizing: border-box; display: block; height: 260px; width: 490px;" width="490" height="260"></canvas></div>
+          </div>
+        </div>
+
+        <div class="section-title">At a glance</div>
+        <div class="grid-2">
+          <div class="attn-card crit">
+            <div class="cnt" id="a-moratorium"></div>
+            <div class="label">Missed the moratorium period entirely</div>
+            <div class="desc">3+ months since disbursement with zero repayments made — the most serious defaulting cases.</div>
+          </div>
+          <div class="attn-card crit">
+            <div class="cnt" id="a-def"></div>
+            <div class="label">Total defaulting members</div>
+            <div class="desc">Missed the moratorium, or missed one or more expected installments after it.</div>
+          </div>
+          <div class="attn-card">
+            <div class="cnt" id="a-zero"></div>
+            <div class="label">Never made any repayment</div>
+            <div class="desc">Zero repayments recorded so far, regardless of how long ago the loan was disbursed (includes those still within their moratorium window).</div>
+          </div>
+          <div class="attn-card">
+            <div class="cnt" id="a-pgstarted"></div>
+            <div class="label">PGs with at least one member repaying</div>
+            <div class="desc">Out of all PGs tracked.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GEOGRAPHY PAGE -->
+      <div class="page" id="page-geography">
+        <div class="hint-box">Segregation of the combined dataset by <b>District / DPMU Zone</b>, <b>Block</b> and <b>Category</b> (Fishery / Livestock / Agri-Horti — the PG's commodity type, which is which of the 69 source sheets a member came from). "District" here is the source sheet's DPMU project zone (West/Dhalai/Khowai/Gomati/North), not always the block's literal revenue district — e.g. Jampuijala block sits in Sepahijala district but reports under DPMU West. This is also distinct from "Activity" elsewhere in this dashboard, which refers to the loan product (Nursery/Polyculture) that drives the repayment schedule.</div>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3>Members by category</h3>
+            <div class="chart-wrap" style="height:220px;"><canvas id="categoryDonut" style="box-sizing: border-box; display: block; height: 0px; width: 0px;" width="0" height="0"></canvas></div>
+          </div>
+          <div class="card">
+            <h3>Defaulters by district</h3>
+            <div class="chart-wrap"><canvas id="districtChart" style="box-sizing: border-box; display: block; height: 0px; width: 0px;" width="0" height="0"></canvas></div>
+          </div>
+        </div>
+
+        <div class="section-title">District-wise summary</div>
+        <div class="table-toolbar">
+          <span></span>
+          <button class="export-btn" onclick="exportTable('district')">⬇ Export to Excel</button>
+        </div>
+        <div class="table-wrap" style="margin-bottom:22px;">
+          <table id="districtTable">
+            <thead><tr>
+              <th data-key="district">District / DPMU Zone</th>
+              <th data-key="blocks" style="text-align:right">Blocks</th>
+              <th data-key="members" style="text-align:right">Members</th>
+              <th data-key="received" style="text-align:right">Disbursed</th>
+              <th data-key="paid" style="text-align:right">Repaid</th>
+              <th data-key="defaulters" style="text-align:right">Defaulting</th>
+              <th data-key="completedCount" style="text-align:right">Completed</th>
+            </tr></thead>
+            <tbody id="districtBody"></tbody>
+          </table>
+        </div>
+
+        <div class="section-title">Block-wise summary</div>
+        <div class="table-toolbar">
+          <input class="search-input" id="blockSearch" placeholder="Search block name...">
+          <button class="export-btn" onclick="exportTable('block')">⬇ Export to Excel</button>
+        </div>
+        <div class="table-wrap" style="margin-bottom:22px;">
+          <table id="blockTable">
+            <thead><tr>
+              <th data-key="district">District / DPMU Zone</th><th data-key="block">Block</th>
+              <th data-key="members" style="text-align:right">Members</th>
+              <th data-key="received" style="text-align:right">Disbursed</th>
+              <th data-key="paid" style="text-align:right">Repaid</th>
+              <th data-key="defaulters" style="text-align:right">Defaulting</th>
+              <th data-key="completedCount" style="text-align:right">Completed</th>
+            </tr></thead>
+            <tbody id="blockBody"></tbody>
+          </table>
+        </div>
+
+        <div class="section-title">Category-wise summary</div>
+        <div class="table-toolbar">
+          <span></span>
+          <button class="export-btn" onclick="exportTable('category')">⬇ Export to Excel</button>
+        </div>
+        <div class="table-wrap">
+          <table id="categoryTable">
+            <thead><tr>
+              <th data-key="category">Category</th>
+              <th data-key="members" style="text-align:right">Members</th>
+              <th data-key="received" style="text-align:right">Disbursed</th>
+              <th data-key="paid" style="text-align:right">Repaid</th>
+              <th data-key="defaulters" style="text-align:right">Defaulting</th>
+              <th data-key="completedCount" style="text-align:right">Completed</th>
+            </tr></thead>
+            <tbody id="categoryBody"></tbody>
+          </table>
+        </div>
+
+        <div class="section-title">Category → Sub-category (type of PG) summary</div>
+        <div class="hint-box">Each of the three categories (Agri-Horti, Fishery, Livestock) split into its sub-categories, taken from the "Type of PG" column of the sheet (Livestock: Goatery / Piggery).</div>
+        <div class="table-toolbar"><span></span><button class="export-btn" onclick="exportTable('activity')">⬇ Export to Excel</button></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Category</th><th>Sub-category</th>
+              <th style="text-align:right">Members</th><th style="text-align:right">PGs</th>
+              <th style="text-align:right">Disbursed</th><th style="text-align:right">Repaid</th>
+              <th style="text-align:right">Defaulting</th><th style="text-align:right">Completed</th>
+            </tr></thead>
+            <tbody id="activityBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PG-wise PAGE -->
+      <div class="page" id="page-pgwise">
+        <div class="table-toolbar">
+          <input class="search-input" id="pgSearch" placeholder="Search PG name...">
+          <button class="export-btn" onclick="exportTable('pg')">⬇ Export to Excel</button>
+        </div>
+        <div class="table-wrap">
+          <table id="pgTable">
+            <thead><tr>
+              <th data-key="pg">PG</th><th data-key="pgId">PG ID</th><th data-key="district">District / DPMU Zone</th><th data-key="block">Block</th><th data-key="category">Category</th><th data-key="subCategory">Sub-category</th>
+              <th data-key="vc">VC</th><th data-key="clf">CLF</th>
+              <th data-key="members" style="text-align:right">Members</th>
+              <th data-key="pgStartedRepayment">Repayment started?</th>
+              <th data-key="received" style="text-align:right">Disbursed</th>
+              <th data-key="paid" style="text-align:right">Repaid</th>
+              <th data-key="totalToRepay" style="text-align:right">Total to repay</th>
+              <th data-key="repaymentGap" style="text-align:right">Repayment gap</th>
+              <th data-key="zeroCount" style="text-align:right">Never repaid</th>
+              <th data-key="missedMoratoriumCount" style="text-align:right">Missed moratorium</th>
+              <th data-key="defaulters" style="text-align:right">Defaulting</th>
+              <th data-key="completedCount" style="text-align:right">Completed</th>
+            </tr></thead>
+            <tbody id="pgBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- MEMBERS PAGE -->
+      <div class="page" id="page-members">
+        <div class="table-toolbar">
+          <input class="search-input" id="memberSearch" placeholder="Search member name...">
+          <button class="export-btn" onclick="exportTable('members')">⬇ Export to Excel</button>
+        </div>
+        <div class="table-wrap">
+          <table id="memberTable">
+            <thead><tr>
+              <th data-key="member">Member</th><th data-key="pg">PG</th><th data-key="pgId">PG ID</th>
+              <th data-key="district">District / DPMU Zone</th><th data-key="block">Block</th><th data-key="pgCategory">Category</th>
+              <th data-key="subCategory">Sub-category</th><th data-key="activity">Loan type (tenure)</th>
+              <th data-key="tenureMonths" style="text-align:right">Repay window (mo)</th>
+              <th data-key="totalLoanPeriod" style="text-align:right">Total loan period (mo)</th>
+              <th data-key="sanctioned" style="text-align:right">Received</th>
+              <th data-key="paid" style="text-align:right">Paid</th>
+              <th data-key="totalToRepay" style="text-align:right">Total to repay</th>
+              <th data-key="monthsSince" style="text-align:right">Months since loan</th>
+              <th data-key="repaymentsMade" style="text-align:right">Repayments made</th>
+              <th data-key="statusLabel">Status</th>
+            </tr></thead>
+            <tbody id="memberBody"></tbody>
+          </table>
+        </div>
+        <div class="pagination">
+          <button id="memPrev" onclick="changePage(-1)" disabled="">‹ Prev</button>
+          <span id="memPageInfo"></span>
+          <button id="memNext" onclick="changePage(1)">Next ›</button>
+        </div>
+      </div>
+
+      <!-- DEFAULTERS PAGE -->
+      <div class="page" id="page-defaulters">
+        <div class="hint-box">A member is marked <b>defaulting</b> if either: (a) they missed their <b>3-month moratorium period</b> entirely — zero repayments 3+ months after disbursement — or (b) the <b>cumulative amount they've paid so far is less than what should have been paid by now</b> (based on an even monthly EMI over their activity's repayment window). This is amount-based, not count-based: a member who skips a month but later pays double to catch up is <b>not</b> flagged, since what matters is whether they're caught up on the total, not whether every single month was paid on time. A member is marked <b>Completed</b> instead of defaulting once their total paid reaches or exceeds the amount they received.</div>
+        <div class="table-toolbar">
+          <input class="search-input" id="defSearch" placeholder="Search member or PG...">
+          <button class="export-btn" onclick="exportTable('defaulters')">⬇ Export to Excel</button>
+        </div>
+        <div class="table-wrap">
+          <table id="defTable">
+            <thead><tr>
+              <th data-key="member">Member</th><th data-key="pg">PG</th>
+              <th data-key="district">District / DPMU Zone</th><th data-key="block">Block</th><th data-key="pgCategory">Category</th>
+              <th data-key="subCategory">Sub-category</th><th data-key="activity">Loan type (tenure)</th>
+              <th data-key="sanctioned" style="text-align:right">Received</th>
+              <th data-key="monthsSince" style="text-align:right">Months since loan</th>
+              <th data-key="repaymentsMade" style="text-align:right">Repayments made</th>
+              <th data-key="shortfall" style="text-align:right">Shortfall</th>
+              <th data-key="reason">Reason</th>
+            </tr></thead>
+            <tbody id="defBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SANCTIONED BUT NOT DISBURSED PAGE -->
+      <div class="page" id="page-pending">
+        <div class="hint-box">Members whose <b>Loan Amount Sanctioned</b> is more than the amount actually disbursed (<b>Total amount Received in Kind and Cash</b>). <b>Pending = Sanctioned − Disbursed</b> (disbursed = "Total amount Received in Kind and Cash", column S); it is money still to be released and is <b>not</b> part of what the member has to repay. (The sheet's column U is Sanctioned − Utilized, a different figure, and is not used here.) <b>Not disbursed</b> = nothing released yet (these members are not counted on the other pages); <b>Partly disbursed</b> = some money released, the rest still pending (these are counted on the other pages for the amount released). The filters above (District, Block, Category, Sub-category, CLF, VC, PG) apply; the Member status filter does not.</div>
+        <div class="kpi-grid">
+          <div class="kpi-card amber"><div class="kpi-value" id="p-count"></div><div class="kpi-label">Members with amount pending</div></div>
+          <div class="kpi-card amber"><div class="kpi-value" id="p-amt"></div><div class="kpi-label">Total pending (sanctioned − disbursed)</div></div>
+          <div class="kpi-card"><div class="kpi-value" id="p-none"></div><div class="kpi-label">Not disbursed at all</div></div>
+          <div class="kpi-card"><div class="kpi-value" id="p-part"></div><div class="kpi-label">Partly disbursed</div></div>
+          <div class="kpi-card"><div class="kpi-value" id="p-pgs"></div><div class="kpi-label">PGs affected</div></div>
+        </div>
+        <div class="table-toolbar">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <input class="search-input" id="pendSearch" placeholder="Search member or PG...">
+            <select id="pendKind" class="search-input" style="min-width:170px;"><option value="">All (not + partly disbursed)</option><option value="Not disbursed">Not disbursed only</option><option value="Partly disbursed">Partly disbursed only</option></select>
+          </div>
+          <button class="export-btn" onclick="exportTable('pending')">⬇ Export to Excel</button>
+        </div>
+        <div class="table-wrap">
+          <table id="pendTable">
+            <thead><tr>
+              <th data-key="member">Member</th><th data-key="pg">PG</th>
+              <th data-key="district">District / DPMU Zone</th><th data-key="block">Block</th><th data-key="pgCategory">Category</th>
+              <th data-key="subCategory">Sub-category</th>
+              <th data-key="vc">VC</th><th data-key="clf">CLF</th>
+              <th data-key="sanctioned" style="text-align:right">Sanctioned</th>
+              <th data-key="disbursed" style="text-align:right">Disbursed</th>
+              <th data-key="pendingAmt" style="text-align:right">Pending</th>
+              <th data-key="kind">Disbursement</th>
+              <th data-key="status">Loan status in sheet</th>
+            </tr></thead>
+            <tbody id="pendBody"></tbody>
+          </table>
+        </div>
+        <div class="section-title">Block-wise pending amount</div>
+        <div class="table-wrap" style="max-height:320px;">
+          <table><thead><tr><th>District / DPMU Zone</th><th>Block</th><th>Category</th><th style="text-align:right">Members</th><th style="text-align:right">Sanctioned</th><th style="text-align:right">Disbursed</th><th style="text-align:right">Pending</th></tr></thead><tbody id="pendGroupBody"></tbody></table>
+        </div>
+      </div>
+
+      <!-- ANOMALIES PAGE -->
+      <div class="page" id="page-anomalies">
+        <div class="hint-box">These are structural data issues detected across all 69 source sheets — separate from the defaulting/repayment analysis above. Export any section to Excel to share with whoever maintains the sheets. The filters at the top (District, Block, Category, Activity, CLF, VC, PG, Member status) apply to every section below; the "member name is blank" section can only be filtered by District, Block, Category and PG.</div>
+
+        <div class="section-title">Repayment recorded but no disbursed amount <span id="cnt-orphan"></span></div>
+        <div class="hint-box">These rows have a repayment amount but no amount disbursed (and usually no sanctioned amount), so they are not counted as members. Their repayments <b>are</b> included in the Overview "Total repaid" figure so it matches the sheet total. The sanctioned/disbursed amounts need to be filled in at the source.</div>
+        <div class="table-toolbar"><button class="export-btn" onclick="exportAnomaly('orphan')">⬇ Export to Excel</button></div>
+        <div class="table-wrap" style="margin-bottom:22px;max-height:280px;">
+          <table><thead><tr><th>Sheet row</th><th>Member</th><th>PG</th><th>Block</th><th>Category</th><th style="text-align:right">Sanctioned</th><th style="text-align:right">Disbursed</th><th style="text-align:right">Repaid</th></tr></thead><tbody id="an-orphan"></tbody></table>
+        </div>
+
+        <div class="section-title">Pending Loan amount (column U) ≠ Sanctioned − Utilized <span id="cnt-pendmismatch"></span></div>
+        <div class="hint-box">The sheet's "Pending Loan amount" (column U) should equal the Loan Amount Sanctioned (L) minus the Total utilized loan amount (T). These rows don't match — usually column U or T was not updated. Column U is not used for any dashboard figure.</div>
+        <div class="table-toolbar"><button class="export-btn" onclick="exportAnomaly('pendMismatch')">⬇ Export to Excel</button></div>
+        <div class="table-wrap" style="margin-bottom:22px;max-height:320px;">
+          <table><thead><tr><th>Member</th><th>PG</th><th>Block</th><th>Category</th><th style="text-align:right">Sanctioned (L)</th><th style="text-align:right">Utilized (T)</th><th style="text-align:right">Sanctioned − Utilized</th><th style="text-align:right">Column U in sheet</th></tr></thead><tbody id="an-pendmismatch"></tbody></table>
+        </div>
+
+        <div class="section-title">Loan taken, no repayment updates ever <span id="cnt-zeroupdate"></span></div>
+        <div class="table-toolbar"><button class="export-btn" onclick="exportAnomaly('zeroUpdate')">⬇ Export to Excel</button></div>
+        <div class="table-wrap" style="margin-bottom:22px;max-height:280px;">
+          <table><thead><tr><th>Member</th><th>PG</th><th>District / DPMU Zone</th><th>Block</th><th>Category</th></tr></thead><tbody id="an-zeroupdate"></tbody></table>
+        </div>
+
+        <div class="section-title">Repayment date entered, but amount is blank <span id="cnt-datenoamount"></span></div>
+        <div class="hint-box">Likely a data-entry gap — the repayment date was logged but the corresponding principal/interest amount was never filled in.</div>
+        <div class="table-toolbar"><button class="export-btn" onclick="exportAnomaly('dateNoAmount')">⬇ Export to Excel</button></div>
+        <div class="table-wrap" style="margin-bottom:22px;">
+          <table><thead><tr><th>Member</th><th>PG</th><th style="text-align:right">Month</th><th>Date entered</th></tr></thead><tbody id="an-datenoamount"></tbody></table>
+        </div>
+
+        <div class="section-title">Amount received exceeds amount sanctioned <span id="cnt-oversanctioned"></span></div>
+        <div class="hint-box">Sanctioned amount is filled in but the amount actually disbursed is higher than it — a genuine over-disbursement against what was approved. (Cases where Sanctioned is blank/₹0 are tracked separately below, since those are a missing-data problem rather than an over-disbursement.)</div>
+        <div class="table-toolbar"><button class="export-btn" onclick="exportAnomaly('receivedOverSanctioned')">⬇ Export to Excel</button></div>
+        <div class="table-wrap" style="margin-bottom:22px;">
+          <table><thead><tr><th>Member</th><th>PG</th><th style="text-align:right">Sanctioned</th><th style="text-align:right">Received</th><th style="text-align:right">Excess</th></tr></thead><tbody id="an-oversanctioned"></tbody></table>
+        </div>
+
+        <div class="section-title">Loan Amount Sanctioned not recorded, but money disbursed <span id="cnt-nosanctioned"></span></div>
+        <div class="hint-box">"Loan Amount Sanctioned" (column L) is blank/₹0 in the sheet, even though the member has an amount disbursed/received. The sanctioned amount needs to be filled in at the source.</div>
+        <div class="table-toolbar"><button class="export-btn" onclick="exportAnomaly('noSanctioned')">⬇ Export to Excel</button></div>
+        <div class="table-wrap" style="margin-bottom:22px;max-height:280px;">
+          <table><thead><tr><th>Member</th><th>PG</th><th>Block</th><th style="text-align:right">Received</th><th style="text-align:right">Paid</th></tr></thead><tbody id="an-nosanctioned"></tbody></table>
+        </div>
+
+        <div class="section-title">Same LokOS ID used by different members <span id="cnt-duplokos"></span></div>
+        <div class="hint-box">The same LokOS ID appears on more than one distinct member/PG combination — one of them is likely a copy-paste error in the sheet and needs correcting at the source.</div>
+        <div class="table-toolbar"><button class="export-btn" onclick="exportAnomaly('dupLokos')">⬇ Export to Excel</button></div>
+        <div class="table-wrap" style="margin-bottom:22px;max-height:280px;">
+          <table><thead><tr><th>LokOS ID</th><th>Member</th><th>PG</th><th>Block</th><th style="text-align:right">Received</th></tr></thead><tbody id="an-duplokos"></tbody></table>
+        </div>
+
+        <div class="section-title">Repaid more than the total amount due <span id="cnt-overpaid"></span></div>
+        <div class="hint-box">Amount paid so far is higher than "total to repay" (principal + interest). Usually a small rounding/final-installment excess, but worth a quick check for larger amounts.</div>
+        <div class="table-toolbar"><button class="export-btn" onclick="exportAnomaly('overpaid')">⬇ Export to Excel</button></div>
+        <div class="table-wrap" style="margin-bottom:22px;max-height:280px;">
+          <table><thead><tr><th>Member</th><th>PG</th><th>Block</th><th style="text-align:right">Paid</th><th style="text-align:right">Total to repay</th><th style="text-align:right">Excess</th></tr></thead><tbody id="an-overpaid"></tbody></table>
+        </div>
+
+        <div class="section-title">Repayments made beyond the loan tenure <span id="cnt-overmonths"></span></div>
+        <div class="hint-box">Number of monthly repayments recorded is more than the repayment tenure computed from the member's Tenure code — either they're still paying past their term, or the Tenure code was entered wrong.</div>
+        <div class="table-toolbar"><button class="export-btn" onclick="exportAnomaly('overMonths')">⬇ Export to Excel</button></div>
+        <div class="table-wrap" style="margin-bottom:22px;max-height:280px;">
+          <table><thead><tr><th>Member</th><th>PG</th><th>Block</th><th style="text-align:right">Repayments made</th><th style="text-align:right">Tenure (months)</th></tr></thead><tbody id="an-overmonths"></tbody></table>
+        </div>
+
+        <div class="section-title">Members who completed repayment early <span id="cnt-early"></span></div>
+        <div class="table-toolbar"><button class="export-btn" onclick="exportAnomaly('earlyRepayment')">⬇ Export to Excel</button></div>
+        <div class="table-wrap" style="margin-bottom:22px;">
+          <table><thead><tr><th>Member</th><th>PG</th><th style="text-align:right">Months since loan</th><th style="text-align:right">Total loan period</th></tr></thead><tbody id="an-early"></tbody></table>
+        </div>
+
+        <div class="section-title">Loan data entered but member name is blank <span id="cnt-noname"></span></div>
+        <div class="hint-box">These rows have financial data filled in (sanctioned/received amounts) but no member name — they're silently excluded from every other page of this dashboard since there's no name to key them on. They need the name filled in at the source.</div>
+        <div class="table-toolbar"><button class="export-btn" onclick="exportAnomaly('dataNoName')">⬇ Export to Excel</button></div>
+        <div class="table-wrap" style="margin-bottom:22px;">
+          <table><thead><tr><th>Source</th><th>Sheet row #</th><th>PG</th></tr></thead><tbody id="an-noname"></tbody></table>
+        </div>
+
+        <div class="section-title">Loaned members with no LokOS ID entered <span id="cnt-nolokos"></span></div>
+        <div class="table-toolbar"><button class="export-btn" onclick="exportAnomaly('noLokosId')">⬇ Export to Excel</button></div>
+        <div class="table-wrap" style="margin-bottom:10px;">
+          <table><thead><tr><th>Member</th><th>PG</th></tr></thead><tbody id="an-nolokos"></tbody></table>
+        </div>
+      </div>
+
+      <!-- DATA QUALITY PAGE -->
+      <div class="page" id="page-dataquality">
+        <div class="section-title">Naming inconsistencies found</div>
+        <div class="hint-box">VC and CLF names in the source sheets were inconsistently cased/spelled. These were normalized for filtering in this dashboard, but the underlying sheets should be corrected at the source.</div>
+        <div class="grid-3">
+          <div class="attn-card">
+            <div class="cnt" id="dq-clf"></div>
+            <div class="label">Distinct CLF spellings after normalization</div>
+            <div class="desc">Check these against each block's canonical CLF list.</div>
+          </div>
+          <div class="attn-card">
+            <div class="cnt" id="dq-vc"></div>
+            <div class="label">Distinct VC spellings after normalization</div>
+            <div class="desc">Possible typos of the same place — verify in the source sheets.</div>
+          </div>
+          <div class="attn-card crit">
+            <div class="cnt" id="dq-activity"></div>
+            <div class="label">Loaned members with no activity/tenure type recorded</div>
+            <div class="desc">The sheet's "Tenure (in Months)" field — which also encodes the loan product (Nursery/Polyculture) — is blank for these members despite a loan being sanctioned.</div>
+          </div>
+        </div>
+        <div class="section-title">Index sheet link anomalies</div>
+        <div class="hint-box">While mapping the 69 source links from the "Link for PG MPR" index sheet, a few rows appeared to cross-reference the wrong spreadsheet between two adjacent blocks (their Fishery/Livestock/Agri-Horti links point at each other's files). This dashboard fetches exactly what the index sheet links to — verify Hezamara/Lefunga (West) and Raishyabari/Chawmanu (Dhalai) in the index sheet if the numbers for those blocks look off.</div>
+
+        <div class="section-title">PG Unique ID matching (from TRESP PG Database.xlsx) <span id="cnt-pgidunmatched"></span></div>
+        <div class="hint-box">PG names in the loan sheets are matched against the PG Database's block-wise sheets (column H, "PG Unique ID") by fuzzy name match, since the two sources spell/space PG names differently. PGs below couldn't be matched with confidence — usually a bigger spelling difference, or the PG genuinely isn't in the PG Database yet. Check these manually.</div>
+        <div class="table-toolbar"><button class="export-btn" onclick="exportTable('pgIdUnmatched')">⬇ Export to Excel</button></div>
+        <div class="table-wrap" style="margin-bottom:10px;max-height:320px;">
+          <table><thead><tr><th>Block</th><th>PG</th><th style="text-align:right">Members</th></tr></thead><tbody id="dq-pgidunmatched"></tbody></table>
+        </div>
+      </div>
+
+      <!-- SYNC STATUS PAGE -->
+      <div class="page" id="page-syncstatus">
+        <div class="hint-box">Each of the 69 source sheets is fetched independently through a CORS proxy (since they are not "Published to web"). A source that fails here doesn't block the rest — its members are simply missing from the combined totals until the next successful sync.</div>
+        <div class="sync-summary">
+          <div class="attn-card" style="margin:0;"><div class="cnt" id="ss-ok"></div><div class="label">Sources synced OK</div></div>
+          <div class="attn-card crit" style="margin:0;"><div class="cnt" id="ss-fail"></div><div class="label">Sources failed</div></div>
+        </div>
+        <div class="table-toolbar">
+          <input class="search-input" id="syncSearch" placeholder="Search district/block/category...">
+          <button class="export-btn" onclick="syncAll(true)">⟳ Sync now</button>
+        </div>
+        <div class="table-wrap">
+          <table id="syncTable">
+            <thead><tr>
+              <th>District / DPMU Zone</th><th>Block</th><th>Category</th><th>Status</th>
+              <th style="text-align:right">Members</th><th>Via</th><th>Last synced</th><th>Error</th>
+            </tr></thead>
+            <tbody id="syncBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="scheduleModal" onclick="if(event.target===this) closeScheduleModal()">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div>
+        <h2 id="modalMemberName"></h2>
+        <div class="sub" id="modalMemberSub"></div>
+      </div>
+      <button class="modal-close" onclick="closeScheduleModal()">✕</button>
+    </div>
+    <div class="modal-kpis" id="modalKpis"></div>
+    <div class="table-wrap" style="max-height:400px;">
+      <table>
+        <thead><tr>
+          <th>Month</th><th style="text-align:right">Amount due</th><th style="text-align:right">Amount paid</th>
+          <th style="text-align:right">Repayment date</th><th>Status</th>
+        </tr></thead>
+        <tbody id="modalScheduleBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== SOURCE CONFIG =====
+// Derived from the "Link for PG MPR" index sheet (docs.google.com/spreadsheets/d/1C0mvljM6bBqwZBCenEfYirVIUSKknPSCTbyqDlEDBlc).
+// Each block has 3 category tabs. A few rows in the index sheet cross-reference between two
+// adjacent blocks (see Data Quality page) — encoded here exactly as the index sheet has them.
+// `zone` is the DPMU zone used only to decide which blocks are fetched (ACTIVE_ZONES); it defaults
+// to `district` when not given. Some blocks' real administrative district differs from their DPMU
+// zone (e.g. Jampuijala is in Sepahijala district but is run by West DPMU) — pass zone explicitly then.
+function S(district, block, category, sheetId, gid, zone){ return {district, block, category, sheetId, gid, zone: zone||district, key: district+'||'+block+'||'+category}; }
+const ACTIVE_ZONES = ['West'];   // DPMU zones shown for now; add 'Dhalai','Khowai','Gomati','North' as their sheets are published
+const ALL_SOURCES = [
+  // West
+  S('West','Belbari','Fishery','1rbXpO60pkShOfPc8ZurOvqjYdX2FO4XgMTtbLjbOHIA','2013123985'),
+  S('West','Belbari','Livestock','1rbXpO60pkShOfPc8ZurOvqjYdX2FO4XgMTtbLjbOHIA','2073601712'),
+  S('West','Belbari','Agri-Horti','1rbXpO60pkShOfPc8ZurOvqjYdX2FO4XgMTtbLjbOHIA','0'),
+  S('West','Mandwi','Fishery','1ZzM4S7DZ76RKET-DPRW9h81G_Gr3gQUNsBrJECjMDeE','1979876275'),
+  S('West','Mandwi','Livestock','1ZzM4S7DZ76RKET-DPRW9h81G_Gr3gQUNsBrJECjMDeE','1517572113'),
+  S('West','Mandwi','Agri-Horti','1ZzM4S7DZ76RKET-DPRW9h81G_Gr3gQUNsBrJECjMDeE','0'),
+  S('West','Hezamara','Fishery','1--7tSBONoWQJk5FyBSwheQZFws5GXV61Y47jVYbzZy0','280289712'),
+  S('West','Hezamara','Livestock','1--7tSBONoWQJk5FyBSwheQZFws5GXV61Y47jVYbzZy0','715401793'),
+  S('West','Hezamara','Agri-Horti','1QDH3twowf05-acmhlWfeIpZOlmLcAt0KbLl-0EUn_q0','0'),
+  S('West','Lefunga','Fishery','1QDH3twowf05-acmhlWfeIpZOlmLcAt0KbLl-0EUn_q0','125272854'),
+  S('West','Lefunga','Livestock','1QDH3twowf05-acmhlWfeIpZOlmLcAt0KbLl-0EUn_q0','1805517466'),
+  S('West','Lefunga','Agri-Horti','1--7tSBONoWQJk5FyBSwheQZFws5GXV61Y47jVYbzZy0','0'),
+  S('Sepahijala','Jampuijala','Fishery','1EaGuUg10GZDWIbEaah4oIE90RGzCPFfGssROuVqN3C0','394538267','West'),
+  S('Sepahijala','Jampuijala','Livestock','1EaGuUg10GZDWIbEaah4oIE90RGzCPFfGssROuVqN3C0','1256132106','West'),
+  S('Sepahijala','Jampuijala','Agri-Horti','1EaGuUg10GZDWIbEaah4oIE90RGzCPFfGssROuVqN3C0','0','West'),
+  // Dhalai
+  S('Dhalai','Raishyabari','Fishery','1Tv9Q_96AWO2fk2Nuh4MIDv-aKFhxgbA1R4lUXzYK_K0','650741203'),
+  S('Dhalai','Raishyabari','Livestock','18chvIVWIrehxs9YbkIcfMm-YvSxSXFDxPGF8nUVSbGo','617519364'),
+  S('Dhalai','Raishyabari','Agri-Horti','18chvIVWIrehxs9YbkIcfMm-YvSxSXFDxPGF8nUVSbGo','0'),
+  S('Dhalai','Chawmanu','Fishery','1EaGuUg10GZDWIbEaah4oIE90RGzCPFfGssROuVqN3C0','394538267'),
+  S('Dhalai','Chawmanu','Livestock','1Tv9Q_96AWO2fk2Nuh4MIDv-aKFhxgbA1R4lUXzYK_K0','572222859'),
+  S('Dhalai','Chawmanu','Agri-Horti','1Tv9Q_96AWO2fk2Nuh4MIDv-aKFhxgbA1R4lUXzYK_K0','0'),
+  S('Dhalai','Manu','Fishery','1KAEXJY_0Zht9mdJ9Rj7vM3XaSiYsY2Sh6Nx1u5DG11E','1327529683'),
+  S('Dhalai','Manu','Livestock','1KAEXJY_0Zht9mdJ9Rj7vM3XaSiYsY2Sh6Nx1u5DG11E','1856343118'),
+  S('Dhalai','Manu','Agri-Horti','1KAEXJY_0Zht9mdJ9Rj7vM3XaSiYsY2Sh6Nx1u5DG11E','0'),
+  S('Dhalai','Dumburnagar','Fishery','1tDk7PiyNcWTJXLjiMHs-2JQHe2MmsgF-uXxJwkmGITc','1736404005'),
+  S('Dhalai','Dumburnagar','Livestock','1tDk7PiyNcWTJXLjiMHs-2JQHe2MmsgF-uXxJwkmGITc','365131361'),
+  S('Dhalai','Dumburnagar','Agri-Horti','1tDk7PiyNcWTJXLjiMHs-2JQHe2MmsgF-uXxJwkmGITc','0'),
+  S('Dhalai','Ganganagar','Fishery','1qzLzZTJzJaytCYRew4X1m_cnxHoC48VQx788eo_Riyg','1765040243'),
+  S('Dhalai','Ganganagar','Livestock','1qzLzZTJzJaytCYRew4X1m_cnxHoC48VQx788eo_Riyg','45211397'),
+  S('Dhalai','Ganganagar','Agri-Horti','1qzLzZTJzJaytCYRew4X1m_cnxHoC48VQx788eo_Riyg','0'),
+  // Khowai
+  S('Khowai','Padmabil','Fishery','1Rkn3_zh6skLVRxv07Epz1Di3Fh22BkoVEAZaZCrwwkQ','765595870'),
+  S('Khowai','Padmabil','Livestock','1Rkn3_zh6skLVRxv07Epz1Di3Fh22BkoVEAZaZCrwwkQ','1406284984'),
+  S('Khowai','Padmabil','Agri-Horti','1Rkn3_zh6skLVRxv07Epz1Di3Fh22BkoVEAZaZCrwwkQ','0'),
+  S('Khowai','Tulasikhar','Fishery','1Ls9aSMVY1hrNwyI6JPhs6_hkvU2hfZ_-R1rWBMXk7gE','1786638222'),
+  S('Khowai','Tulasikhar','Livestock','1Ls9aSMVY1hrNwyI6JPhs6_hkvU2hfZ_-R1rWBMXk7gE','1577199997'),
+  S('Khowai','Tulasikhar','Agri-Horti','1Ls9aSMVY1hrNwyI6JPhs6_hkvU2hfZ_-R1rWBMXk7gE','0'),
+  S('Khowai','Mungiakami','Fishery','1oliFizzAUy_Gk-64jyqvFIKCK_KnFlpc-nNWx4s_Sww','824388260'),
+  S('Khowai','Mungiakami','Livestock','1oliFizzAUy_Gk-64jyqvFIKCK_KnFlpc-nNWx4s_Sww','197375460'),
+  S('Khowai','Mungiakami','Agri-Horti','1oliFizzAUy_Gk-64jyqvFIKCK_KnFlpc-nNWx4s_Sww','0'),
+  // Gomati
+  S('Gomati','Karbook','Fishery','1R10iU6Z1j9laS51__hc-YzAuBM01lnx8dvv8kaln7eQ','139228360'),
+  S('Gomati','Karbook','Livestock','1R10iU6Z1j9laS51__hc-YzAuBM01lnx8dvv8kaln7eQ','182737849'),
+  S('Gomati','Karbook','Agri-Horti','1R10iU6Z1j9laS51__hc-YzAuBM01lnx8dvv8kaln7eQ','0'),
+  S('Gomati','Killla','Fishery','1Wg9nkKmJircItzUAD3blSLKx_SH68R8zd5RLxpKCh_g','1753125906'),
+  S('Gomati','Killla','Livestock','1Wg9nkKmJircItzUAD3blSLKx_SH68R8zd5RLxpKCh_g','1179645525'),
+  S('Gomati','Killla','Agri-Horti','1Wg9nkKmJircItzUAD3blSLKx_SH68R8zd5RLxpKCh_g','0'),
+  S('Gomati','Silachari','Fishery','1HFL-idEwSbcNnz5BsCAlJ9cloUrv97nK-iN9iSY0iRU','1550765446'),
+  S('Gomati','Silachari','Livestock','1HFL-idEwSbcNnz5BsCAlJ9cloUrv97nK-iN9iSY0iRU','1755180785'),
+  S('Gomati','Silachari','Agri-Horti','1HFL-idEwSbcNnz5BsCAlJ9cloUrv97nK-iN9iSY0iRU','0'),
+  S('Gomati','Rupaichari','Fishery','1qyWJ3ZybVImaLmXX5Di0E_hR6kT7tog-jwRPOQWeEhg','170439797'),
+  S('Gomati','Rupaichari','Livestock','1qyWJ3ZybVImaLmXX5Di0E_hR6kT7tog-jwRPOQWeEhg','1988692677'),
+  S('Gomati','Rupaichari','Agri-Horti','1qyWJ3ZybVImaLmXX5Di0E_hR6kT7tog-jwRPOQWeEhg','0'),
+  S('Gomati','Ompi','Fishery','1FdNJ6GCM6r9_lJMwBhB04WtiYms6S7pbJ9deMfO6Q6k','844795039'),
+  S('Gomati','Ompi','Livestock','1FdNJ6GCM6r9_lJMwBhB04WtiYms6S7pbJ9deMfO6Q6k','1337570994'),
+  S('Gomati','Ompi','Agri-Horti','1FdNJ6GCM6r9_lJMwBhB04WtiYms6S7pbJ9deMfO6Q6k','0'),
+  // North
+  S('North','Pecharthal','Fishery','1De0D27pjkHFNwc7F5b51kNTSpSkSA9pVYVMdUzKR9zE','1315075853'),
+  S('North','Pecharthal','Livestock','1De0D27pjkHFNwc7F5b51kNTSpSkSA9pVYVMdUzKR9zE','1295979009'),
+  S('North','Pecharthal','Agri-Horti','1De0D27pjkHFNwc7F5b51kNTSpSkSA9pVYVMdUzKR9zE','0'),
+  S('North','Damcherra','Fishery','1prYRES9wIZNdSo0l3a9x1qr95TNex47NHI2NOv-s47Y','983092047'),
+  S('North','Damcherra','Livestock','1prYRES9wIZNdSo0l3a9x1qr95TNex47NHI2NOv-s47Y','652752604'),
+  S('North','Damcherra','Agri-Horti','1prYRES9wIZNdSo0l3a9x1qr95TNex47NHI2NOv-s47Y','0'),
+  S('North','Jampuihill','Fishery','1-fa8jukuOEnjMS-Z6WdfLjTX9SO1WvddBwXFjAtaOpg','328835969'),
+  S('North','Jampuihill','Livestock','1-fa8jukuOEnjMS-Z6WdfLjTX9SO1WvddBwXFjAtaOpg','242962543'),
+  S('North','Jampuihill','Agri-Horti','1-fa8jukuOEnjMS-Z6WdfLjTX9SO1WvddBwXFjAtaOpg','0'),
+  S('North','Dasda','Fishery','1nzF5PCVKUIX3RX_rMRaKCxCVKY4e5X4jHGcd7LjmwpI','958089324'),
+  S('North','Dasda','Livestock','1nzF5PCVKUIX3RX_rMRaKCxCVKY4e5X4jHGcd7LjmwpI','1346574263'),
+  S('North','Dasda','Agri-Horti','1nzF5PCVKUIX3RX_rMRaKCxCVKY4e5X4jHGcd7LjmwpI','0'),
+  S('North','Laljuri','Fishery','1nzsij7ckLMo5mAmlCJjh1CCROwFhOwCV7N-r__5s3uI','1417973159'),
+  S('North','Laljuri','Livestock','1nzsij7ckLMo5mAmlCJjh1CCROwFhOwCV7N-r__5s3uI','1338883970'),
+  S('North','Laljuri','Agri-Horti','1nzsij7ckLMo5mAmlCJjh1CCROwFhOwCV7N-r__5s3uI','0'),
+];
+const SOURCES = ALL_SOURCES.filter(s=>ACTIVE_ZONES.includes(s.zone));
+document.getElementById('sourceCountTop').textContent = SOURCES.length;
+
+const DISTRICT_BLOCKS = {};
+SOURCES.forEach(s=>{
+  if(!DISTRICT_BLOCKS[s.district]) DISTRICT_BLOCKS[s.district] = new Set();
+  DISTRICT_BLOCKS[s.district].add(s.block);
+});
+
+// PG Unique ID, from "TRESP PG Database.xlsx" (block-wise sheets, column H). Flat [block, pgName, pgId, ...] —
+// matched against the loan sheets' PG names by fuzzy name match since spelling/spacing differs between the
+// two sources (different people typed them). See PG_ID_INDEX / lookupPgId below.
+const PG_ID_DATA = ["Belbari","Palbaksha Agri PG","PG-WT-BEL-001","Belbari","Hokbar Agri PG","PG-WT-BEL-002","Belbari","YAPHANG AGRI PG","PG-WT-BEL-003","Belbari","BINDABON AGRI PG","PG-WT-BEL-004","Belbari","Swrang Agri PG","PG-WT-BEL-005","Belbari","Bwlai Agri PG","PG-WT-BEL-007","Belbari","Bwtang PG","PG-WT-BEL-008","Belbari","Bwthai Agri Pg ","PG-WT-BEL-009","Belbari","BAKUL AGRI PG","PG-WT-BEL-010","Belbari","Maitang PG","PG-WT-BEL-011","Belbari","YAPRI THANSA AGRI PG","PG-WT-BEL-012","Belbari","KHATHANSA PG","PG-WT-BEL-013","Belbari","MAITANG AGRI FARMER PG","PG-WT-BEL-014","Belbari","KHUMPUI PG","PG-WT-BEL-018","Belbari","Kwsurang Agri PG","PG-WT-BEL-019","Belbari","HUKBAR AGRI-HORTI PG","PG-WT-BEL-020","Belbari","Salkwchang pg ","PG-WT-BEL-021","Belbari","JORA KAHAM PG","PG-WT-BEL-022","Belbari","KHUNDRUPUI  PG","PG-WT-BEL-023","Belbari","Jhordan Agri PG","PG-WT-BEL-024","Belbari","TANGBAKSA AGRI HORI PG","PG-WT-BEL-026","Belbari","MAMI Agri/Horti PG","PG-WT-BEL-027","Belbari","MAI HAM AGRI PG","PG-WT-BEL-028","Belbari","Mamita PG","PG-WT-BEL-029","Belbari","KWTHAR AGRI PG","PG-WT-BEL-006","Belbari","Bwkhwrwi Agri PG ","PG-WT-BEL-025","Belbari","JOBA AGRI FARMER PG","PG-WT-BEL-015","Belbari","Thaisukang PG ","PG-WT-BEL-016","Belbari","Kwthang PG ","PG-WT-BEL-017","Belbari","SALNI POHOR PG","PG-WT-BEL-030","Belbari","KIYOKHA BODOL PG","PG-WT-BEL-031","Belbari","SICHAKHA BODOL PG","PG-WT-BEL-032","Belbari","YAKHILI Fishery PG","PG-WT-BEL-033","Belbari","SASWLANG PG","PG-WT-BEL-034","Belbari","ATHUKIRI PG","PG-WT-BEL-035","Belbari","ARI PG","PG-WT-BEL-036","Belbari","MAJILATA Fishery PG","PG-WT-BEL-037","Belbari","CHAMPA Fishery PG","PG-WT-BEL-038","Belbari","TEPSA PG","PG-WT-BEL-039","Belbari","TWIMUK BODOL PG","PG-WT-BEL-040","Belbari","PHANBAKSA PG","PG-WT-BEL-041","Belbari","HAMKWRAI BODOL PG","PG-WT-BEL-042","Belbari","LUKUNI HAMARI PG","PG-WT-BEL-043","Belbari","YAPHANG PG","PG-WT-BEL-044","Belbari","JORA NI HAMARI PG","PG-WT-BEL-045","Belbari","TIYARI BODOL PG","PG-WT-BEL-046","Belbari","TWISA Fishery PG","PG-WT-BEL-047","Belbari","PUKHIRI Fishery PG","PG-WT-BEL-049","Belbari","TWIMUK Fishery PG","PG-WT-BEL-050","Belbari","TIYARI BODOL MUD","PG-WT-BEL-051","Belbari","YAKHWRAI PG","PG-WT-BEL-052","Belbari","TWIRUMA PG","PG-WT-BEL-053","Belbari","KHATHANSA  PG","PG-WT-BEL-054","Belbari","Bogol PG","PG-WT-BEL-048","Belbari","SWNAMJAK Goatery PG","PG-WT-BEL-061","Belbari","Koklam PG","PG-WT-BEL-072","Belbari","THANSA PG","PG-WT-BEL-073","Belbari","GUNTHU GOAT FARMER PG","PG-WT-BEL-088","Belbari","Hamchuk PG","PG-WT-BEL-095","Belbari","Tiyari PG","PG-WT-BEL-067","Belbari","Khathansa Piggery pg","PG-WT-BEL-069","Belbari","Yaprikwtal Piggery pg","PG-WT-BEL-071","Belbari","Padha Bubar Piggery","PG-WT-BEL-077","Belbari","Twikwthar Piggery PG","PG-WT-BEL-079","Belbari","YAKHILI PIGGERY PG","PG-WT-BEL-083","Belbari","\nSACHLANG PG","PG-WT-BEL-085","Belbari","GWDALJAK PIGGERY PG","PG-WT-BEL-056","Belbari","KHA BAKSA PG","PG-WT-BEL-057","Belbari","Mwchangjak Piggery PG","PG-WT-BEL-058","Belbari","Tangswkang Piggery PG","PG-WT-BEL-059","Belbari","YAPAI Bodol PG","PG-WT-BEL-060","Belbari","Baithang piggery PG","PG-WT-BEL-062","Belbari","HACHUK Piggery PG","PG-WT-BEL-063","Belbari","Hatal Piggery PG ","PG-WT-BEL-064","Belbari","Hengra PIGGERY PG","PG-WT-BEL-065","Belbari","Langma Piggery PG","PG-WT-BEL-066","Belbari","Thinang piggery pg","PG-WT-BEL-084","Belbari","MASING PG","PG-WT-BEL-068","Belbari","Hamnai PG","PG-WT-BEL-086","Belbari","KWSWRANG PG","PG-WT-BEL-070","Belbari","KHUMTANG PG","PG-WT-BEL-100","Belbari","KHUMALI PIGGARY PG","PG-WT-BEL-074","Belbari","Kokbiti  PG","PG-WT-BEL-076","Belbari","Gwndra Piggery PG","PG-WT-BEL-089","Belbari","THINANGNI HAMKWRAI PG","PG-WT-BEL-078","Belbari","YAPRI HELENG PG","PG-WT-BEL-080","Belbari","HAMKWRAI PG","PG-WT-BEL-081","Belbari","HAPING KUTAL PG","PG-WT-BEL-082","Belbari","Yaluk PG","PG-WT-BEL-055","Belbari","Hamluk PG","PG-WT-BEL-087","Belbari","Mukthang Piggery PG","PG-WT-BEL-091","Belbari","Twiluk pg","PG-WT-BEL-094","Belbari","KHUMPUI PG","PG-WT-BEL-090","Belbari","NWKHUNG HAMARI PG","PG-WT-BEL-092","Belbari","THANGSANAI PG","PG-WT-BEL-093","Belbari","HAMARI PG","PG-WT-BEL-096","Belbari","KOK BAKSA PG","PG-WT-BEL-097","Belbari","Sarinda PG","PG-WT-BEL-075","Belbari","KHUMBER PG","PG-WT-BEL-099","Belbari","Kwtal PG","PG-WT-BEL-098","Belbari","Yakchu PG","PG-WT-BEL-101","Belbari","YAPAI  PG","PG-WT-BEL-102","Belbari","Raisok PG","PG-WT-BEL-103","Mandwi","Baithang PG","PG-WT-MND-001","Mandwi","BAITHANG PG","PG-WT-MND-002","Mandwi","Barjak PG","PG-WT-MND-003","Mandwi","BEDEK PG","PG-WT-MND-004","Mandwi","Bwskng PG","PG-WT-MND-005","Mandwi","DHUMPTI","PG-WT-MND-006","Mandwi","Bwthai PG","PG-WT-MND-007","Mandwi","HAMCHAJAK PG","PG-WT-MND-008","Mandwi","HAMKWRAI PG","PG-WT-MND-009","Mandwi","KAHAM PG","PG-WT-MND-010","Mandwi","Kaisha PG","PG-WT-MND-011","Mandwi","Khatansa PG","PG-WT-MND-012","Mandwi","KHUMPUI PG","PG-WT-MND-013","Mandwi","Khurumpui PG","PG-WT-MND-014","Mandwi","Kiyokha PG","PG-WT-MND-015","Mandwi","KWRAK PG","PG-WT-MND-016","Mandwi","NAITHOK PG","PG-WT-MND-017","Mandwi","PARIJA PG","PG-WT-MND-018","Mandwi","Laimi PG","PG-WT-MND-019","Mandwi","Laisha PG ","PG-WT-MND-020","Mandwi","MADHABI PG","PG-WT-MND-021","Mandwi","Deepjyoti","PG-WT-MND-022","Mandwi","Mamita PG","PG-WT-MND-023","Mandwi","Thansa","PG-WT-MND-024","Mandwi","Mari PG","PG-WT-MND-025","Mandwi","YARWNG PG","PG-WT-MND-026","Mandwi","Naikalnai","PG-WT-MND-027","Mandwi","NAIMA PG","PG-WT-MND-028","Mandwi","Phai Kwtal PG","PG-WT-MND-029","Mandwi","PHANKWRAK PG","PG-WT-MND-030","Mandwi","Hamari PG","PG-WT-MND-031","Mandwi","Sanma PG","PG-WT-MND-032","Mandwi","Sichadi PG","PG-WT-MND-033","Mandwi","Sichajak PG","PG-WT-MND-034","Mandwi","SIYARI PG","PG-WT-MND-035","Mandwi","SWRANG HORTI PG","PG-WT-MND-036","Mandwi","Thansa PG","PG-WT-MND-037","Mandwi","YAKHILI PG","PG-WT-MND-038","Mandwi","Holong PG","PG-WT-MND-039","Mandwi","Kwtar PG","PG-WT-MND-040","Mandwi","Gressful PG","PG-WT-MND-041","Mandwi","Laisa PG","PG-WT-MND-042","Mandwi","Tal PG","PG-WT-MND-043","Mandwi","HAMKURAI PG","PG-WT-MND-044","Mandwi","Twima PG","PG-WT-MND-045","Mandwi","Pilala","PG-WT-MND-046","Mandwi","Pohor PG","PG-WT-MND-047","Mandwi","Wak PG","PG-WT-MND-048","Mandwi","Kumkum PG","PG-WT-MND-049","Mandwi","Ringma PG","PG-WT-MND-050","Mandwi","Bubar PG","PG-WT-MND-051","Mandwi","Hamchanai","PG-WT-MND-052","Mandwi","Yaprikwtal","PG-WT-MND-053","Mandwi","Mukthang","PG-WT-MND-054","Mandwi","RAIMA PG","PG-WT-MND-055","Mandwi","Nokthai PG","PG-WT-MND-056","Mandwi","Manthai PG","PG-WT-MND-057","Mandwi","Bubar PG","PG-WT-MND-058","Mandwi","Thaikwtal PG","PG-WT-MND-059","Mandwi","Tiyari PG","PG-WT-MND-060","Mandwi","Kwbwi","PG-WT-MND-061","Mandwi","Bukhurui","PG-WT-MND-062","Mandwi","KHUMPUI PG","PG-WT-MND-063","Mandwi","Siyari PG","PG-WT-MND-064","Mandwi","Masia PG","PG-WT-MND-065","Mandwi","Kwthar PG","PG-WT-MND-066","Mandwi","Thansa","PG-WT-MND-067","Mandwi","Saima","PG-WT-MND-068","Mandwi","Barjak PG","PG-WT-MND-069","Mandwi","Titli","PG-WT-MND-070","Mandwi","Bubar PG","PG-WT-MND-071","Mandwi","Saidra PG","PG-WT-MND-072","Mandwi","Hachuk PG","PG-WT-MND-073","Mandwi","hatal PG","PG-WT-MND-074","Mandwi","Songchajak PG","PG-WT-MND-075","Mandwi","Bwthai PG","PG-WT-MND-076","Mandwi","Hamchanai PG","PG-WT-MND-077","Mandwi","Chandan PG","PG-WT-MND-078","Mandwi","Khabaksha PG","PG-WT-MND-079","Mandwi","YARWNG PG","PG-WT-MND-080","Mandwi","Nok PG","PG-WT-MND-081","Mandwi","Salka PG","PG-WT-MND-082","Mandwi","Sinai PG","PG-WT-MND-083","Mandwi","Twisha PG","PG-WT-MND-084","Mandwi","Twima PG","PG-WT-MND-085","Mandwi","Rose PG","PG-WT-MND-086","Mandwi","Boyer","PG-WT-MND-087","Mandwi","Khathansa PG","PG-WT-MND-088","Mandwi","Diamond","PG-WT-MND-089","Mandwi","Hengra PG","PG-WT-MND-090","Mandwi","Purna PG","PG-WT-MND-091","Mandwi","Tajmahal","PG-WT-MND-092","Hezamara","POHOR PG","PG-WT-HEZ-001","Hezamara","SWKANG PG","PG-WT-HEZ-002","Hezamara","KATACHERRA PG","PG-WT-HEZ-003","Hezamara","THANSA LAMA PG","PG-WT-HEZ-004","Hezamara","BWSKANG PG","PG-WT-HEZ-005","Hezamara","SARAT CHOWDHURY PG","PG-WT-HEZ-006","Hezamara","KAHAM PG","PG-WT-HEZ-007","Hezamara","MAILYAMURA PG","PG-WT-HEZ-008","Hezamara","KHUMPUI PG","PG-WT-HEZ-009","Hezamara","RAIMA PG","PG-WT-HEZ-010","Hezamara","PIRKHA PG","PG-WT-HEZ-011","Hezamara","KUBUI PG","PG-WT-HEZ-012","Hezamara","SAIMA PG","PG-WT-HEZ-013","Hezamara","MARI PG","PG-WT-HEZ-014","Hezamara","POHAR PG","PG-WT-HEZ-015","Hezamara","DALIYA PG","PG-WT-HEZ-016","Hezamara","LANGMA PG","PG-WT-HEZ-017","Hezamara","MAI PG","PG-WT-HEZ-018","Hezamara","HALOK PG","PG-WT-HEZ-019","Hezamara","MAMITA PG","PG-WT-HEZ-020","Hezamara","SALKA PG","PG-WT-HEZ-021","Hezamara","KHACHUKSA PG","PG-WT-HEZ-022","Hezamara","KHUMBER PG","PG-WT-HEZ-023","Hezamara","BABA GARIA PG","PG-WT-HEZ-024","Hezamara","DUKMALI PG","PG-WT-HEZ-025","Hezamara","BEDEK PG","PG-WT-HEZ-026","Hezamara","THANGSA BUDOL PG","PG-WT-HEZ-027","Hezamara","YAPHANG PG","PG-WT-HEZ-028","Hezamara","HAMKRAI PG ","PG-WT-HEZ-029","Hezamara","CHAMATHWI PG","PG-WT-HEZ-030","Hezamara","ATHUKIRI PG","PG-WT-HEZ-031","Hezamara","KWTAL LAMA PG","PG-WT-HEZ-032","Hezamara","YAPRI BAKSA PG","PG-WT-HEZ-033","Hezamara","NOKHA PG","PG-WT-HEZ-034","Hezamara","SONGCHAMA PG","PG-WT-HEZ-035","Hezamara","MALI PG","PG-WT-HEZ-036","Hezamara","GANTHI PG","PG-WT-HEZ-037","Hezamara","HUGBAR PG","PG-WT-HEZ-038","Hezamara","KHUMULUNG PG","PG-WT-HEZ-039","Hezamara","KHAKUWER PG","PG-WT-HEZ-040","Hezamara","KHUSBO PG","PG-WT-HEZ-041","Hezamara","TWIMUKH PG","PG-WT-HEZ-042","Hezamara","SALKAHAM PG","PG-WT-HEZ-043","Hezamara","ARNAI PG","PG-WT-HEZ-044","Hezamara","BARWI TONGNAI PG ","PG-WT-HEZ-045","Hezamara","BOKHORI PG","PG-WT-HEZ-046","Hezamara","LARIMA PG","PG-WT-HEZ-047","Hezamara","AITORMA PG ","PG-WT-HEZ-048","Hezamara","SALKA PG","PG-WT-HEZ-049","Hezamara","TWIBUMA PG","PG-WT-HEZ-050","Hezamara","THANSA FISHERY PG","PG-WT-HEZ-051","Hezamara","SICHAJAK PG","PG-WT-HEZ-052","Hezamara","SAMPILI AGRI PG","PG-WT-HEZ-053","Hezamara","KHUMPUI PG","PG-WT-HEZ-054","Hezamara","KHAMCHANG PG","PG-WT-HEZ-055","Hezamara","BAHA PG","PG-WT-HEZ-056","Hezamara","KHAMCHANG AGRI PG","PG-WT-HEZ-057","Hezamara","GANGA PG","PG-WT-HEZ-058","Hezamara","SUMILI PG","PG-WT-HEZ-059","Hezamara","MAILUMA PG","PG-WT-HEZ-060","Hezamara","YAKHARAI PG","PG-WT-HEZ-061","Hezamara","AIRNAI PG","PG-WT-HEZ-062","Hezamara","CHUBACHU PG","PG-WT-HEZ-063","Hezamara","KHABAKSA PG","PG-WT-HEZ-064","Hezamara","YAPRI KWTAL PG","PG-WT-HEZ-065","Hezamara","LAMA KOLOK PG","PG-WT-HEZ-066","Hezamara","TWISA PG","PG-WT-HEZ-067","Hezamara","KHA THANCHA PG","PG-WT-HEZ-068","Hezamara","BARSHA PG GROUP","PG-WT-HEZ-069","Hezamara","KHATIJAK PG","PG-WT-HEZ-070","Hezamara","MOSRAI PG","PG-WT-HEZ-071","Hezamara","TIYARI PG","PG-WT-HEZ-072","Hezamara","MWCHANG PG","PG-WT-HEZ-073","Hezamara","BUBAR PG","PG-WT-HEZ-074","Hezamara","YAKHARAI PG","PG-WT-HEZ-075","Hezamara","BWPHANG PG","PG-WT-HEZ-076","Hezamara","TOKTHANCHA PG","PG-WT-HEZ-077","Hezamara","MAITHANG PG","PG-WT-HEZ-078","Hezamara","TANGKWRUMG PG","PG-WT-HEZ-079","Hezamara","HAMCHAJAK PG","PG-WT-HEZ-080","Hezamara","PAITHAK PG","PG-WT-HEZ-081","Hezamara","HAMJAKMA PG","PG-WT-HEZ-082","Hezamara","BOLONG PG","PG-WT-HEZ-083","Hezamara","MILOK PG","PG-WT-HEZ-084","Hezamara","THAIPUNG PG","PG-WT-HEZ-085","Hezamara","HOLONG PG","PG-WT-HEZ-086","Hezamara","LEBANG PG","PG-WT-HEZ-087","Hezamara","AKASH PG","PG-WT-HEZ-088","Hezamara","GULAP PG","PG-WT-HEZ-089","Hezamara","SAMPARI PG","PG-WT-HEZ-090","Hezamara","KHUTRO PG","PG-WT-HEZ-091","Hezamara","LANGA PG","PG-WT-HEZ-092","Hezamara","CHUMUI PG","PG-WT-HEZ-093","Hezamara","NUKHUNG PG","PG-WT-HEZ-094","Lefunga","KWTAL PG","PG-WT-LEF-001","Lefunga","HAMKRAI WOMEN PG","PG-WT-LEF-002","Lefunga","ASHA PG","PG-WT-LEF-003","Lefunga","HUKPHANG PG","PG-WT-LEF-004","Lefunga","BUDUK PG","PG-WT-LEF-005","Lefunga","MOTOM PG ","PG-WT-LEF-006","Lefunga","MUKTHANG  PG","PG-WT-LEF-007","Lefunga","MAILUMA PG","PG-WT-LEF-008","Lefunga","BWSKANG PG","PG-WT-LEF-009","Lefunga","KWSHAKA PG","PG-WT-LEF-010","Lefunga","SALKWTAL AGRI PG","PG-WT-LEF-011","Lefunga","HAKBAR  PG","PG-WT-LEF-012","Lefunga","MUKTHANG AGRI  PG","PG-WT-LEF-013","Lefunga","AGRI SARENDHA PG","PG-WT-LEF-014","Lefunga","KHUMCHAK PG","PG-WT-LEF-015","Lefunga","KHAPANG PG","PG-WT-LEF-016","Lefunga","KHATIJAK PG","PG-WT-LEF-017","Lefunga","HAMKRAI Agri PG","PG-WT-LEF-018","Lefunga","MUKUMU PG","PG-WT-LEF-019","Lefunga","BOSONG Fishery PG","PG-WT-LEF-020","Lefunga","KIYOKMA WOMEN PG","PG-WT-LEF-021","Lefunga","MAITANG WOMEN PG","PG-WT-LEF-022","Lefunga","BERDHAM PG","PG-WT-LEF-023","Lefunga","BOSONG WOMEN PG","PG-WT-LEF-024","Lefunga","THANSA PG","PG-WT-LEF-025","Lefunga","BEDEK WOMEN PG","PG-WT-LEF-026","Lefunga","KHWPANG PG","PG-WT-LEF-027","Lefunga","YAPHANG WOMEN PG","PG-WT-LEF-028","Lefunga","BEREM WOMEN PG","PG-WT-LEF-029","Lefunga","TONGNOK WOMEN PG","PG-WT-LEF-030","Lefunga","KWTAL LAMA WOMEN Goatery PG","PG-WT-LEF-031","Lefunga","KWTHANG PG","PG-WT-LEF-032","Lefunga","THUMJAK PG","PG-WT-LEF-033","Lefunga","YAPHANG  PG","PG-WT-LEF-034","Lefunga","PIRKHA PG","PG-WT-LEF-035","Lefunga","KWTAL Piggery PG","PG-WT-LEF-036","Lefunga","TWNGSA Piggery PG","PG-WT-LEF-037","Lefunga","RUNGKUNG PG","PG-WT-LEF-038","Lefunga","YAKHURAI Piggery PG","PG-WT-LEF-039","Lefunga","MUITU Piggery PG","PG-WT-LEF-040","Lefunga","TIYARI PG","PG-WT-LEF-041","Lefunga","SWARANGJAK PG","PG-WT-LEF-042","Lefunga","MUTUM PG","PG-WT-LEF-043","Lefunga","AICHUK PG","PG-WT-LEF-044","Lefunga","HAMBAI PG","PG-WT-LEF-045","Lefunga","LAISA PG","PG-WT-LEF-046","Lefunga","BARKHA PG","PG-WT-LEF-047","Lefunga","YAKHURAI PG","PG-WT-LEF-048","Lefunga","THANSA PG","PG-WT-LEF-049","Lefunga","SWRANG PG","PG-WT-LEF-050","Lefunga","YAPHANG PG","PG-WT-LEF-051","Lefunga","TWIMUK  PG","PG-WT-LEF-052","Lefunga","MAILUMA Piggery PG","PG-WT-LEF-053","Lefunga","BUBAR AGRI PG","PG-WT-LEF-054","Lefunga","Hamchuk PG","PG-WT-LEF-055","Lefunga","MATHIA PG","PG-WT-LEF-056","Lefunga","KWPLAI PG","PG-WT-LEF-057","Lefunga","NUKHUNG PG","PG-WT-LEF-058","Lefunga","DALIYA  PG","PG-WT-LEF-059","Lefunga","SALPOHOR AGRI PG","PG-WT-LEF-060","Lefunga","HAMCHAJAK PG","PG-WT-LEF-061","Lefunga","SAKALAM PG","PG-WT-LEF-062","Lefunga","KWTHAR PG","PG-WT-LEF-063","Lefunga","HAPANG  AGRI PG","PG-WT-LEF-064","Lefunga","TiYARI FISHERY PG","PG-WT-LEF-065","Lefunga","THAI KWTAL AGRI PG","PG-WT-LEF-066","Lefunga","HAMCHANAI AGRI   PG","PG-WT-LEF-067","Lefunga","TWIMA PG","PG-WT-LEF-068","Lefunga","ATHUKiRI AGRI PG","PG-WT-LEF-069","Lefunga","KHAMPAR PG","PG-WT-LEF-070","Lefunga","PHAN BAKSA AGRI PG","PG-WT-LEF-071","Lefunga","SOMILI PG","PG-WT-LEF-072","Lefunga","HAMARI PG","PG-WT-LEF-073","Lefunga","SANMA PG","PG-WT-LEF-074","Lefunga","HAMJAKMA PG","PG-WT-LEF-075","Lefunga","NAIMANI PG","PG-WT-LEF-076","Lefunga","KHUMALI PG","PG-WT-LEF-077","Lefunga","KHUMBAR PG","PG-WT-LEF-078","Lefunga","BISWAKARMA PG","PG-WT-LEF-079","Lefunga","KOKTHANSA","PG-WT-LEF-080","Lefunga","LAM KAHAM AGRI PG","PG-WT-LEF-081","Lefunga","BRINDABAN AGRI PG","PG-WT-LEF-082","Lefunga","PAHARY AGRI PG","PG-WT-LEF-083","Lefunga","HAMCHANAI AGRI PG","PG-WT-LEF-084","Lefunga","THAI KWTAL AGRI PG","PG-WT-LEF-085","Lefunga","THANSA AGRI PG","PG-WT-LEF-086","Lefunga","BANTA AGRI PG","PG-WT-LEF-087","Lefunga","BWTHAI PG","PG-WT-LEF-088","Lefunga","BUPHANG AGRI PG","PG-WT-LEF-089","Lefunga","TWI AGRI PG","PG-WT-LEF-090","Lefunga","NAITUKMA PG","PG-WT-LEF-091","Lefunga","HAKWTWI AGRI PG","PG-WT-LEF-092","Lefunga","BUCHUK PG","PG-WT-LEF-093","Lefunga","KWSRANG PG","PG-WT-LEF-094","Lefunga","YARWNG AGRI PG","PG-WT-LEF-095","Lefunga","TWIMUKH AGRI PG","PG-WT-LEF-096","Jampuijala","Aitorma PG","PG-SEP-JMP-001","Jampuijala","Khumpui PG","PG-SEP-JMP-002","Jampuijala","Hukbar PG","PG-SEP-JMP-003","Jampuijala"," Yakhili","PG-SEP-JMP-004","Jampuijala","Aitorma PG","PG-SEP-JMP-005","Jampuijala","khumbar PG","PG-SEP-JMP-006","Jampuijala","Hamsajak PG","PG-SEP-JMP-007","Jampuijala","Chamathui PG","PG-SEP-JMP-008","Jampuijala","Hati PG","PG-SEP-JMP-009","Jampuijala","Dingra PG","PG-SEP-JMP-010","Jampuijala","Hengra PG","PG-SEP-JMP-011","Jampuijala","Thangsa PG","PG-SEP-JMP-012","Jampuijala","Rangchak ni Rung PG","PG-SEP-JMP-013","Jampuijala","Lamakwtal PG","PG-SEP-JMP-014","Jampuijala","Hayung PG","PG-SEP-JMP-015","Jampuijala","Thangsa PG","PG-SEP-JMP-016","Jampuijala","Kwrak PG","PG-SEP-JMP-017","Jampuijala","Malaima PG","PG-SEP-JMP-018","Jampuijala","Hamchajak PG","PG-SEP-JMP-019","Jampuijala","Risha PG","PG-SEP-JMP-020","Jampuijala","Hamari PG","PG-SEP-JMP-021","Jampuijala","Kwrak PG","PG-SEP-JMP-022","Jampuijala","Bwskang  PG","PG-SEP-JMP-023","Jampuijala","Welcome PG","PG-SEP-JMP-024","Jampuijala","Thanda PG","PG-SEP-JMP-025","Jampuijala","Khathangsa PG","PG-SEP-JMP-026","Jampuijala","Barsa PG","PG-SEP-JMP-027","Jampuijala","Sakbaksa PG","PG-SEP-JMP-028","Jampuijala","Maitang PG","PG-SEP-JMP-029","Jampuijala","Motom PG","PG-SEP-JMP-030","Jampuijala","Jorakaham PG","PG-SEP-JMP-031","Jampuijala","Gulap PG","PG-SEP-JMP-032","Jampuijala","Bwskang  PG","PG-SEP-JMP-033","Jampuijala","Swarang PG","PG-SEP-JMP-034","Jampuijala","Pal PG","PG-SEP-JMP-035","Jampuijala","Action PG","PG-SEP-JMP-036","Jampuijala","Sinari PG","PG-SEP-JMP-037","Jampuijala","Milijak PG","PG-SEP-JMP-038","Jampuijala","Khathangsa PG","PG-SEP-JMP-039","Jampuijala","Kwrwng  PG","PG-SEP-JMP-040","Jampuijala","Chati PG","PG-SEP-JMP-041","Jampuijala","Twimuk PG","PG-SEP-JMP-042","Jampuijala","Sampari  PG","PG-SEP-JMP-043","Jampuijala","Twibuma PG","PG-SEP-JMP-044","Jampuijala","Hengra PG","PG-SEP-JMP-045","Jampuijala","Khakwchang PG","PG-SEP-JMP-046","Jampuijala","Hamjora  PG","PG-SEP-JMP-047","Jampuijala","Athokiri PG","PG-SEP-JMP-048","Jampuijala","Naithok PG","PG-SEP-JMP-049","Jampuijala","Laisa PG","PG-SEP-JMP-050","Jampuijala","Naithok PG","PG-SEP-JMP-051","Jampuijala","Yarwng PG","PG-SEP-JMP-052","Jampuijala","Mukumu PG","PG-SEP-JMP-053","Jampuijala","Milijak  PG","PG-SEP-JMP-054","Jampuijala","Kaham PG","PG-SEP-JMP-055","Jampuijala","Silver PG","PG-SEP-JMP-056","Jampuijala","Rang Gola PG","PG-SEP-JMP-057","Jampuijala","Naithok PG","PG-SEP-JMP-058","Jampuijala","Mwkhuthung","PG-SEP-JMP-059","Jampuijala","Khabaksa PG","PG-SEP-JMP-060","Jampuijala","Palbaksa PG","PG-SEP-JMP-061","Jampuijala","Naharma PG","PG-SEP-JMP-062","Jampuijala","Hambai  PG","PG-SEP-JMP-063","Jampuijala","Khatijak PG","PG-SEP-JMP-064","Jampuijala","Nahar PG","PG-SEP-JMP-065","Jampuijala","Yakswrang PG","PG-SEP-JMP-066","Jampuijala","PHAIKAHAM PG","PG-SEP-JMP-067","Jampuijala","Thangsaka PG","PG-SEP-JMP-068","Jampuijala","Naikalnai PG","PG-SEP-JMP-069","Jampuijala","Lama PG","PG-SEP-JMP-070","Jampuijala","KOK KAISA PG","PG-SEP-JMP-071","Jampuijala","MWCHANG PG","PG-SEP-JMP-072","Jampuijala","Jorakaham PG","PG-SEP-JMP-073","Jampuijala","PILALA PG","PG-SEP-JMP-074","Jampuijala","KHAK KAISA","PG-SEP-JMP-075","Jampuijala","Swarnalata PG","PG-SEP-JMP-076","Jampuijala","Yaphri PG","PG-SEP-JMP-077","Jampuijala","Aichuk PG","PG-SEP-JMP-078","Jampuijala","Rani PG","PG-SEP-JMP-079","Jampuijala","Twimuk PG","PG-SEP-JMP-080","Jampuijala","Twisa PG","PG-SEP-JMP-081","Jampuijala","Tising PG","PG-SEP-JMP-082","Jampuijala","Thaiswkang PG","PG-SEP-JMP-083","Jampuijala","Jaba PG","PG-SEP-JMP-084","Jampuijala","Salmari PG","PG-SEP-JMP-085","Jampuijala","Hukbar PG","PG-SEP-JMP-086","Jampuijala","Mwthangjak","PG-SEP-JMP-087","Jampuijala","Yak Baithang","PG-SEP-JMP-088","Jampuijala","Naithok","PG-SEP-JMP-089","Jampuijala","Machilwy PG","PG-SEP-JMP-090","Jampuijala","Himswkang PG","PG-SEP-JMP-091","Jampuijala","Kwtal Chati","PG-SEP-JMP-092","Jampuijala","Mulungtha PG","PG-SEP-JMP-093","Jampuijala","KHA KUPHUR","PG-SEP-JMP-094","Jampuijala","Ywrang","PG-SEP-JMP-095","Jampuijala","Sampari  PG","PG-SEP-JMP-096","Jampuijala","Kwsrang PG","PG-SEP-JMP-097","Jampuijala","Rajani Ganda PG","PG-SEP-JMP-098","Jampuijala","Lily PG","PG-SEP-JMP-099","Jampuijala","Dangdu PG","PG-SEP-JMP-100","Jampuijala","Papaya PG","PG-SEP-JMP-101","Jampuijala","Khabaksa PG","PG-SEP-JMP-102","Jampuijala","Rakhi PG","PG-SEP-JMP-103","Jampuijala","Bobar PG","PG-SEP-JMP-104","Jampuijala","GULAB PG","PG-SEP-JMP-105","Jampuijala","YAKHILI PG","PG-SEP-JMP-106","Jampuijala","Holong PG","PG-SEP-JMP-107","Jampuijala","Talha PG","PG-SEP-JMP-108","Jampuijala","CHWGSAJAK","PG-SEP-JMP-109","Jampuijala","JORABAKSA","PG-SEP-JMP-110","Jampuijala","MALIMA PG","PG-SEP-JMP-111","Jampuijala","MALAI PG","PG-SEP-JMP-112","Jampuijala","THANSA PG","PG-SEP-JMP-113","Jampuijala","MATHIA PG","PG-SEP-JMP-114","Jampuijala","GOLAP PG","PG-SEP-JMP-115","Jampuijala","KHUMPUI PG","PG-SEP-JMP-116","Jampuijala","NAITHOK PG","PG-SEP-JMP-117","Jampuijala","Buber PG","PG-SEP-JMP-118","Jampuijala","Risha PG","PG-SEP-JMP-119","Jampuijala","SWARANG PG","PG-SEP-JMP-120","Jampuijala","Maitang PG","PG-SEP-JMP-121","Jampuijala","Manthai PG","PG-SEP-JMP-122","Jampuijala","PHANBAKSA PG","PG-SEP-JMP-123","Jampuijala","YAKBAKSA PG","PG-SEP-JMP-124","Jampuijala","KHATHANGSA PG","PG-SEP-JMP-125","Jampuijala","HAMCHAJAK PG","PG-SEP-JMP-126","Jampuijala","Thinang Ni Pohor PG","PG-SEP-JMP-127","Jampuijala","Yapri PG","PG-SEP-JMP-128","Jampuijala","Naithok PG","PG-SEP-JMP-129","Jampuijala","Khumtoya PG","PG-SEP-JMP-130","Jampuijala","SAMPARI PG","PG-SEP-JMP-131","Jampuijala","TULSI PG","PG-SEP-JMP-132","Jampuijala","GULAP PG","PG-SEP-JMP-133","Jampuijala","KHUM PG","PG-SEP-JMP-134","Jampuijala","YAPHANG PG","PG-SEP-JMP-135","Jampuijala","Hamkrai Bodol PG","PG-SEP-JMP-136","Jampuijala","Phaikaham Bodol PG","PG-SEP-JMP-137","Jampuijala","AIJAK PG","PG-SEP-JMP-138","Jampuijala","YARWNG PG","PG-SEP-JMP-139","Jampuijala"," KAMI PG","PG-SEP-JMP-140","Jampuijala","Barsha PG","PG-SEP-JMP-141","Jampuijala","YAPHANG PG","PG-SEP-JMP-142","Jampuijala","POHAR PG","PG-SEP-JMP-143","Jampuijala","CHWBALAIMUNG PG","PG-SEP-JMP-144","Jampuijala","Pohor PG","PG-SEP-JMP-145","Jampuijala","Adik pg","PG-SEP-JMP-146","Jampuijala","RWGYOI PG","PG-SEP-JMP-147","Jampuijala","POHOR","PG-SEP-JMP-148","Jampuijala","Khani PG","PG-SEP-JMP-149","Jampuijala","YAKHILI PG","PG-SEP-JMP-150","Jampuijala","CHUMUI PG","PG-SEP-JMP-151","Jampuijala","THANSA PG","PG-SEP-JMP-152","Jampuijala","TANGBITI PG","PG-SEP-JMP-153","Jampuijala","YAKHILI PG","PG-SEP-JMP-154","Jampuijala","KWRWK PG","PG-SEP-JMP-155","Jampuijala","KHA KAHAM PG","PG-SEP-JMP-156","Jampuijala","ARDI PG","PG-SEP-JMP-157","Jampuijala","TANG BWTANG PG","PG-SEP-JMP-158","Jampuijala","BWOTHAI PG","PG-SEP-JMP-159","Jampuijala","BWLAI PG","PG-SEP-JMP-160","Jampuijala","Bubar PG","PG-SEP-JMP-161","Jampuijala","Hira PG","PG-SEP-JMP-162","Jampuijala","CHWNGSASA PG","PG-SEP-JMP-163","Jampuijala","THANSA PG","PG-SEP-JMP-164","Jampuijala","PILALA PG","PG-SEP-JMP-165","Jampuijala","LANGMA PG","PG-SEP-JMP-166","Jampuijala","SURJA PG","PG-SEP-JMP-167","Jampuijala","HAMCHAMUNG PG","PG-SEP-JMP-168","Jampuijala","KHAKWTUI","PG-SEP-JMP-169","Jampuijala","YAKHILI BAKSA PG","PG-SEP-JMP-170","Jampuijala","Holong PG","PG-SEP-JMP-171","Jampuijala","KHUMTAYA PG","PG-SEP-JMP-172","Jampuijala","KHUM MALI PG","PG-SEP-JMP-173","Jampuijala","PANTWI PG","PG-SEP-JMP-174","Jampuijala","MAITANG PG","PG-SEP-JMP-175","Jampuijala","Kwsrang PG","PG-SEP-JMP-176","Jampuijala","PANIWI PG","PG-SEP-JMP-177","Jampuijala","BOKHIRI PG","PG-SEP-JMP-178","Jampuijala","HAPING PG","PG-SEP-JMP-179","Jampuijala","AIKNA PG","PG-SEP-JMP-180","Jampuijala","TANGPUI PG","PG-SEP-JMP-181"];
+function pgIdLev(a,b){
+  const m=a.length, n=b.length;
+  const dp = Array.from({length:m+1},(_,i)=>[i].concat(Array(n).fill(0)));
+  for(let j=0;j<=n;j++) dp[0][j]=j;
+  for(let i=1;i<=m;i++) for(let j=1;j<=n;j++) dp[i][j] = a[i-1]===b[j-1] ? dp[i-1][j-1] : 1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]);
+  return dp[m][n];
+}
+function pgIdNorm(s){
+  let t = (s||'').toString().toLowerCase().replace(/[\n\r]/g,' ').replace(/[^a-z0-9]+/g,' ').trim();
+  t = t.replace(/\b(pg|agri|horti|fishery|livestock|piggery|goatery|goatary|farmer|women|group|mud)\b/g,'');
+  return t.replace(/\s+/g,' ').trim();
+}
+const PG_ID_INDEX = (()=>{
+  const byBlock = {};
+  for(let i=0;i<PG_ID_DATA.length;i+=3){
+    const block=PG_ID_DATA[i], pg=PG_ID_DATA[i+1], id=PG_ID_DATA[i+2];
+    (byBlock[block]=byBlock[block]||[]).push({pg, id, norm:pgIdNorm(pg)});
+  }
+  return byBlock;
+})();
+// Manually resolved: these PG names matched more than one equally-close candidate by name alone
+// (either the PG Database has two PGs of that name, or two different PGs were both close matches).
+// Verified by cross-checking VC/CLF between the loan sheet and the PG Database instead of name.
+const PG_ID_OVERRIDES = {
+  'Jampuijala||KHA THANGSA PG': 'PG-SEP-JMP-039',   // VC "Pravapur" matches exactly
+  'Jampuijala||KHABAKSHA PG': 'PG-SEP-JMP-102',      // CLF "Rang Bwtang CLF" matches exactly
+  'Lefunga||HAMKRI WOMEN PG': 'PG-WT-LEF-002',       // CLF "Holong CLF" matches; VC "Uttar/North Debendranagar" is the same place
+  'Lefunga||Thaikwtal PG': 'PG-WT-LEF-066',          // VC "Sipai Para" + CLF "Aichuk CLF" both match exactly
+  'Mandwi||Kaisa': 'PG-WT-MND-011',                  // VC "Kairai" matches exactly (CLF didn't match — likely a merged-cell artifact)
+  'Mandwi||Phaikwtal': 'PG-WT-MND-029',              // VC "Aari" + CLF "Bwrwirok Ni Phan CLF" both match exactly
+};
+const _pgIdCache = {};
+function lookupPgId(block, pg){
+  const cacheKey = block+'||'+pg;
+  if(cacheKey in _pgIdCache) return _pgIdCache[cacheKey];
+  if(PG_ID_OVERRIDES[cacheKey]){ _pgIdCache[cacheKey] = PG_ID_OVERRIDES[cacheKey]; return PG_ID_OVERRIDES[cacheKey]; }
+  const candidates = PG_ID_INDEX[block] || [];
+  const target = pgIdNorm(pg);
+  let result = null;
+  const exact = candidates.filter(c=>c.norm===target);
+  if(exact.length===1){ result = exact[0].id; }
+  else if(exact.length>1){
+    let best=null, bestD=Infinity;
+    exact.forEach(c=>{ const d=pgIdLev((pg||'').toLowerCase(), c.pg.toLowerCase()); if(d<bestD){bestD=d; best=c;} });
+    result = best ? best.id : null;
+  } else if(candidates.length && target){
+    let best=null, bestD=Infinity, second=Infinity;
+    candidates.forEach(c=>{
+      const d = pgIdLev(target, c.norm);
+      if(d<bestD){ second=bestD; bestD=d; best=c; } else if(d<second){ second=d; }
+    });
+    const threshold = Math.max(3, Math.round(target.length*0.3));
+    if(best && bestD<=threshold && bestD<second) result = best.id;
+  }
+  _pgIdCache[cacheKey] = result;
+  return result;
+}
+
+// ===== helpers =====
+function fmtRs(n){ return '₹' + Math.round(n).toLocaleString('en-IN'); }
+function toNum(s){
+  if(s===undefined||s===null) return 0;
+  let str = String(s).replace(/₹/g,'').replace(/,/g,'').replace(/%/g,'').trim();
+  if(str===''||str==='nan'||str==='#VALUE!') return 0;
+  const neg = str.startsWith('-');
+  str = str.replace(/^-/,'');
+  const v = parseFloat(str);
+  if(isNaN(v)) return 0;
+  return neg ? -v : v;
+}
+const MONTHS = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+function parseDMonYYYY(s){
+  if(!s) return null;
+  const m = String(s).trim().match(/^(\d{1,2})-([A-Za-z]{3})-(\d{4})$/);
+  if(!m) return null;
+  const mon = MONTHS[m[2].toLowerCase()];
+  if(mon===undefined) return null;
+  return new Date(parseInt(m[3]), mon, parseInt(m[1]));
+}
+function normPlace(s){
+  if(!s) return '';
+  s = String(s).replace(/\s+/g,' ').trim();
+  s = s.replace(/\w\S*/g, t => t.charAt(0).toUpperCase()+t.substr(1).toLowerCase());
+  s = s.replace(/\bVc\b/g,'VC').replace(/\bClf\b/g,'CLF').replace(/\bPg\b/g,'PG');
+  return s;
+}
+const MORATORIUM_MONTHS = 3;
+function activityAndTenure(tenureStr){
+  if(!tenureStr) return {activity:'Not recorded', tenureMonths:null, totalLoanPeriod:null};
+  const s = String(tenureStr);
+  const parts = s.split('-');
+  const activity = parts.length>1 ? parts.slice(0,-1).join('-').trim() : s.trim();
+  const al = activity.toLowerCase();
+  let totalLoanPeriod = null;
+  if(al.includes('nursery')) totalLoanPeriod = 6;
+  else if(al.includes('polyculture')) totalLoanPeriod = 12;
+  else { const m = s.match(/(\d+)/); totalLoanPeriod = m?parseFloat(m[1]):null; }
+  const tenureMonths = totalLoanPeriod!==null ? totalLoanPeriod - MORATORIUM_MONTHS : null;
+  return {activity, tenureMonths, totalLoanPeriod};
+}
+function ordSuffix(n){ return n===1?'st':n===2?'nd':n===3?'rd':'th'; }
+
+// Fixed column layout shared by all 69 source sheets (verified against a live sample —
+// District, Block, VC, CLF, PG, Date of Formation, Type of PG, Member's Name, ... 15 monthly
+// repayment groups of 3 columns each, then Total paid / LokOS ID / Insurance / Cycles).
+const COL = {
+  district:0, block:1, vc:2, clf:3, pg:4, dof:5, typePg:6, member:7, desig:8, caste:9, fundRecv:10,
+  sanctioned:11, disb1:12, actCash:13, amtCash:14, disb2:15, materials:16, amtKind:17,
+  received:18, utilized:19, pending:20, interest:21, status:22, roi:23, tenure:24,
+  totOutstanding:33, monthStart:43, totalPaid:88, lokos:89, insurance:90, cycles:91
+};
+const EXPECTED_COLS = 92;
+
+function buildMemberRecordsFromSheet(rows, source, rowOffset){
+  // rowOffset: how many header rows to skip before data starts.
+  // gviz (tq?tqx=out:csv) flattens merged headers into 1 row. The "Published to web" CSV
+  // keeps the raw 3-row merged-header grid (title row, sub-header row, blank row) instead —
+  // same 92-column order either way, just a different number of header rows on top.
+  rowOffset = rowOffset || 1;
+  const result = {members:[], dataNoName:[], pending:[], uMismatch:[], orphan:[]};
+  if(!rows || rows.length<=rowOffset) return result;
+  const header = rows[0];
+  if(!header || header.length < EXPECTED_COLS-5){ result.badShape = header?header.length:0; return result; }
+  const allDataRows = rows.slice(rowOffset);
+  // Some sheets (e.g. Jampuijala) leave VC/CLF/PG blank on every row after the first member of a
+  // group — a merged cell in the sheet UI that the CSV export doesn't repeat. Carry the last
+  // non-blank value down so every member still gets tagged with the right PG/VC/CLF.
+  [COL.vc, COL.clf, COL.pg].forEach(idx=>{
+    let last = '';
+    allDataRows.forEach(r=>{
+      if(r[idx] && r[idx].trim()) last = r[idx];
+      else if(last) r[idx] = last;
+    });
+  });
+  const dataRows = allDataRows.filter(r=>r[COL.member] && r[COL.member].trim());
+  allDataRows.forEach((r,i)=>{
+    const nameBlank = !r[COL.member] || !r[COL.member].trim();
+    const hasData = toNum(r[COL.sanctioned])>0 || toNum(r[COL.received])>0;
+    if(nameBlank && hasData) result.dataNoName.push({rowNum:i+rowOffset+1, pg:(r[COL.pg]||'').trim(), district:source.district, block:source.block, category:source.category, source: source.district+' / '+source.block+' / '+source.category});
+  });
+  // Column positions after the fixed block differ between sheets (e.g. Livestock sheets have 29 monthly
+  // repayment groups, others 15), so find them from the header text.
+  const monthCols = [];
+  let totalPaidIdx = COL.totalPaid, lokosIdx = COL.lokos, totalPaidFound = false, lokosFound = false;
+  for(let hr=0; hr<3 && hr<rows.length; hr++){
+    (rows[hr]||[]).forEach((c,i)=>{
+      if(!c) return;
+      const m = c.match(/\((\d+)(?:st|nd|rd|th) month\)/i);
+      if(m && !monthCols.some(x=>x.n===+m[1])) monthCols.push({n:+m[1], dateIdx:i, prinIdx:i+1, intIdx:i+2});
+      if(/total\s+(loan\s+amount\s+paid|repayment(\s+done)?|amount\s+repaid|repaid)/i.test(c)) { totalPaidIdx = i; totalPaidFound = true; }
+      if(/lokos/i.test(c)) { lokosIdx = i; lokosFound = true; }
+    });
+  }
+  // The "total repaid" column always sits immediately before the "PG member LokOS ID" column (CK/CL in the 15-month
+  // sheets, EC/ED in the 29-month Livestock sheets), so if its header was renamed, use that position.
+  if(!totalPaidFound && lokosFound) totalPaidIdx = lokosIdx - 1;
+  monthCols.sort((a,b)=>a.n-b.n);
+  if(!monthCols.length){
+    for(let n=1;n<=15;n++){ const base = COL.monthStart + (n-1)*3; monthCols.push({n, dateIdx: base, prinIdx: base+1, intIdx: base+2}); }
+  }
+  // Repayments recorded against rows that have no disbursed amount (so they are not counted as members).
+  allDataRows.forEach((r,i)=>{
+    const p = toNum(r[totalPaidIdx]);
+    const named = r[COL.member] && r[COL.member].trim();
+    if(p>0 && !(named && toNum(r[COL.received])>0)){
+      result.orphan.push({
+        sheetRow: i+rowOffset+1, member: named ? r[COL.member].trim() : '(no name)', pg:(r[COL.pg]||'').trim(),
+        district: source.district, block:(r[COL.block]||'').trim()||source.block,
+        pgCategory: source.category, subCategory: (r[COL.typePg]||'').replace(/\s+/g,' ').trim() || 'Not recorded',
+        vc: normPlace(r[COL.vc]), clf: normPlace(r[COL.clf]),
+        sanctioned: Math.round(toNum(r[COL.sanctioned])), disbursed: Math.round(toNum(r[COL.received])), paid: Math.round(p)
+      });
+    }
+  });
+  const today = new Date();
+  dataRows.forEach(r=>{
+    const sanctioned = toNum(r[COL.sanctioned]);
+    const received = toNum(r[COL.received]);
+    // Column U ("Pending Loan amount") should equal Sanctioned (L) minus Total utilized loan amount (T).
+    const utilized = toNum(r[COL.utilized]), uSheet = toNum(r[COL.pending]);
+    if(sanctioned>0 && Math.abs(uSheet - (sanctioned - utilized)) > 1){
+      result.uMismatch.push({
+        member: r[COL.member], pg:(r[COL.pg]||'').trim(),
+        district: source.district, block:(r[COL.block]||'').trim()||source.block,
+        pgCategory: source.category, subCategory: (r[COL.typePg]||'').replace(/\s+/g,' ').trim() || 'Not recorded', vc: normPlace(r[COL.vc]), clf: normPlace(r[COL.clf]),
+        sanctioned: Math.round(sanctioned), utilized: Math.round(utilized), expectedU: Math.round(sanctioned - utilized), sheetU: Math.round(uSheet)
+      });
+    }
+    // Sanctioned but not (fully) disbursed: sanctioned minus disbursed (Total amount Received in Kind and Cash).
+    if(sanctioned > received + 1){
+      result.pending.push({
+        member: r[COL.member], pg:(r[COL.pg]||'').trim(),
+        district: source.district, block:(r[COL.block]||'').trim()||source.block,
+        pgCategory: source.category, subCategory: (r[COL.typePg]||'').replace(/\s+/g,' ').trim() || 'Not recorded', vc: normPlace(r[COL.vc]), clf: normPlace(r[COL.clf]),
+        sanctioned: Math.round(sanctioned), disbursed: Math.round(received), pendingAmt: Math.round(sanctioned - received),
+        sheetPending: Math.round(toNum(r[COL.pending])),
+        kind: received>0 ? 'Partly disbursed' : 'Not disbursed',
+        status: r[COL.status]||'', lokosId:(r[lokosIdx]||'').toString().trim()
+      });
+    }
+    if(received<=0) return;
+    const paid = toNum(r[totalPaidIdx]);
+    const outstanding = toNum(r[COL.totOutstanding]);
+    const interestTotal = toNum(r[COL.interest]);
+    const d1 = parseDMonYYYY(r[COL.disb1]), d2 = parseDMonYYYY(r[COL.disb2]);
+    let firstDisb = null;
+    if(d1 && d2) firstDisb = d1<d2?d1:d2; else firstDisb = d1||d2||null;
+    let monthsSince = null;
+    if(firstDisb) monthsSince = Math.round(((today - firstDisb)/86400000/30.44)*10)/10;
+    const {activity, tenureMonths, totalLoanPeriod} = activityAndTenure(r[COL.tenure]);
+    const totalToRepay = received + interestTotal;
+    const emi = (tenureMonths && tenureMonths>0) ? (totalToRepay/tenureMonths) : null;
+    let repaymentsMade = 0, lastRepaymentDate = null;
+    const schedule = monthCols.map(mc=>{
+      const dRaw = r[mc.dateIdx], d = parseDMonYYYY(dRaw);
+      const prin = toNum(r[mc.prinIdx]), interest = toNum(r[mc.intIdx]);
+      const paidAmt = prin + interest;
+      if(d || paidAmt>0){ repaymentsMade++; }
+      if(d && (!lastRepaymentDate || d>lastRepaymentDate)) lastRepaymentDate=d;
+      let due = null;
+      if(totalLoanPeriod!=null && tenureMonths){
+        if(mc.n<=MORATORIUM_MONTHS) due = 0;
+        else if(mc.n<=totalLoanPeriod) due = emi?Math.round(emi*100)/100:0;
+        else due = 0;
+      }
+      return { month: mc.n, dueAmount: due, paidAmount: Math.round(paidAmt*100)/100, paidDate: d?d.toISOString().slice(0,10):null };
+    });
+    const startedRepayment = repaymentsMade > 0;
+    const zeroRepayments = repaymentsMade === 0;
+    const missedMoratorium = monthsSince!==null && monthsSince>=MORATORIUM_MONTHS && zeroRepayments;
+    let cumulativeExpected = null, shortfall = null;
+    if(emi!==null && monthsSince!==null){
+      const monthsElapsedInWindow = Math.max(Math.min(monthsSince-MORATORIUM_MONTHS, tenureMonths), 0);
+      cumulativeExpected = Math.round(emi*monthsElapsedInWindow);
+      shortfall = Math.max(cumulativeExpected - paid, 0);
+    }
+    const isCompleted = received>0 && paid>=received;
+    const isDefaulter = !isCompleted && (missedMoratorium || (shortfall!==null && shortfall>1));
+    const lokosId = (r[lokosIdx]||'').toString().trim();
+    result.members.push({
+      member: r[COL.member], pg: (r[COL.pg]||'').trim(),
+      district: source.district,
+      block: (r[COL.block]||'').trim() || source.block,
+      pgCategory: source.category,
+      subCategory: (r[COL.typePg]||'').replace(/\s+/g,' ').trim() || 'Not recorded',
+      vc: normPlace(r[COL.vc]), clf: normPlace(r[COL.clf]),
+      designation: r[COL.desig]||'', activity, tenureMonths, totalLoanPeriod, moratoriumMonths: MORATORIUM_MONTHS,
+      sanctioned: Math.round(sanctioned), received: Math.round(received),
+      paid: Math.round(paid), outstanding: Math.round(outstanding),
+      totalToRepay: Math.round(totalToRepay), emi: emi?Math.round(emi):null,
+      monthsSince, repaymentsMade, lastRepaymentDate: lastRepaymentDate?lastRepaymentDate.toISOString().slice(0,10):null,
+      cumulativeExpected, shortfall,
+      startedRepayment, zeroRepayments, missedMoratorium, isCompleted, isDefaulter, lokosId,
+      status: r[COL.status]||'Not started',
+      schedule, sourceKey: source.key,
+    });
+  });
+  return result;
+}
+
+function aggregate(members, dataNoName, pending, uMismatch, orphan){
+  const pgKey = m => m.pg+'||'+m.district+'||'+m.block+'||'+m.vc;
+  const pgAgg = {};
+  members.forEach(m=>{
+    const k = pgKey(m);
+    if(!pgAgg[k]) pgAgg[k]={pg:m.pg,district:m.district,block:m.block,category:m.pgCategory,vc:m.vc,clf:m.clf,members:0,sanctioned:0,received:0,paid:0,outstanding:0,
+      totalToRepay:0,startedCount:0,zeroCount:0,missedMoratoriumCount:0,defaulters:0,completedCount:0};
+    const a=pgAgg[k];
+    a.members++; a.sanctioned+=m.sanctioned; a.received+=m.received; a.paid+=m.paid; a.outstanding+=m.outstanding;
+    a.totalToRepay+=m.totalToRepay;
+    if(m.startedRepayment) a.startedCount++;
+    if(m.zeroRepayments) a.zeroCount++;
+    if(m.missedMoratorium) a.missedMoratoriumCount++;
+    if(m.isDefaulter) a.defaulters++;
+    if(m.isCompleted) a.completedCount++;
+  });
+  const pgs = Object.values(pgAgg).map(p=>({...p, pgStartedRepayment: p.startedCount>0, repaymentGap: Math.max(p.totalToRepay-p.paid,0)}));
+
+  function groupAgg(keyFn){
+    const g = {};
+    members.forEach(m=>{
+      const k = keyFn(m);
+      if(!g[k]) g[k]={key:k,members:0,received:0,paid:0,totalToRepay:0,defaulters:0,completedCount:0,blocks:new Set()};
+      g[k].members++; g[k].received+=m.received; g[k].paid+=m.paid; g[k].totalToRepay+=m.totalToRepay;
+      if(m.isDefaulter) g[k].defaulters++;
+      if(m.isCompleted) g[k].completedCount++;
+      g[k].blocks.add(m.block);
+    });
+    return g;
+  }
+  const districtAgg = groupAgg(m=>m.district);
+  const districts = Object.values(districtAgg).map(d=>({district:d.key, blocks:d.blocks.size, members:d.members, received:d.received, paid:d.paid, totalToRepay:d.totalToRepay, defaulters:d.defaulters, completedCount:d.completedCount}));
+  const blockAgg = groupAgg(m=>m.district+'||'+m.block);
+  const blocks = Object.values(blockAgg).map(b=>{ const [district,block]=b.key.split('||'); return {district, block, members:b.members, received:b.received, paid:b.paid, totalToRepay:b.totalToRepay, defaulters:b.defaulters, completedCount:b.completedCount}; });
+  const categoryAgg = groupAgg(m=>m.pgCategory);
+  const categories = Object.values(categoryAgg).map(c=>({category:c.key, members:c.members, received:c.received, paid:c.paid, totalToRepay:c.totalToRepay, defaulters:c.defaulters, completedCount:c.completedCount}));
+
+  const totals = {
+    pgCount: pgs.length, memberCount: members.length,
+    sanctioned: members.reduce((s,m)=>s+m.sanctioned,0), received: members.reduce((s,m)=>s+m.received,0),
+    paid: members.reduce((s,m)=>s+m.paid,0), outstanding: members.reduce((s,m)=>s+m.outstanding,0),
+    totalToRepay: members.reduce((s,m)=>s+m.totalToRepay,0),
+    repaymentGap: members.reduce((s,m)=>s+Math.max(m.totalToRepay-m.paid,0),0),
+    startedRepayment: members.filter(m=>m.startedRepayment).length,
+    zeroRepayments: members.filter(m=>m.zeroRepayments).length,
+    missedMoratorium: members.filter(m=>m.missedMoratorium).length,
+    defaulters: members.filter(m=>m.isDefaulter).length,
+    completed: members.filter(m=>m.isCompleted).length,
+    pgsStartedRepayment: pgs.filter(p=>p.pgStartedRepayment).length,
+    activityUnknownCount: members.filter(m=>m.activity==='Not recorded').length,
+  };
+  const now = new Date();
+  const tenureRef = [
+    {activity:'Nursery', moratorium:3, tenure:3, total:6},
+    {activity:'Polyculture', moratorium:3, tenure:9, total:12},
+    {activity:'Polyculture with high value', moratorium:3, tenure:9, total:12},
+  ];
+  const anomalies = {
+    zeroUpdate: members.filter(m=>m.repaymentsMade===0).map(m=>({member:m.member, pg:m.pg, district:m.district, block:m.block, category:m.pgCategory})),
+    dateNoAmount: [].concat(...members.map(m=>(m.schedule||[]).filter(s=>s.paidDate && s.paidAmount===0).map(s=>({member:m.member, pg:m.pg, month:s.month, date:s.paidDate})))),
+    receivedOverSanctioned: members.filter(m=>m.received > m.sanctioned+1).map(m=>({member:m.member, pg:m.pg, sanctioned:m.sanctioned, received:m.received})),
+    earlyRepayment: members.filter(m=>m.isCompleted && m.totalLoanPeriod!=null && m.monthsSince!=null && m.monthsSince < m.totalLoanPeriod).map(m=>({member:m.member, pg:m.pg, monthsSince:m.monthsSince, totalPeriod:m.totalLoanPeriod})),
+    dataNoName: dataNoName,
+    noLokosId: members.filter(m=>!m.lokosId).map(m=>({member:m.member, pg:m.pg})),
+  };
+  return { generatedAt: now.toISOString().slice(0,16).replace('T',' '), totals, pgs, members, pending: pending||[], uMismatch: uMismatch||[], orphanRepay: orphan||[], tenureRef, anomalies, districts, blocks, categories };
+}
+
+// ===== sync engine =====
+// Once a source spreadsheet is "Published to web" (File > Share > Publish to web > Entire
+// document > CSV), add its publish ID here (the "2PACX-1v..." string from the resulting URL,
+// docs.google.com/spreadsheets/d/e/{PUBLISH_ID}/pub?...). One publish ID per spreadsheet file
+// covers every gid tab in that file. Sources whose sheetId isn't listed here fall back to
+// fetching the regular (unpublished) sheet through a CORS proxy, which is unreliable for large
+// sheets — publishing is the fix.
+const PUB_MAP = {
+  '1rbXpO60pkShOfPc8ZurOvqjYdX2FO4XgMTtbLjbOHIA': '2PACX-1vQ0CjclXQZHgXzNJr67hRbRgePtra7VdQWU9o08S4LIaK1tUbAKKr08bmi0EbXCkxcHq8R2mmNpYHjW',   // West/Belbari
+  '1ZzM4S7DZ76RKET-DPRW9h81G_Gr3gQUNsBrJECjMDeE': '2PACX-1vSMrA11UvOKxZgaBR-SSwA7ghUIA-Lm2dHJuNmmC2JStrS4nc3qJJpPrhSjreMrsjVI3axZAG2hoPVT',   // West/Mandwi
+  '1--7tSBONoWQJk5FyBSwheQZFws5GXV61Y47jVYbzZy0': '2PACX-1vSQotFY5YjaW9c4yvr_pAe4t3Z2eokuB3bz_Csyv5KqlxxN0egLVlS_l1EdIWHgKKjZh0szZsVNnqyG',   // West/Hezamara, West/Lefunga
+  '1QDH3twowf05-acmhlWfeIpZOlmLcAt0KbLl-0EUn_q0': '2PACX-1vTdQ_ddbqxmO5nQOChdSHmUzCOExkdYIVAg_UPuT7-0UF6U0_kA0NwPWsrDpwrnM2bhlzxwLTRAvW5i',   // West/Lefunga, West/Hezamara
+  '1EaGuUg10GZDWIbEaah4oIE90RGzCPFfGssROuVqN3C0': '2PACX-1vSY8txDqurtsL_0PHXrcOcgBqME2mftlSVqz4HMJ4actC8EdR3KftZgzfCSEHYQJPRAKArsUl7GpHCN',   // West/Jampuijala, Dhalai/Chawmanu
+};
+function gvizUrl(sheetId,gid){ return `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&gid=${gid}`; }
+function pubUrl(pubId,gid){ return `https://docs.google.com/spreadsheets/d/e/${pubId}/pub?gid=${gid}&single=true&output=csv`; }
+async function fetchCsvForSource(src){
+  const attempts = [];
+  const pubId = PUB_MAP[src.sheetId];
+  if(pubId){
+    attempts.push({ name: 'published', url: pubUrl(pubId, src.gid) });
+  }
+  if(!pubId) throw new Error('Not published to web yet — add its publish link to PUB_MAP');
+  const target = gvizUrl(src.sheetId, src.gid);
+  attempts.push(
+    { name: 'direct', url: target },
+    { name: 'allorigins', url: 'https://api.allorigins.win/raw?url=' + encodeURIComponent(target) },
+    { name: 'codetabs', url: 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(target) },
+  );
+  let lastErr = null;
+  for(const attempt of attempts){
+    try {
+      const controller = new AbortController();
+      const timeoutMs = attempt.name==='published' ? 20000 : 9000;
+      const timer = setTimeout(()=>controller.abort(), timeoutMs);
+      let resp;
+      try {
+        resp = await fetch(attempt.url, {cache:'no-store', signal: controller.signal});
+      } finally {
+        clearTimeout(timer);
+      }
+      if(!resp.ok) throw new Error('HTTP '+resp.status+' via '+attempt.name);
+      const text = await resp.text();
+      if(!text || text.length < 20) throw new Error('Empty/short response via '+attempt.name);
+      return { text, via: attempt.name };
+    } catch(e) { lastErr = e; continue; }
+  }
+  throw lastErr || new Error('All fetch attempts failed');
+}
+
+async function runPool(items, limit, worker){
+  let idx = 0, active = 0, completed = 0;
+  return new Promise(resolve=>{
+    function launch(){
+      if(idx>=items.length && active===0){ resolve(); return; }
+      while(active<limit && idx<items.length){
+        const item = items[idx++];
+        active++;
+        worker(item).finally(()=>{
+          active--; completed++;
+          updateSyncProgress(completed, items.length);
+          launch();
+        });
+      }
+    }
+    launch();
+  });
+}
+
+function updateSyncProgress(done, total){
+  const box = document.getElementById('syncProgressBox');
+  box.style.display = 'block';
+  document.getElementById('syncProgressText').textContent = `Syncing sources… ${done} / ${total}`;
+  document.getElementById('syncProgressBar').style.width = Math.round(done/total*100)+'%';
+  setBadge('stale', `● Syncing ${done}/${total} sources…`);
+}
+
+let sourceStatus = {};
+let DATA = { generatedAt:'—', totals:{pgCount:0,memberCount:0,sanctioned:0,received:0,paid:0,outstanding:0,totalToRepay:0,repaymentGap:0,startedRepayment:0,zeroRepayments:0,missedMoratorium:0,defaulters:0,completed:0,pgsStartedRepayment:0,activityUnknownCount:0}, pgs:[], members:[], tenureRef:[], anomalies:{}, districts:[], blocks:[], categories:[] };
+let syncing = false;
+
+async function syncAll(manual){
+  if(syncing) return;
+  syncing = true;
+  const btn = document.getElementById('refreshBtn');
+  const originalBtn = btn.textContent;
+  btn.textContent = '⟳ Syncing…'; btn.disabled = true;
+  document.getElementById('syncProgressBox').style.display = 'block';
+  updateSyncProgress(0, SOURCES.length);
+
+  let allMembers = [], allDataNoName = [], allPending = [], allUMismatch = [], allOrphan = [], ok=0, fail=0;
+  await runPool(SOURCES, 6, async(src)=>{
+    try{
+      const { text, via } = await fetchCsvForSource(src);
+      const parsed = Papa.parse(text, {skipEmptyLines:false});
+      const rowOffset = via==='published' ? 3 : 1;
+      const { members, dataNoName, pending, uMismatch, orphan, badShape } = buildMemberRecordsFromSheet(parsed.data, src, rowOffset);
+      if(badShape){
+        sourceStatus[src.key] = {ok:false, rows:0, via, error:`Unexpected column count (${badShape}) — sheet layout may have changed`, district:src.district, block:src.block, category:src.category, syncedAt:new Date().toISOString()};
+        fail++; return;
+      }
+      allMembers = allMembers.concat(members);
+      allDataNoName = allDataNoName.concat(dataNoName);
+      allPending = allPending.concat(pending||[]);
+      allUMismatch = allUMismatch.concat(uMismatch||[]);
+      allOrphan = allOrphan.concat(orphan||[]);
+      sourceStatus[src.key] = {ok:true, rows:members.length, via, error:null, district:src.district, block:src.block, category:src.category, syncedAt:new Date().toISOString()};
+      ok++;
+    } catch(e){
+      sourceStatus[src.key] = {ok:false, rows:0, via:null, error:e.message, district:src.district, block:src.block, category:src.category, syncedAt:new Date().toISOString()};
+      fail++;
+    }
+  });
+
+  const newData = aggregate(allMembers, allDataNoName, allPending, allUMismatch, allOrphan);
+  applyNewData(newData, ok, fail);
+  if(location.protocol.indexOf('http')===0 && ok>0){
+    fetch('/save-snapshot', {method:'POST', body: JSON.stringify({data:newData, sourceStatus, savedAt:new Date().toISOString()})}).catch(()=>{});
+  }
+
+  document.getElementById('syncProgressBox').style.display = 'none';
+  btn.textContent = originalBtn; btn.disabled = false;
+  syncing = false;
+  renderSyncStatus();
+}
+
+function applyNewData(newData, ok, fail){
+  let diffs = [];
+  if(DATA.totals && DATA.totals.memberCount!==undefined && DATA.totals.memberCount>0){
+    const old = DATA.totals;
+    const d = newData.totals.defaulters - old.defaulters;
+    const zr = newData.totals.zeroRepayments - old.zeroRepayments;
+    const mm = newData.totals.missedMoratorium - old.missedMoratorium;
+    const p = newData.totals.paid - old.paid;
+    const s = newData.totals.sanctioned - old.sanctioned;
+    const mc = newData.totals.memberCount - old.memberCount;
+    const st = (newData.totals.startedRepayment||0) - (old.startedRepayment||0);
+    const cp = (newData.totals.completed||0) - (old.completed||0);
+    if(cp!==0) diffs.push(`completed loans ${cp>0?'up':'down'} by ${Math.abs(cp)}`);
+    if(d!==0) diffs.push(`defaulting members ${d>0?'up':'down'} by ${Math.abs(d)}`);
+    if(mm!==0) diffs.push(`missed-moratorium members ${mm>0?'up':'down'} by ${Math.abs(mm)}`);
+    if(zr!==0) diffs.push(`never-repaid members ${zr>0?'up':'down'} by ${Math.abs(zr)}`);
+    if(st!==0) diffs.push(`members who started repaying ${st>0?'up':'down'} by ${Math.abs(st)}`);
+    if(p!==0) diffs.push(`total repaid changed by ${fmtRs(Math.abs(p))}`);
+    if(s!==0) diffs.push(`total sanctioned ${s>0?'up':'down'} by ${fmtRs(Math.abs(s))}`);
+    if(mc!==0) diffs.push(`${Math.abs(mc)} member(s) ${mc>0?'newly appeared':'removed'} in the combined list`);
+  }
+
+  DATA = newData;
+  document.getElementById('asofTop').textContent = newData.generatedAt;
+
+  rebuildDistrictBlocks(newData.members);
+  populateDistrictBlock();
+  const clfVals = uniqueSorted(newData.members.map(m=>m.clf));
+  const vcVals = uniqueSorted(newData.members.map(m=>m.vc));
+  const pgVals = uniqueSorted(newData.members.map(m=>m.pg));
+  populateActivityOptions();
+  ['fClf','fVc','fPg'].forEach(id=>{ document.getElementById(id).innerHTML=''; });
+  const clfSel=document.getElementById('fClf'); clfSel.appendChild(new Option('All CLFs',''));
+  clfVals.forEach(v=>clfSel.appendChild(new Option(v,v)));
+  const vcSel=document.getElementById('fVc'); vcSel.appendChild(new Option('All VCs',''));
+  vcVals.forEach(v=>vcSel.appendChild(new Option(v,v)));
+  const pgSel=document.getElementById('fPg'); pgSel.appendChild(new Option('All PGs',''));
+  pgVals.forEach(v=>pgSel.appendChild(new Option(v,v)));
+  document.getElementById('dq-clf').textContent = clfVals.length;
+  document.getElementById('dq-vc').textContent = vcVals.length;
+  document.getElementById('dq-activity').textContent = newData.totals.activityUnknownCount||0;
+
+  const pgUnmatchedMap = {};
+  newData.members.forEach(m=>{
+    const key = m.block+'||'+m.pg;
+    if(!lookupPgId(m.block, m.pg)){
+      if(!pgUnmatchedMap[key]) pgUnmatchedMap[key] = {block:m.block, pg:m.pg, members:0};
+      pgUnmatchedMap[key].members++;
+    }
+  });
+  window._pgIdUnmatched = Object.values(pgUnmatchedMap).sort((a,b)=> a.block===b.block ? a.pg.localeCompare(b.pg) : a.block.localeCompare(b.block));
+  document.getElementById('cnt-pgidunmatched').textContent = `(${window._pgIdUnmatched.length})`;
+  document.getElementById('dq-pgidunmatched').innerHTML = window._pgIdUnmatched.map(r=>`<tr><td>${r.block}</td><td>${r.pg}</td><td style="text-align:right">${r.members}</td></tr>`).join('');
+
+  const banner = document.getElementById('changeBanner');
+  if(diffs.length){
+    banner.style.display='block';
+    banner.textContent = 'Since last sync: ' + diffs.join(', ') + '.';
+  } else if(location.protocol!=='file:') { banner.style.display='none'; }
+
+  if(fail===0 && ok>0) setBadge('live', `● Live — ${ok}/${SOURCES.length} sources synced`);
+  else if(ok>0) setBadge('error', `● ${ok}/${SOURCES.length} synced, ${fail} failed — see Sync Status`);
+  else setBadge('error', `● Sync failed for all sources — see Sync Status`);
+
+  render();
+}
+
+function setBadge(state, text){
+  const b = document.getElementById('liveBadge');
+  b.className = 'badge ' + (state==='live'?'badge-live':state==='stale'?'badge-stale':'badge-error');
+  b.textContent = text;
+}
+
+// ===== Navigation =====
+document.querySelectorAll('.nav-item').forEach(item=>{
+  item.addEventListener('click', ()=>{
+    document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    item.classList.add('active');
+    const page = item.dataset.page;
+    document.getElementById('page-'+page).classList.add('active');
+    document.getElementById('pageTitle').textContent = item.textContent.trim().replace(/^\S+\s/, '');
+  });
+});
+
+function uniqueSorted(arr){ return [...new Set(arr)].sort(); }
+function populateSelect(id, values){
+  const sel = document.getElementById(id);
+  values.forEach(v=>{ const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); });
+}
+function rebuildDistrictBlocks(members){
+  // DISTRICT_BLOCKS starts out built from the hardcoded SOURCES list (one entry per DPMU zone),
+  // which can't reflect a block whose sheet records a different real district (e.g. Jampuijala's
+  // sheet says "Sepaijala" even though it's fetched as part of the West DPMU zone). Rebuild it from
+  // the actual synced data so every real district value shows up as its own filter option.
+  Object.keys(DISTRICT_BLOCKS).forEach(k=>delete DISTRICT_BLOCKS[k]);
+  members.forEach(m=>{
+    if(!DISTRICT_BLOCKS[m.district]) DISTRICT_BLOCKS[m.district] = new Set();
+    DISTRICT_BLOCKS[m.district].add(m.block);
+  });
+}
+function populateDistrictBlock(){
+  const dSel = document.getElementById('fDistrict');
+  const curD = dSel.value;
+  dSel.innerHTML = '<option value="">All Districts</option>';
+  populateSelect('fDistrict', Object.keys(DISTRICT_BLOCKS).sort());
+  dSel.value = curD;
+  populateBlockOptions();
+}
+function populateBlockOptions(){
+  const d = document.getElementById('fDistrict').value;
+  const bSel = document.getElementById('fBlock');
+  const curB = bSel.value;
+  bSel.innerHTML = '<option value="">All Blocks</option>';
+  const blocks = d ? [...DISTRICT_BLOCKS[d]].sort() : [...new Set(SOURCES.map(s=>s.block))].sort();
+  populateSelect('fBlock', blocks);
+  bSel.value = blocks.includes(curB) ? curB : '';
+}
+document.getElementById('fDistrict').addEventListener('change', ()=>{ populateBlockOptions(); render(); });
+populateDistrictBlock();
+
+let charts = {};
+function destroyCharts(){ Object.values(charts).forEach(c=>c&&c.destroy()); charts={}; }
+
+function memberStatus(m){
+  if(m.isCompleted) return 'Completed';
+  if(m.isDefaulter) return 'Defaulting';
+  if(m.zeroRepayments) return 'Not started yet';
+  return 'On track';
+}
+function defaultReason(m){
+  const reasons = [];
+  if(m.missedMoratorium) reasons.push('Missed moratorium (3mo, zero repayments)');
+  if(m.shortfall>1 && !m.missedMoratorium) reasons.push(`Behind by ${fmtRs(m.shortfall)} vs. amount due to date`);
+  return reasons.join('; ') || '-';
+}
+function statusPill(st){
+  const cls = st==='Completed'?'pill-blue':st==='Defaulting'?'pill-red':st==='Not started yet'?'pill-amber':'pill-green';
+  return `<span class="pill ${cls}">${st}</span>`;
+}
+function shortfallIcon(m){
+  if(m.isCompleted) return '';
+  if(m.shortfall==null) return '';
+  const isBehind = m.shortfall > 1;
+  const cls = isBehind ? 'info-icon warn' : 'info-icon';
+  const label = isBehind ? '!' : 'i';
+  return `<span class="info-icon-wrap"><span class="${cls}">${label}</span><span class="info-tooltip">
+    Paid to date: <b>${fmtRs(m.paid)}</b><br>
+    Due to date: <b>${fmtRs(m.cumulativeExpected||0)}</b><br>
+    ${isBehind ? 'Behind by <b>'+fmtRs(m.shortfall)+'</b>' : 'Caught up — no shortfall'}
+    </span></span>`;
+}
+
+const CATEGORY_ORDER = ['Agri-Horti','Fishery','Livestock'];
+// Activity dropdown is grouped under the three categories: value = "Category||Activity".
+function populateActivityOptions(){
+  const sel = document.getElementById('fActivity'), cur = sel.value;
+  const catFilter = document.getElementById('fCategory').value;
+  const counts = {};
+  DATA.members.forEach(m=>{ const k=m.pgCategory+'||'+m.subCategory; counts[k]=(counts[k]||0)+1; });
+  sel.innerHTML = '';
+  sel.appendChild(new Option(catFilter ? 'All '+catFilter+' sub-categories' : 'All Sub-categories', ''));
+  CATEGORY_ORDER.filter(c=>!catFilter || c===catFilter).forEach(c=>{
+    const acts = Object.keys(counts).filter(k=>k.startsWith(c+'||')).map(k=>k.slice(c.length+2)).sort();
+    if(!acts.length) return;
+    const g = document.createElement('optgroup'); g.label = c;
+    acts.forEach(a=>g.appendChild(new Option(a+' ('+counts[c+'||'+a]+')', c+'||'+a)));
+    sel.appendChild(g);
+  });
+  sel.value = [...sel.options].some(o=>o.value===cur) ? cur : '';
+}
+function getFiltered(){
+  const district=document.getElementById('fDistrict').value, block=document.getElementById('fBlock').value,
+        category=document.getElementById('fCategory').value, activity=document.getElementById('fActivity').value,
+        clf=document.getElementById('fClf').value, vc=document.getElementById('fVc').value,
+        pg=document.getElementById('fPg').value, status=document.getElementById('fStatus').value;
+  return DATA.members.filter(m=>{
+    if(district && m.district!==district) return false;
+    if(block && m.block!==block) return false;
+    if(category && m.pgCategory!==category) return false;
+    if(activity){ const i = activity.indexOf('||'); if(m.pgCategory!==activity.slice(0,i) || m.subCategory!==activity.slice(i+2)) return false; }
+    if(clf && m.clf!==clf) return false;
+    if(vc && m.vc!==vc) return false;
+    if(pg && m.pg!==pg) return false;
+    if(status==='defaulter' && !m.isDefaulter) return false;
+    if(status==='nonstarter' && !m.zeroRepayments) return false;
+    if(status==='completed' && !m.isCompleted) return false;
+    if(status==='ontrack' && (m.isDefaulter||m.zeroRepayments||m.isCompleted)) return false;
+    return true;
+  });
+}
+
+let sortState = {pg:{key:null,dir:1}, members:{key:null,dir:1}, defaulters:{key:null,dir:1}, district:{key:null,dir:1}, block:{key:null,dir:1}, category:{key:null,dir:1}};
+let memPage = 0, memPageSize = 25;
+
+function sortRows(rows, key, dir){
+  return [...rows].sort((a,b)=>{
+    let av=a[key], bv=b[key];
+    if(typeof av==='boolean') { av=av?1:0; bv=bv?1:0; return dir*(av-bv); }
+    if(typeof av==='string') return dir*av.localeCompare(bv);
+    return dir*((av||0)-(bv||0));
+  });
+}
+
+function render(){
+  const filtered = getFiltered();
+  const pgSet = new Set(filtered.map(m=>m.pg+'||'+m.district+'||'+m.block+'||'+m.vc));
+  document.getElementById('filterCount').textContent = filtered.length;
+  document.getElementById('filterTotal').textContent = DATA.members.length;
+
+  const received = filtered.reduce((s,m)=>s+m.received,0);
+  const paid = filtered.reduce((s,m)=>s+m.paid,0);
+  const totalToRepay = filtered.reduce((s,m)=>s+m.totalToRepay,0);
+  const repaymentGap = filtered.reduce((s,m)=>s+Math.max(m.totalToRepay-m.paid,0),0);
+  const started = filtered.filter(m=>m.startedRepayment).length;
+  const zeroRepay = filtered.filter(m=>m.zeroRepayments).length;
+  const missedMoratorium = filtered.filter(m=>m.missedMoratorium).length;
+  const defaulters = filtered.filter(m=>m.isDefaulter).length;
+  const completed = filtered.filter(m=>m.isCompleted).length;
+  const zeroNotDefaulting = filtered.filter(m=>m.zeroRepayments && !m.isDefaulter && !m.isCompleted).length;
+  const onTrack = filtered.length - defaulters - completed - zeroNotDefaulting;
+
+  const pgsInView = new Set(filtered.map(m=>m.pg+'||'+m.district+'||'+m.block+'||'+m.vc));
+  const pgStartedInView = new Set(filtered.filter(m=>m.startedRepayment).map(m=>m.pg+'||'+m.district+'||'+m.block+'||'+m.vc));
+
+  document.getElementById('k-mem').textContent = filtered.length;
+  document.getElementById('k-pg').textContent = pgSet.size;
+  document.getElementById('k-pgstarted').textContent = pgStartedInView.size + ' / ' + pgsInView.size;
+  document.getElementById('k-memstarted').textContent = started + ' / ' + filtered.length;
+  document.getElementById('k-recv').textContent = fmtRs(received);
+  const orphanRows = getPendingFiltered(DATA.orphanRepay);
+  const orphanPaid = orphanRows.reduce((s,m)=>s+m.paid,0);
+  document.getElementById('k-paid').textContent = fmtRs(paid + orphanPaid);
+  document.getElementById('k-paid-note').textContent = orphanRows.length
+    ? `Includes ${fmtRs(orphanPaid)} repaid on ${orphanRows.length} row(s) with no disbursed amount (see Anomalies)` : '';
+  document.getElementById('k-torepay').textContent = fmtRs(totalToRepay);
+  document.getElementById('k-gap').textContent = fmtRs(repaymentGap);
+  document.getElementById('k-zero').textContent = zeroRepay;
+  document.getElementById('k-moratorium').textContent = missedMoratorium;
+  document.getElementById('k-def').textContent = defaulters;
+  document.getElementById('k-completed').textContent = completed;
+  document.getElementById('a-moratorium').textContent = missedMoratorium;
+  document.getElementById('a-def').textContent = defaulters;
+  document.getElementById('a-zero').textContent = zeroRepay;
+  document.getElementById('a-pgstarted').textContent = pgStartedInView.size + ' / ' + pgsInView.size;
+
+  const tRef = document.getElementById('tenureRefBody');
+  tRef.innerHTML = (DATA.tenureRef||[]).map(t=>`<tr>
+    <td>${t.activity}</td><td style="text-align:right">${t.moratorium} months</td>
+    <td style="text-align:right">${t.tenure} months</td><td style="text-align:right">${t.total} months</td></tr>`).join('');
+  const unknownHint = document.getElementById('tenureUnknownHint');
+  if(DATA.totals.activityUnknownCount>0){
+    unknownHint.style.display='block';
+    unknownHint.textContent = `${DATA.totals.activityUnknownCount} loaned members have no activity/tenure recorded in the sheet — this table's rule can't be applied to them (see Data Quality page).`;
+  } else { unknownHint.style.display='none'; }
+
+  destroyCharts();
+  charts.donut = new Chart(document.getElementById('statusDonut'), {
+    type:'doughnut',
+    data:{ labels:['On track','Never repaid (within moratorium)','Defaulting','Completed'],
+      datasets:[{ data:[onTrack, zeroNotDefaulting, defaulters, completed], backgroundColor:['#1e7d3c','#b8720a','#b3261e','#1a5f9e'] }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} }
+  });
+  document.getElementById('donutLegend').innerHTML = [
+    ['On track',onTrack,'#1e7d3c'],['Never repaid (in moratorium)',zeroNotDefaulting,'#b8720a'],['Defaulting',defaulters,'#b3261e'],['Completed',completed,'#1a5f9e']
+  ].map(([l,v,c])=>`<span><span class="legend-dot" style="background:${c}"></span>${l} ${v}</span>`).join('');
+
+  const pgKey = m => m.pg+'||'+m.district+'||'+m.block+'||'+m.vc;
+  const pgAgg = {};
+  const subs = {};
+  filtered.forEach(m=>{
+    const k = pgKey(m);
+    (subs[k] = subs[k] || new Set()).add(m.subCategory);
+    if(!pgAgg[k]) pgAgg[k]={pg:m.pg,district:m.district,block:m.block,category:m.pgCategory,vc:m.vc,clf:m.clf,members:0,sanctioned:0,received:0,paid:0,outstanding:0,
+      totalToRepay:0,startedCount:0,zeroCount:0,missedMoratoriumCount:0,defaulters:0,completedCount:0};
+    const a=pgAgg[k];
+    a.members++; a.sanctioned+=m.sanctioned; a.received+=m.received; a.paid+=m.paid; a.outstanding+=m.outstanding;
+    a.totalToRepay+=m.totalToRepay;
+    if(m.startedRepayment) a.startedCount++;
+    if(m.zeroRepayments) a.zeroCount++;
+    if(m.missedMoratorium) a.missedMoratoriumCount++;
+    if(m.isDefaulter) a.defaulters++;
+    if(m.isCompleted) a.completedCount++;
+  });
+  window._pgRows = Object.values(pgAgg).map(p=>({...p, subCategory:[...(subs[pgKey(p)]||[])].sort().join(', '), pgStartedRepayment: p.startedCount>0, repaymentGap: Math.max(p.totalToRepay-p.paid,0), pgId: lookupPgId(p.block, p.pg)}));
+  window._memberRows = filtered.map(m=>({...m, statusLabel: memberStatus(m), reason: defaultReason(m), pgId: lookupPgId(m.block, m.pg)}));
+  window._defRows = window._memberRows.filter(m=>m.isDefaulter);
+  window._memberByKey = {};
+  filtered.forEach(m=>{ window._memberByKey[m.member+'||'+m.pg+'||'+m.district+'||'+m.block+'||'+m.vc] = m; });
+
+  const top = [...window._pgRows].sort((a,b)=>b.received-a.received).slice(0,10);
+  charts.pg = new Chart(document.getElementById('pgChart'), {
+    type:'bar',
+    data:{ labels:top.map(p=>p.pg+' ('+p.block+')'), datasets:[
+      {label:'Disbursed',data:top.map(p=>p.received),backgroundColor:'#1a5f9e'},
+      {label:'Repaid',data:top.map(p=>p.paid),backgroundColor:'#1e7d3c'},
+      {label:'Total to repay',data:top.map(p=>p.totalToRepay),backgroundColor:'#b3261e'}
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      scales:{x:{ticks:{autoSkip:false,maxRotation:45}},y:{beginAtZero:true}},
+      plugins:{legend:{display:true,position:'top'}} }
+  });
+
+  renderPgTable();
+  memPage = 0;
+  renderMemberTable();
+  renderDefTable();
+  renderAnomalies();
+  renderGeography(filtered);
+  renderPending();
+  renderActivitySummary(filtered);
+}
+document.getElementById('fCategory').addEventListener('change', ()=>{ populateActivityOptions(); render(); });
+
+function getPendingFiltered(list){
+  const g = id => document.getElementById(id).value;
+  const district=g('fDistrict'), block=g('fBlock'), category=g('fCategory'), clf=g('fClf'), vc=g('fVc'), pg=g('fPg'), sub=g('fActivity');
+  return (list||DATA.pending||[]).filter(m=>
+    (!district||m.district===district) && (!block||m.block===block) && (!category||m.pgCategory===category) &&
+    (!sub || (m.pgCategory+'||'+m.subCategory)===sub) &&
+    (!clf||m.clf===clf) && (!vc||m.vc===vc) && (!pg||m.pg===pg));
+}
+sortState.pending = {key:null,dir:1};
+function renderPending(){
+  const all = getPendingFiltered();
+  const kind = document.getElementById('pendKind').value;
+  const inKind = kind ? all.filter(m=>m.kind===kind) : all;
+  window._pendRows = inKind;
+  document.getElementById('p-count').textContent = all.length;
+  document.getElementById('p-amt').textContent = fmtRs(all.reduce((s,m)=>s+m.pendingAmt,0));
+  document.getElementById('p-none').textContent = all.filter(m=>m.kind==='Not disbursed').length;
+  document.getElementById('p-part').textContent = all.filter(m=>m.kind==='Partly disbursed').length;
+  document.getElementById('p-pgs').textContent = new Set(all.map(m=>m.pg+'||'+m.district+'||'+m.block+'||'+m.vc)).size;
+  let rows = inKind;
+  const q = (document.getElementById('pendSearch').value||'').toLowerCase();
+  if(q) rows = rows.filter(r=>(r.member||'').toLowerCase().includes(q)||r.pg.toLowerCase().includes(q));
+  const st = sortState.pending;
+  rows = st.key ? sortRows(rows, st.key, st.dir) : [...rows].sort((a,b)=>b.pendingAmt-a.pendingAmt);
+  document.getElementById('pendBody').innerHTML = rows.map(m=>`<tr>
+    <td>${m.member}</td><td>${m.pg}</td><td>${m.district}</td><td>${m.block}</td><td>${m.pgCategory}</td><td>${m.subCategory}</td>
+    <td>${m.vc}</td><td>${m.clf}</td>
+    <td style="text-align:right">${fmtRs(m.sanctioned)}</td><td style="text-align:right">${fmtRs(m.disbursed)}</td>
+    <td style="text-align:right;font-weight:600;color:var(--amber);">${fmtRs(m.pendingAmt)}</td>
+    <td>${m.kind==='Not disbursed'?'<span class="pill pill-red">Not disbursed</span>':'<span class="pill pill-amber">Partly disbursed</span>'}</td>
+    <td>${m.status||'-'}</td></tr>`).join('');
+  const grp = {};
+  inKind.forEach(m=>{ const k=m.district+'||'+m.block+'||'+m.pgCategory; (grp[k]=grp[k]||{district:m.district,block:m.block,cat:m.pgCategory,n:0,s:0,d:0,p:0}); const g=grp[k]; g.n++; g.s+=m.sanctioned; g.d+=m.disbursed; g.p+=m.pendingAmt; });
+  document.getElementById('pendGroupBody').innerHTML = Object.values(grp).sort((a,b)=>b.p-a.p).map(g=>`<tr><td>${g.district}</td><td>${g.block}</td><td>${g.cat}</td><td style="text-align:right">${g.n}</td><td style="text-align:right">${fmtRs(g.s)}</td><td style="text-align:right">${fmtRs(g.d)}</td><td style="text-align:right">${fmtRs(g.p)}</td></tr>`).join('');
+}
+document.getElementById('pendSearch').addEventListener('input', renderPending);
+document.getElementById('pendKind').addEventListener('change', renderPending);
+document.querySelectorAll('#pendTable th').forEach(th=>th.addEventListener('click', ()=>{
+  const st = sortState.pending, k = th.dataset.key;
+  st.dir = (st.key===k) ? -st.dir : 1; st.key = k; renderPending();
+}));
+
+function renderGeography(filtered){
+  const categoryCounts = {Fishery:0, Livestock:0, 'Agri-Horti':0};
+  filtered.forEach(m=>{ if(categoryCounts[m.pgCategory]===undefined) categoryCounts[m.pgCategory]=0; categoryCounts[m.pgCategory]++; });
+  if(charts.categoryDonut) charts.categoryDonut.destroy();
+  const catEl = document.getElementById('categoryDonut');
+  if(catEl){
+    charts.categoryDonut = new Chart(catEl, {
+      type:'doughnut',
+      data:{ labels:Object.keys(categoryCounts), datasets:[{data:Object.values(categoryCounts), backgroundColor:['#1a5f9e','#1e7d3c','#b8720a']}] },
+      options:{ responsive:true, maintainAspectRatio:false }
+    });
+  }
+  const distMap = {};
+  filtered.forEach(m=>{
+    if(!distMap[m.district]) distMap[m.district]={district:m.district, members:0, defaulters:0};
+    distMap[m.district].members++;
+    if(m.isDefaulter) distMap[m.district].defaulters++;
+  });
+  const distRows = Object.values(distMap).sort((a,b)=>b.defaulters-a.defaulters);
+  if(charts.districtChart) charts.districtChart.destroy();
+  const distEl = document.getElementById('districtChart');
+  if(distEl){
+    charts.districtChart = new Chart(distEl, {
+      type:'bar',
+      data:{ labels:distRows.map(d=>d.district), datasets:[
+        {label:'Members', data:distRows.map(d=>d.members), backgroundColor:'#1a5f9e'},
+        {label:'Defaulting', data:distRows.map(d=>d.defaulters), backgroundColor:'#b3261e'}
+      ]},
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:true,position:'top'}} }
+    });
+  }
+
+  const districtBody = document.getElementById('districtBody');
+  const districtBlockCount = {};
+  filtered.forEach(m=>{ if(!districtBlockCount[m.district]) districtBlockCount[m.district]=new Set(); districtBlockCount[m.district].add(m.block); });
+  window._districtRows = Object.values(distMap).map(d=>{
+    const agg = window._districtAggFull(filtered, d.district);
+    return {district:d.district, blocks:(districtBlockCount[d.district]||new Set()).size, ...agg};
+  });
+  districtBody.innerHTML = window._districtRows.sort((a,b)=>b.members-a.members).map(d=>`<tr>
+    <td>${d.district}</td><td style="text-align:right">${d.blocks}</td>
+    <td style="text-align:right">${d.members}</td>
+    <td style="text-align:right">${fmtRs(d.received)}</td>
+    <td style="text-align:right">${fmtRs(d.paid)}</td>
+    <td style="text-align:right;${d.defaulters>0?'color:var(--red);font-weight:600;':''}">${d.defaulters}</td>
+    <td style="text-align:right">${d.completedCount}</td>
+  </tr>`).join('');
+
+  renderBlockTable(filtered);
+
+  const catBody = document.getElementById('categoryBody');
+  const cats = ['Fishery','Livestock','Agri-Horti'];
+  window._categoryRows = cats.map(c=>{
+    const sub = filtered.filter(m=>m.pgCategory===c);
+    return { category:c, members:sub.length, received:sub.reduce((s,m)=>s+m.received,0), paid:sub.reduce((s,m)=>s+m.paid,0),
+      totalToRepay:sub.reduce((s,m)=>s+m.totalToRepay,0), defaulters:sub.filter(m=>m.isDefaulter).length, completedCount:sub.filter(m=>m.isCompleted).length };
+  });
+  catBody.innerHTML = window._categoryRows.map(c=>`<tr>
+    <td>${c.category}</td><td style="text-align:right">${c.members}</td>
+    <td style="text-align:right">${fmtRs(c.received)}</td><td style="text-align:right">${fmtRs(c.paid)}</td>
+    <td style="text-align:right;${c.defaulters>0?'color:var(--red);font-weight:600;':''}">${c.defaulters}</td>
+    <td style="text-align:right">${c.completedCount}</td>
+  </tr>`).join('');
+}
+function renderActivitySummary(filtered){
+  const rows = [];
+  CATEGORY_ORDER.forEach(c=>{
+    const inCat = filtered.filter(m=>m.pgCategory===c);
+    if(!inCat.length) return;
+    const acts = [...new Set(inCat.map(m=>m.subCategory))].sort();
+    const mk = (label, sub)=>({category:c, activity:label, members:sub.length,
+      pgs:new Set(sub.map(m=>m.pg+'||'+m.district+'||'+m.block+'||'+m.vc)).size,
+      received:sub.reduce((s,m)=>s+m.received,0), paid:sub.reduce((s,m)=>s+m.paid,0),
+      defaulters:sub.filter(m=>m.isDefaulter).length, completedCount:sub.filter(m=>m.isCompleted).length});
+    rows.push({...mk('All '+c, inCat), total:true});
+    acts.forEach(a=>rows.push(mk(a, inCat.filter(m=>m.subCategory===a))));
+  });
+  window._activityRows = rows;
+  document.getElementById('activityBody').innerHTML = rows.map(r=>`<tr${r.total?' style="background:var(--grey-bg);font-weight:700;"':''}>
+    <td>${r.category}</td><td>${r.total?'All sub-categories':r.activity}</td>
+    <td style="text-align:right">${r.members}</td><td style="text-align:right">${r.pgs}</td>
+    <td style="text-align:right">${fmtRs(r.received)}</td><td style="text-align:right">${fmtRs(r.paid)}</td>
+    <td style="text-align:right;${r.defaulters>0?'color:var(--red);font-weight:600;':''}">${r.defaulters}</td>
+    <td style="text-align:right">${r.completedCount}</td></tr>`).join('');
+}
+window._districtAggFull = function(filtered, district){
+  const sub = filtered.filter(m=>m.district===district);
+  return { members:sub.length, received:sub.reduce((s,m)=>s+m.received,0), paid:sub.reduce((s,m)=>s+m.paid,0),
+    totalToRepay:sub.reduce((s,m)=>s+m.totalToRepay,0), defaulters:sub.filter(m=>m.isDefaulter).length, completedCount:sub.filter(m=>m.isCompleted).length };
+};
+function renderBlockTable(filtered){
+  const q = (document.getElementById('blockSearch').value||'').toLowerCase();
+  const blockMap = {};
+  filtered.forEach(m=>{
+    const k = m.district+'||'+m.block;
+    if(!blockMap[k]) blockMap[k]={district:m.district, block:m.block, members:0, received:0, paid:0, totalToRepay:0, defaulters:0, completedCount:0};
+    const b = blockMap[k];
+    b.members++; b.received+=m.received; b.paid+=m.paid; b.totalToRepay+=m.totalToRepay;
+    if(m.isDefaulter) b.defaulters++;
+    if(m.isCompleted) b.completedCount++;
+  });
+  window._blockRows = Object.values(blockMap);
+  let rows = window._blockRows;
+  if(q) rows = rows.filter(r=>r.block.toLowerCase().includes(q) || r.district.toLowerCase().includes(q));
+  const st = sortState.block;
+  if(st.key) rows = sortRows(rows, st.key, st.dir);
+  else rows = [...rows].sort((a,b)=>b.defaulters-a.defaulters);
+  document.getElementById('blockBody').innerHTML = rows.map(b=>`<tr>
+    <td>${b.district}</td><td>${b.block}</td>
+    <td style="text-align:right">${b.members}</td>
+    <td style="text-align:right">${fmtRs(b.received)}</td>
+    <td style="text-align:right">${fmtRs(b.paid)}</td>
+    <td style="text-align:right;${b.defaulters>0?'color:var(--red);font-weight:600;':''}">${b.defaulters}</td>
+    <td style="text-align:right">${b.completedCount}</td>
+  </tr>`).join('');
+}
+document.getElementById('blockSearch').addEventListener('input', ()=>renderBlockTable(getFiltered()));
+
+function renderPgTable(){
+  let rows = window._pgRows;
+  const q = (document.getElementById('pgSearch').value||'').toLowerCase();
+  if(q) rows = rows.filter(r=>r.pg.toLowerCase().includes(q));
+  const st = sortState.pg;
+  if(st.key) rows = sortRows(rows, st.key, st.dir);
+  else rows = [...rows].sort((a,b)=>b.defaulters-a.defaulters);
+  const body = document.getElementById('pgBody');
+  body.innerHTML = rows.map(p=>`<tr>
+    <td>${p.pg}</td><td>${p.pgId||'—'}</td><td>${p.district}</td><td>${p.block}</td><td>${p.category}</td><td>${p.subCategory}</td><td>${p.vc}</td><td>${p.clf}</td>
+    <td style="text-align:right">${p.members}</td>
+    <td>${p.pgStartedRepayment ? '<span class="pill pill-green">Yes ('+p.startedCount+')</span>' : '<span class="pill pill-red">No</span>'}</td>
+    <td style="text-align:right">${fmtRs(p.received)}</td>
+    <td style="text-align:right">${fmtRs(p.paid)}</td>
+    <td style="text-align:right">${fmtRs(p.totalToRepay)}</td>
+    <td style="text-align:right;${p.repaymentGap>0?'color:var(--amber);font-weight:600;':''}">${fmtRs(p.repaymentGap)}</td>
+    <td style="text-align:right;${p.zeroCount>0?'color:var(--amber);font-weight:600;':''}">${p.zeroCount}</td>
+    <td style="text-align:right;${p.missedMoratoriumCount>0?'color:var(--red);font-weight:600;':''}">${p.missedMoratoriumCount}</td>
+    <td style="text-align:right;${p.defaulters>0?'color:var(--red);font-weight:600;':''}">${p.defaulters}</td>
+    <td style="text-align:right;${p.completedCount>0?'color:var(--blue);font-weight:600;':''}">${p.completedCount}</td>
+  </tr>`).join('');
+}
+
+function renderMemberTable(){
+  let rows = window._memberRows;
+  const q = (document.getElementById('memberSearch').value||'').toLowerCase();
+  if(q) rows = rows.filter(r=>r.member.toLowerCase().includes(q));
+  const st = sortState.members;
+  if(st.key) rows = sortRows(rows, st.key, st.dir);
+  else rows = [...rows].sort((a,b)=>(b.shortfall||0)-(a.shortfall||0));
+  const totalPages = Math.max(1, Math.ceil(rows.length/memPageSize));
+  memPage = Math.min(memPage, totalPages-1);
+  const pageRows = rows.slice(memPage*memPageSize, (memPage+1)*memPageSize);
+  const body = document.getElementById('memberBody');
+  body.innerHTML = pageRows.map(m=>`<tr>
+    <td><span class="member-link" onclick="openScheduleModal('${m.member.replace(/'/g,"\\'")}','${m.pg.replace(/'/g,"\\'")}','${m.district.replace(/'/g,"\\'")}','${m.block.replace(/'/g,"\\'")}','${(m.vc||'').replace(/'/g,"\\'")}')">${m.member}</span></td>
+    <td>${m.pg}</td><td>${m.pgId||'—'}</td><td>${m.district}</td><td>${m.block}</td><td>${m.pgCategory}</td>
+    <td>${m.subCategory}</td><td>${m.activity}</td>
+    <td style="text-align:right">${m.tenureMonths!=null?m.tenureMonths:'-'}</td>
+    <td style="text-align:right">${m.totalLoanPeriod!=null?m.totalLoanPeriod:'-'}</td>
+    <td style="text-align:right">${fmtRs(m.received)}</td>
+    <td style="text-align:right">${fmtRs(m.paid)}${shortfallIcon(m)}</td>
+    <td style="text-align:right">${fmtRs(m.totalToRepay)}</td>
+    <td style="text-align:right">${m.monthsSince!=null?Math.round(m.monthsSince):'-'}</td>
+    <td style="text-align:right">${m.repaymentsMade}</td>
+    <td>${statusPill(m.statusLabel)}</td>
+  </tr>`).join('');
+  document.getElementById('memPageInfo').textContent = `Page ${memPage+1} of ${totalPages}`;
+  document.getElementById('memPrev').disabled = memPage===0;
+  document.getElementById('memNext').disabled = memPage>=totalPages-1;
+}
+function changePage(delta){ memPage += delta; renderMemberTable(); }
+
+function renderDefTable(){
+  let rows = window._defRows;
+  const q = (document.getElementById('defSearch').value||'').toLowerCase();
+  if(q) rows = rows.filter(r=>r.member.toLowerCase().includes(q)||r.pg.toLowerCase().includes(q));
+  const st = sortState.defaulters;
+  if(st.key) rows = sortRows(rows, st.key, st.dir);
+  else rows = [...rows].sort((a,b)=>(b.shortfall||0)-(a.shortfall||0));
+  const body = document.getElementById('defBody');
+  body.innerHTML = rows.map(m=>`<tr>
+    <td><span class="member-link" onclick="openScheduleModal('${m.member.replace(/'/g,"\\'")}','${m.pg.replace(/'/g,"\\'")}','${m.district.replace(/'/g,"\\'")}','${m.block.replace(/'/g,"\\'")}','${(m.vc||'').replace(/'/g,"\\'")}')">${m.member}</span></td>
+    <td>${m.pg}</td><td>${m.district}</td><td>${m.block}</td><td>${m.pgCategory}</td><td>${m.subCategory}</td><td>${m.activity}</td>
+    <td style="text-align:right">${fmtRs(m.received)}</td>
+    <td style="text-align:right">${m.monthsSince!=null?Math.round(m.monthsSince):'-'}</td>
+    <td style="text-align:right">${m.repaymentsMade}</td>
+    <td style="text-align:right;color:var(--red);font-weight:600;">${fmtRs(m.shortfall||0)}</td>
+    <td>${m.reason}</td>
+  </tr>`).join('');
+}
+
+// ===== Payment history modal =====
+function openScheduleModal(memberName, pgName, district, block, vc){
+  const key = memberName+'||'+pgName+'||'+district+'||'+block+'||'+(vc||'');
+  const m = window._memberByKey[key] || DATA.members.find(x=>x.member===memberName && x.pg===pgName && x.district===district && x.block===block && (vc===undefined || x.vc===vc));
+  if(!m) return;
+  document.getElementById('modalMemberName').textContent = m.member;
+  const modalPgId = lookupPgId(m.block, m.pg);
+  document.getElementById('modalMemberSub').textContent = `${m.pg}${modalPgId?' ('+modalPgId+')':''} · ${m.district}, ${m.block} · ${m.pgCategory} · ${m.subCategory} · ${m.activity} · ${m.vc}, ${m.clf}`;
+  document.getElementById('modalKpis').innerHTML = `
+    <div class="modal-kpi">Received<b>${fmtRs(m.received)}</b></div>
+    <div class="modal-kpi">Paid so far<b>${fmtRs(m.paid)}</b></div>
+    <div class="modal-kpi">Total to repay<b>${fmtRs(m.totalToRepay)}</b></div>
+    <div class="modal-kpi">Due to date<b>${m.cumulativeExpected!=null?fmtRs(m.cumulativeExpected):'-'}</b></div>
+    <div class="modal-kpi">Status<b>${statusPill(memberStatus(m))}</b></div>
+  `;
+  const body = document.getElementById('modalScheduleBody');
+  const sched = m.schedule || [];
+  body.innerHTML = sched.map(s=>{
+    let statusTxt, statusColor;
+    if(s.dueAmount===null){ statusTxt='Unknown (activity not recorded)'; statusColor='var(--text-dim)'; }
+    else if(s.dueAmount===0 && s.paidAmount===0){ statusTxt = 'Within moratorium'; statusColor='var(--text-dim)'; }
+    else if(s.paidAmount >= s.dueAmount && s.dueAmount>0){ statusTxt='Paid'; statusColor='var(--green)'; }
+    else if(s.dueAmount>0 && s.paidAmount===0 && !s.paidDate){ statusTxt='Missed (at time)'; statusColor='var(--amber)'; }
+    else if(s.dueAmount>0){ statusTxt='Partial'; statusColor='var(--amber)'; }
+    else { statusTxt='-'; statusColor='var(--text-dim)'; }
+    return `<tr>
+      <td>Month ${s.month}</td>
+      <td style="text-align:right">${s.dueAmount!=null?fmtRs(s.dueAmount):'-'}</td>
+      <td style="text-align:right">${fmtRs(s.paidAmount)}</td>
+      <td style="text-align:right">${s.paidDate||'-'}</td>
+      <td style="color:${statusColor};font-weight:600;">${statusTxt}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('scheduleModal').classList.add('open');
+}
+function closeScheduleModal(){ document.getElementById('scheduleModal').classList.remove('open'); }
+
+// sortable headers
+['pgTable','memberTable','defTable','districtTable','blockTable','categoryTable'].forEach(tid=>{
+  const key = tid==='pgTable'?'pg':tid==='memberTable'?'members':tid==='defTable'?'defaulters':tid==='districtTable'?'district':tid==='blockTable'?'block':'category';
+  document.querySelectorAll(`#${tid} th`).forEach(th=>{
+    th.addEventListener('click', ()=>{
+      const st = sortState[key];
+      const k = th.dataset.key;
+      st.dir = (st.key===k) ? -st.dir : 1;
+      st.key = k;
+      if(tid==='pgTable') renderPgTable();
+      else if(tid==='memberTable') renderMemberTable();
+      else if(tid==='defTable') renderDefTable();
+      else if(tid==='blockTable') renderBlockTable(getFiltered());
+      else renderGeography(getFiltered());
+    });
+  });
+});
+
+document.getElementById('pgSearch').addEventListener('input', renderPgTable);
+document.getElementById('memberSearch').addEventListener('input', ()=>{memPage=0; renderMemberTable();});
+document.getElementById('defSearch').addEventListener('input', renderDefTable);
+['fBlock','fCategory','fActivity','fClf','fVc','fPg','fStatus'].forEach(id=>document.getElementById(id).addEventListener('change', render));
+
+function clearFilters(){
+  document.getElementById('fDistrict').value='';
+  populateBlockOptions();
+  document.getElementById('fBlock').value='';
+  document.getElementById('fCategory').value='';
+  document.getElementById('fActivity').value='';
+  populateActivityOptions();
+  document.getElementById('fClf').value='';
+  document.getElementById('fVc').value='';
+  document.getElementById('fPg').value='';
+  document.getElementById('fStatus').value='';
+  render();
+}
+
+// Anomalies follow the filters at the top (District, Block, Category, Activity, CLF, VC, PG, Member status).
+function computeAnomalies(){
+  const members = getFiltered();
+  const g = id => document.getElementById(id).value;
+  const district=g('fDistrict'), block=g('fBlock'), category=g('fCategory'), pg=g('fPg');
+  return {
+    zeroUpdate: members.filter(m=>m.repaymentsMade===0).map(m=>({member:m.member, pg:m.pg, district:m.district, block:m.block, category:m.pgCategory})),
+    dateNoAmount: [].concat(...members.map(m=>(m.schedule||[]).filter(s=>s.paidDate && s.paidAmount===0).map(s=>({member:m.member, pg:m.pg, month:s.month, date:s.paidDate})))),
+    receivedOverSanctioned: members.filter(m=>m.sanctioned>0 && m.received > m.sanctioned+1).map(m=>({member:m.member, pg:m.pg, sanctioned:m.sanctioned, received:m.received})),
+    noSanctioned: members.filter(m=>m.sanctioned<=0 && (m.received>0 || m.paid>0)).map(m=>({member:m.member, pg:m.pg, block:m.block, received:m.received, paid:m.paid})),
+    dupLokos: (()=>{
+      const map = {};
+      members.forEach(m=>{
+        const id = (m.lokosId||'').trim();
+        if(id && !/^₹?0(\.00)?$/.test(id)) (map[id]=map[id]||[]).push(m);
+      });
+      return Object.entries(map).filter(([k,v])=>new Set(v.map(x=>x.member+'|'+x.pg)).size>1)
+        .flatMap(([id,v])=>v.map(x=>({lokosId:id, member:x.member, pg:x.pg, block:x.block, received:x.received})));
+    })(),
+    overpaid: members.filter(m=>m.paid > m.totalToRepay+1).map(m=>({member:m.member, pg:m.pg, block:m.block, paid:m.paid, totalToRepay:m.totalToRepay, excess:Math.round(m.paid-m.totalToRepay)})),
+    overMonths: members.filter(m=>m.tenureMonths!=null && m.repaymentsMade > m.tenureMonths).map(m=>({member:m.member, pg:m.pg, block:m.block, repaymentsMade:m.repaymentsMade, tenureMonths:m.tenureMonths})),
+    earlyRepayment: members.filter(m=>m.isCompleted && m.totalLoanPeriod!=null && m.monthsSince!=null && m.monthsSince < m.totalLoanPeriod).map(m=>({member:m.member, pg:m.pg, monthsSince:m.monthsSince, totalPeriod:m.totalLoanPeriod})),
+    dataNoName: ((DATA.anomalies||{}).dataNoName||[]).filter(r=>(!district||r.district===district)&&(!block||r.block===block)&&(!category||r.category===category)&&(!pg||r.pg===pg)),
+    noLokosId: members.filter(m=>!m.lokosId).map(m=>({member:m.member, pg:m.pg})),
+    orphan: getPendingFiltered(DATA.orphanRepay),
+    pendMismatch: getPendingFiltered(DATA.uMismatch).map(m=>({member:m.member, pg:m.pg, district:m.district, block:m.block, category:m.pgCategory, sanctioned:m.sanctioned, utilized:m.utilized, expected:m.expectedU, sheetU:m.sheetU})),
+  };
+}
+function renderAnomalies(){
+  const an = window._anomalies = computeAnomalies();
+  document.getElementById('cnt-orphan').textContent = `(${an.orphan.length})`;
+  document.getElementById('an-orphan').innerHTML = an.orphan.map(r=>`<tr><td>Row ${r.sheetRow}</td><td>${r.member}</td><td>${r.pg}</td><td>${r.block}</td><td>${r.pgCategory}</td><td style="text-align:right">${fmtRs(r.sanctioned)}</td><td style="text-align:right">${fmtRs(r.disbursed)}</td><td style="text-align:right;font-weight:600;">${fmtRs(r.paid)}</td></tr>`).join('');
+  document.getElementById('cnt-pendmismatch').textContent = `(${an.pendMismatch.length})`;
+  document.getElementById('an-pendmismatch').innerHTML = an.pendMismatch.map(r=>`<tr><td>${r.member}</td><td>${r.pg}</td><td>${r.block}</td><td>${r.category}</td><td style="text-align:right">${fmtRs(r.sanctioned)}</td><td style="text-align:right">${fmtRs(r.utilized)}</td><td style="text-align:right">${fmtRs(r.expected)}</td><td style="text-align:right;color:var(--red);font-weight:600;">${fmtRs(r.sheetU)}</td></tr>`).join('');
+  const set = (id, rows, rowFn) => { document.getElementById(id).innerHTML = (rows||[]).map(rowFn).join(''); };
+  document.getElementById('cnt-zeroupdate').textContent = `(${(an.zeroUpdate||[]).length})`;
+  set('an-zeroupdate', an.zeroUpdate, r=>`<tr><td>${r.member}</td><td>${r.pg}</td><td>${r.district}</td><td>${r.block}</td><td>${r.category}</td></tr>`);
+
+  document.getElementById('cnt-datenoamount').textContent = `(${(an.dateNoAmount||[]).length})`;
+  set('an-datenoamount', an.dateNoAmount, r=>`<tr><td>${r.member}</td><td>${r.pg}</td><td style="text-align:right">${r.month}</td><td>${r.date}</td></tr>`);
+
+  document.getElementById('cnt-oversanctioned').textContent = `(${(an.receivedOverSanctioned||[]).length})`;
+  set('an-oversanctioned', an.receivedOverSanctioned, r=>`<tr><td>${r.member}</td><td>${r.pg}</td><td style="text-align:right">${fmtRs(r.sanctioned)}</td><td style="text-align:right">${fmtRs(r.received)}</td><td style="text-align:right;color:var(--red);font-weight:600;">${fmtRs(r.received-r.sanctioned)}</td></tr>`);
+
+  document.getElementById('cnt-nosanctioned').textContent = `(${(an.noSanctioned||[]).length})`;
+  set('an-nosanctioned', an.noSanctioned, r=>`<tr><td>${r.member}</td><td>${r.pg}</td><td>${r.block}</td><td style="text-align:right">${fmtRs(r.received)}</td><td style="text-align:right">${fmtRs(r.paid)}</td></tr>`);
+
+  document.getElementById('cnt-duplokos').textContent = `(${(an.dupLokos||[]).length})`;
+  set('an-duplokos', an.dupLokos, r=>`<tr><td>${r.lokosId}</td><td>${r.member}</td><td>${r.pg}</td><td>${r.block}</td><td style="text-align:right">${fmtRs(r.received)}</td></tr>`);
+
+  document.getElementById('cnt-overpaid').textContent = `(${(an.overpaid||[]).length})`;
+  set('an-overpaid', an.overpaid, r=>`<tr><td>${r.member}</td><td>${r.pg}</td><td>${r.block}</td><td style="text-align:right">${fmtRs(r.paid)}</td><td style="text-align:right">${fmtRs(r.totalToRepay)}</td><td style="text-align:right;color:var(--red);font-weight:600;">${fmtRs(r.excess)}</td></tr>`);
+
+  document.getElementById('cnt-overmonths').textContent = `(${(an.overMonths||[]).length})`;
+  set('an-overmonths', an.overMonths, r=>`<tr><td>${r.member}</td><td>${r.pg}</td><td>${r.block}</td><td style="text-align:right">${r.repaymentsMade}</td><td style="text-align:right">${r.tenureMonths}</td></tr>`);
+
+  document.getElementById('cnt-early').textContent = `(${(an.earlyRepayment||[]).length})`;
+  set('an-early', an.earlyRepayment, r=>`<tr><td>${r.member}</td><td>${r.pg}</td><td style="text-align:right">${Math.round(r.monthsSince)}</td><td style="text-align:right">${r.totalPeriod}</td></tr>`);
+
+  document.getElementById('cnt-noname').textContent = `(${(an.dataNoName||[]).length})`;
+  set('an-noname', an.dataNoName, r=>`<tr><td>${r.source}</td><td>Row ${r.rowNum}</td><td>${r.pg}</td></tr>`);
+
+  document.getElementById('cnt-nolokos').textContent = `(${(an.noLokosId||[]).length})`;
+  set('an-nolokos', an.noLokosId, r=>`<tr><td>${r.member}</td><td>${r.pg}</td></tr>`);
+}
+
+function exportAnomaly(which){
+  const an = window._anomalies || computeAnomalies();
+  let rows, filename;
+  if(which==='orphan'){ rows=(an.orphan||[]).map(r=>({'Sheet Row':r.sheetRow,Member:r.member,PG:r.pg,District:r.district,Block:r.block,Category:r.pgCategory,Sanctioned:r.sanctioned,Disbursed:r.disbursed,Repaid:r.paid})); filename='Anomaly_RepaymentWithoutDisbursement'; }
+  else if(which==='pendMismatch'){ rows=(an.pendMismatch||[]).map(r=>({Member:r.member,PG:r.pg,District:r.district,Block:r.block,Category:r.category,'Sanctioned (L)':r.sanctioned,'Utilized (T)':r.utilized,'Sanctioned - Utilized':r.expected,'Column U in sheet':r.sheetU})); filename='Anomaly_PendingColumnU_Mismatch'; }
+  else if(which==='zeroUpdate'){ rows=(an.zeroUpdate||[]).map(r=>({Member:r.member,PG:r.pg,District:r.district,Block:r.block,Category:r.category})); filename='Anomaly_ZeroRepaymentUpdates'; }
+  else if(which==='dateNoAmount'){ rows=(an.dateNoAmount||[]).map(r=>({Member:r.member,PG:r.pg,Month:r.month,'Date Entered':r.date})); filename='Anomaly_DateWithoutAmount'; }
+  else if(which==='receivedOverSanctioned'){ rows=(an.receivedOverSanctioned||[]).map(r=>({Member:r.member,PG:r.pg,Sanctioned:r.sanctioned,Received:r.received,Excess:r.received-r.sanctioned})); filename='Anomaly_ReceivedOverSanctioned'; }
+  else if(which==='noSanctioned'){ rows=(an.noSanctioned||[]).map(r=>({Member:r.member,PG:r.pg,Block:r.block,Received:r.received,Paid:r.paid})); filename='Anomaly_SanctionedNotRecorded'; }
+  else if(which==='dupLokos'){ rows=(an.dupLokos||[]).map(r=>({'LokOS ID':r.lokosId,Member:r.member,PG:r.pg,Block:r.block,Received:r.received})); filename='Anomaly_DuplicateLokosId'; }
+  else if(which==='overpaid'){ rows=(an.overpaid||[]).map(r=>({Member:r.member,PG:r.pg,Block:r.block,Paid:r.paid,'Total To Repay':r.totalToRepay,Excess:r.excess})); filename='Anomaly_RepaidOverTotal'; }
+  else if(which==='overMonths'){ rows=(an.overMonths||[]).map(r=>({Member:r.member,PG:r.pg,Block:r.block,'Repayments Made':r.repaymentsMade,'Tenure Months':r.tenureMonths})); filename='Anomaly_RepaymentsBeyondTenure'; }
+  else if(which==='earlyRepayment'){ rows=(an.earlyRepayment||[]).map(r=>({Member:r.member,PG:r.pg,'Months Since Loan':r.monthsSince,'Total Loan Period':r.totalPeriod})); filename='Anomaly_EarlyRepayment'; }
+  else if(which==='dataNoName'){ rows=(an.dataNoName||[]).map(r=>({Source:r.source,'Sheet Row':r.rowNum,PG:r.pg})); filename='Anomaly_DataNoName'; }
+  else if(which==='noLokosId'){ rows=(an.noLokosId||[]).map(r=>({Member:r.member,PG:r.pg})); filename='Anomaly_NoLokosId'; }
+  if(!rows || !rows.length){ alert('No rows to export for this check.'); return; }
+  if(!window.XLSX){ alert('Excel export library failed to load.'); return; }
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Data');
+  const date = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `${filename}_${date}.xlsx`);
+}
+
+function exportTable(which){
+  let rows, filename;
+  if(which==='pg'){
+    rows = window._pgRows.map(p=>({PG:p.pg,'PG ID':p.pgId||'',District:p.district,Block:p.block,Category:p.category,'Sub-category':p.subCategory,VC:p.vc,CLF:p.clf,Members:p.members,'Repayment Started':p.pgStartedRepayment?'Yes':'No',Disbursed:p.received,Repaid:p.paid,'Total To Repay':p.totalToRepay,'Repayment Gap':p.repaymentGap,'Never Repaid':p.zeroCount,'Missed Moratorium':p.missedMoratoriumCount,Defaulting:p.defaulters,Completed:p.completedCount}));
+    filename = 'TRESP_PG_Summary';
+  } else if(which==='members'){
+    rows = window._memberRows.map(m=>({Member:m.member,PG:m.pg,'PG ID':m.pgId||'',District:m.district,Block:m.block,Category:m.pgCategory,'Sub-category':m.subCategory,'Loan Type (Tenure)':m.activity,'Repay Window (months)':m.tenureMonths,'Total Loan Period (months)':m.totalLoanPeriod,Received:m.received,Paid:m.paid,'Total To Repay':m.totalToRepay,'Amount Due To Date':m.cumulativeExpected,Shortfall:m.shortfall,'Months Since Loan':m.monthsSince,'Repayments Made':m.repaymentsMade,'Started Repayment':m.startedRepayment?'Yes':'No','Missed Moratorium':m.missedMoratorium?'Yes':'No',Completed:m.isCompleted?'Yes':'No',Status:m.statusLabel}));
+    filename = 'TRESP_Members';
+  } else if(which==='defaulters'){
+    rows = window._defRows.map(m=>({Member:m.member,PG:m.pg,District:m.district,Block:m.block,Category:m.pgCategory,'Sub-category':m.subCategory,'Loan Type (Tenure)':m.activity,Received:m.received,'Months Since Loan':m.monthsSince,'Repayments Made':m.repaymentsMade,Shortfall:m.shortfall,Reason:m.reason}));
+    filename = 'TRESP_Defaulters';
+  } else if(which==='activity'){
+    rows = (window._activityRows||[]).map(r=>({Category:r.category,'Sub-category':r.total?'All sub-categories':r.activity,Members:r.members,PGs:r.pgs,Disbursed:r.received,Repaid:r.paid,Defaulting:r.defaulters,Completed:r.completedCount}));
+    filename = 'TRESP_Category_Activity_Summary';
+  } else if(which==='pending'){
+    rows = (window._pendRows||[]).map(m=>({Member:m.member,PG:m.pg,District:m.district,Block:m.block,Category:m.pgCategory,'Sub-category':m.subCategory,VC:m.vc,CLF:m.clf,Sanctioned:m.sanctioned,Disbursed:m.disbursed,'Pending (Sanctioned - Disbursed)':m.pendingAmt,Disbursement:m.kind,'Loan Status':m.status}));
+    filename = 'TRESP_Sanctioned_Not_Disbursed';
+  } else if(which==='pgIdUnmatched'){
+    rows = (window._pgIdUnmatched||[]).map(r=>({Block:r.block,PG:r.pg,Members:r.members}));
+    filename = 'TRESP_PG_ID_Unmatched';
+  } else if(which==='district'){
+    rows = (window._districtRows||[]).map(d=>({District:d.district,Blocks:d.blocks,Members:d.members,Disbursed:d.received,Repaid:d.paid,'Total To Repay':d.totalToRepay,Defaulting:d.defaulters,Completed:d.completedCount}));
+    filename = 'TRESP_District_Summary';
+  } else if(which==='block'){
+    rows = (window._blockRows||[]).map(b=>({District:b.district,Block:b.block,Members:b.members,Disbursed:b.received,Repaid:b.paid,'Total To Repay':b.totalToRepay,Defaulting:b.defaulters,Completed:b.completedCount}));
+    filename = 'TRESP_Block_Summary';
+  } else if(which==='category'){
+    rows = (window._categoryRows||[]).map(c=>({Category:c.category,Members:c.members,Disbursed:c.received,Repaid:c.paid,'Total To Repay':c.totalToRepay,Defaulting:c.defaulters,Completed:c.completedCount}));
+    filename = 'TRESP_Category_Summary';
+  }
+  if(!rows || !rows.length){ alert('Nothing to export yet — sync the data first.'); return; }
+  if(!window.XLSX){ alert('Excel export library failed to load.'); return; }
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Data');
+  const date = new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `${filename}_${date}.xlsx`);
+}
+
+function renderSyncStatus(){
+  const q = (document.getElementById('syncSearch').value||'').toLowerCase();
+  let rows = SOURCES.map(s=>({ ...s, ...(sourceStatus[s.key]||{ok:null,rows:0,via:null,error:'Not yet synced',syncedAt:null}) }));
+  document.getElementById('ss-ok').textContent = rows.filter(r=>r.ok===true).length;
+  document.getElementById('ss-fail').textContent = rows.filter(r=>r.ok===false).length;
+  if(q) rows = rows.filter(r=> (r.district+' '+r.block+' '+r.category).toLowerCase().includes(q));
+  document.getElementById('syncBody').innerHTML = rows.map(r=>{
+    const statusPill = r.ok===true ? '<span class="pill pill-green">OK</span>' : r.ok===false ? '<span class="pill pill-red">Failed</span>' : '<span class="pill pill-grey">Pending</span>';
+    return `<tr>
+      <td>${r.district}</td><td>${r.block}</td><td>${r.category}</td>
+      <td>${statusPill}</td>
+      <td style="text-align:right">${r.rows||0}</td>
+      <td>${r.via||'-'}</td>
+      <td>${r.syncedAt?new Date(r.syncedAt).toLocaleTimeString():'-'}</td>
+      <td style="color:var(--red);">${r.error||''}</td>
+    </tr>`;
+  }).join('');
+}
+document.getElementById('syncSearch').addEventListener('input', renderSyncStatus);
+
+const LIVE_URL = 'http://localhost:8743/TRESP_Combined_PG_Loan_Dashboard.html';
+if(location.protocol==='file:'){
+  // Browsers block Google Sheets requests from file:// pages. If the local dashboard server is running,
+  // jump to it (live sync); otherwise show the last saved snapshot.
+  const b = document.getElementById('changeBanner');
+  b.style.display='block';
+  b.style.background='var(--amber-bg)'; b.style.borderColor='#f0d9ad'; b.style.color='var(--amber)';
+  document.getElementById('refreshBtn').disabled = true;
+  b.innerHTML = 'Checking for the live dashboard server…';
+  if(window.SNAPSHOT && window.SNAPSHOT.data){
+    sourceStatus = window.SNAPSHOT.sourceStatus || {};
+    const oks = Object.values(sourceStatus).filter(s=>s.ok).length;
+    applyNewData(window.SNAPSHOT.data, oks, 0);
+    document.getElementById('asofTop').textContent = new Date(window.SNAPSHOT.savedAt).toLocaleString();
+    renderSyncStatus();
+  } else { render(); renderSyncStatus(); }
+  setBadge('stale', '● Not live');
+  const ctl = new AbortController(); setTimeout(()=>ctl.abort(), 2500);
+  fetch('http://localhost:8743/ping', {mode:'no-cors', signal: ctl.signal})
+    .then(()=>{ location.replace(LIVE_URL); })
+    .catch(()=>{
+      const saved = window.SNAPSHOT && window.SNAPSHOT.savedAt ? new Date(window.SNAPSHOT.savedAt).toLocaleString() : null;
+      setBadge(saved?'stale':'error', saved?'● Saved snapshot — not live':'● No data yet');
+      b.innerHTML = '<b>The live dashboard server is not running, so live sync is not possible from a file.</b> ' +
+        (saved ? 'Showing saved data from ' + saved + '. ' : 'No saved data yet. ') +
+        'Start the server once by double-clicking <b>Launch_TRESP_Dashboard.bat</b> (or sign out and back in to Windows — it starts automatically after Setup_Autostart.bat has been run), then open this file again.';
+    });
+} else {
+  render();
+  renderSyncStatus();
+  setBadge('stale', '● Not yet synced');
+  syncAll(false);
+  // Auto-refresh every 2 hours.
+  setInterval(()=>syncAll(false), 2*60*60*1000);
+}
+</script>
+
+
+</body></html>
