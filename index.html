@@ -55,6 +55,17 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Ari
 .kpi-card.red{border-top-color:var(--red);}
 .kpi-value{font-size:24px;font-weight:800;color:var(--navy);line-height:1.1;}
 .kpi-label{font-size:11.5px;color:var(--text-dim);margin-top:4px;font-weight:600;}
+.kpi-grid-primary{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;margin-bottom:18px;}
+.kpi-grid-primary .kpi-card{padding:18px 20px;}
+.kpi-grid-primary .kpi-value{font-size:32px;}
+.kpi-grid-primary .kpi-label{font-size:12.5px;}
+.kpi-details{margin-bottom:22px;}
+.kpi-details summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--blue);padding:8px 0;list-style:none;user-select:none;}
+.kpi-details summary::-webkit-details-marker{display:none;}
+.kpi-details summary:before{content:'▸ ';display:inline-block;transition:transform .15s;}
+.kpi-details[open] summary:before{transform:rotate(90deg);}
+.kpi-details summary:hover{color:var(--navy);}
+.kpi-details .kpi-grid{margin-top:12px;margin-bottom:0;}
 .section-title{font-size:15px;font-weight:700;color:var(--navy);margin:26px 0 12px;padding-bottom:6px;border-bottom:2px solid var(--border);}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
 .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
@@ -190,7 +201,7 @@ tr:hover td{background:var(--blue-light);}
           <div class="kpi-card red"><div class="kpi-value" id="k-overduetodate"></div><div class="kpi-label">Overdue as of today</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">Sum of (amount each member should have paid by now − what they've actually paid), for members behind schedule only</div></div>
           <div class="kpi-card amber"><div class="kpi-value" id="k-zero"></div><div class="kpi-label">Never made a repayment</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">Zero months with a repayment date or amount entered — includes members still inside their moratorium, where nothing is due yet</div></div>
           <div class="kpi-card" id="k-inmoratorium-card"><div class="kpi-value" id="k-inmoratorium"></div><div class="kpi-label">In moratorium period</div><div class="kpi-label" id="k-inmoratorium-note" style="font-weight:400;font-size:10.5px;margin-top:2px;"></div></div>
-          <div class="kpi-card red"><div class="kpi-value" id="k-moratorium"></div><div class="kpi-label">Missed moratorium period</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">Zero repayments AND it's been ≥3 months since first disbursement — the grace period is over</div></div>
+          <div class="kpi-card red"><div class="kpi-value" id="k-moratorium"></div><div class="kpi-label">Missed moratorium period</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">Zero repayments AND the moratorium is over (Livestock 1 month, Fishery 3, Agri-Horti 4 since first disbursement)</div></div>
           <div class="kpi-card red"><div class="kpi-value" id="k-def"></div><div class="kpi-label">Defaulting members</div></div>
           <div class="kpi-card"><div class="kpi-value" id="k-completed"></div><div class="kpi-label">Loans completed (paid ≥ received)</div></div>
         </div>
@@ -199,7 +210,7 @@ tr:hover td{background:var(--blue-light);}
         <div class="hint-box" id="tenureUnknownHint" style="display: block;"></div>
         <div class="table-wrap" style="margin-bottom:22px;">
           <table>
-            <thead><tr><th>Activity</th><th style="text-align:right">Moratorium</th><th style="text-align:right">Repayment tenure</th><th style="text-align:right">Total loan period</th></tr></thead>
+            <thead><tr><th>Category</th><th>Loan type (tenure code)</th><th style="text-align:right">Moratorium</th><th style="text-align:right">First instalment due</th><th style="text-align:right">Repayment tenure</th><th style="text-align:right">Total loan period</th><th style="text-align:right">Members</th></tr></thead>
             <tbody id="tenureRefBody"></tbody>
           </table>
         </div>
@@ -392,7 +403,7 @@ tr:hover td{background:var(--blue-light);}
 
       <!-- DEFAULTERS PAGE -->
       <div class="page" id="page-defaulters">
-        <div class="hint-box">A member is marked <b>defaulting</b> if either: (a) they missed their <b>3-month moratorium period</b> entirely — zero repayments 3+ months after disbursement — or (b) the <b>cumulative amount they've paid so far is less than what should have been paid by now</b> (based on an even monthly EMI over their activity's repayment window). This is amount-based, not count-based: a member who skips a month but later pays double to catch up is <b>not</b> flagged, since what matters is whether they're caught up on the total, not whether every single month was paid on time. A member is marked <b>Completed</b> instead of defaulting once their total paid reaches or exceeds the amount they received.</div>
+        <div class="hint-box">A member is marked <b>defaulting</b> if either: (a) they made zero repayments even though their <b>moratorium period</b> is over — Livestock repays from the 2nd month (1-month moratorium), Fishery from the 4th (3 months), Agri-Horti from the 5th (4 months) — or (b) the <b>cumulative amount they've paid so far is less than what should have been paid by now</b> (based on an even monthly EMI over their activity's repayment window). This is amount-based, not count-based: a member who skips a month but later pays double to catch up is <b>not</b> flagged, since what matters is whether they're caught up on the total, not whether every single month was paid on time. A member is marked <b>Completed</b> instead of defaulting once their total paid reaches or exceeds the amount they received.</div>
         <div class="table-toolbar">
           <input class="search-input" id="defSearch" placeholder="Search member or PG...">
           <button class="export-btn" onclick="exportTable('defaulters')">⬇ Export to Excel</button>
@@ -803,8 +814,10 @@ function normPlace(s){
   s = s.replace(/\bVc\b/g,'VC').replace(/\bClf\b/g,'CLF').replace(/\bPg\b/g,'PG');
   return s;
 }
-const MORATORIUM_MONTHS = 3;
-function activityAndTenure(tenureStr){
+// Months before the first instalment is due: Livestock repays from the 2nd month, Agri-Horti from the 5th, Fishery from the 4th.
+const MORATORIUM_BY_CATEGORY = { 'Livestock':1, 'Agri-Horti':4, 'Fishery':3 };
+function moratoriumFor(category){ return MORATORIUM_BY_CATEGORY[category] ?? 3; }
+function activityAndTenure(tenureStr, moratorium){
   if(!tenureStr) return {activity:'Not recorded', tenureMonths:null, totalLoanPeriod:null};
   const s = String(tenureStr);
   const parts = s.split('-');
@@ -814,7 +827,7 @@ function activityAndTenure(tenureStr){
   if(al.includes('nursery')) totalLoanPeriod = 6;
   else if(al.includes('polyculture')) totalLoanPeriod = 12;
   else { const m = s.match(/(\d+)/); totalLoanPeriod = m?parseFloat(m[1]):null; }
-  const tenureMonths = totalLoanPeriod!==null ? totalLoanPeriod - MORATORIUM_MONTHS : null;
+  const tenureMonths = totalLoanPeriod!==null ? totalLoanPeriod - moratorium : null;
   return {activity, tenureMonths, totalLoanPeriod};
 }
 function ordSuffix(n){ return n===1?'st':n===2?'nd':n===3?'rd':'th'; }
@@ -926,7 +939,8 @@ function buildMemberRecordsFromSheet(rows, source, rowOffset){
     if(d1 && d2) firstDisb = d1<d2?d1:d2; else firstDisb = d1||d2||null;
     let monthsSince = null;
     if(firstDisb) monthsSince = Math.round(((today - firstDisb)/86400000/30.44)*10)/10;
-    const {activity, tenureMonths, totalLoanPeriod} = activityAndTenure(r[COL.tenure]);
+    const moratorium = moratoriumFor(source.category);
+    const {activity, tenureMonths, totalLoanPeriod} = activityAndTenure(r[COL.tenure], moratorium);
     const totalToRepay = received + interestTotal;
     const emi = (tenureMonths && tenureMonths>0) ? (totalToRepay/tenureMonths) : null;
     let repaymentsMade = 0, lastRepaymentDate = null;
@@ -938,7 +952,7 @@ function buildMemberRecordsFromSheet(rows, source, rowOffset){
       if(d && (!lastRepaymentDate || d>lastRepaymentDate)) lastRepaymentDate=d;
       let due = null;
       if(totalLoanPeriod!=null && tenureMonths){
-        if(mc.n<=MORATORIUM_MONTHS) due = 0;
+        if(mc.n<=moratorium) due = 0;
         else if(mc.n<=totalLoanPeriod) due = emi?Math.round(emi*100)/100:0;
         else due = 0;
       }
@@ -946,10 +960,10 @@ function buildMemberRecordsFromSheet(rows, source, rowOffset){
     });
     const startedRepayment = repaymentsMade > 0;
     const zeroRepayments = repaymentsMade === 0;
-    const missedMoratorium = monthsSince!==null && monthsSince>=MORATORIUM_MONTHS && zeroRepayments;
+    const missedMoratorium = monthsSince!==null && monthsSince>=moratorium && zeroRepayments;
     let cumulativeExpected = null, shortfall = null;
     if(emi!==null && monthsSince!==null){
-      const monthsElapsedInWindow = Math.max(Math.min(monthsSince-MORATORIUM_MONTHS, tenureMonths), 0);
+      const monthsElapsedInWindow = Math.max(Math.min(monthsSince-moratorium, tenureMonths), 0);
       cumulativeExpected = Math.round(emi*monthsElapsedInWindow);
       shortfall = Math.max(cumulativeExpected - paid, 0);
     }
@@ -963,7 +977,7 @@ function buildMemberRecordsFromSheet(rows, source, rowOffset){
       pgCategory: source.category,
       subCategory: (r[COL.typePg]||'').replace(/\s+/g,' ').trim() || 'Not recorded',
       vc: normPlace(r[COL.vc]), clf: normPlace(r[COL.clf]),
-      designation: r[COL.desig]||'', activity, tenureMonths, totalLoanPeriod, moratoriumMonths: MORATORIUM_MONTHS,
+      designation: r[COL.desig]||'', activity, tenureMonths, totalLoanPeriod, moratoriumMonths: moratorium,
       sanctioned: Math.round(sanctioned), received: Math.round(received),
       paid: Math.round(paid), outstanding: Math.round(outstanding),
       totalToRepay: Math.round(totalToRepay), emi: emi?Math.round(emi):null,
@@ -1029,11 +1043,14 @@ function aggregate(members, dataNoName, pending, uMismatch, orphan){
     activityUnknownCount: members.filter(m=>m.activity==='Not recorded').length,
   };
   const now = new Date();
-  const tenureRef = [
-    {activity:'Nursery', moratorium:3, tenure:3, total:6},
-    {activity:'Polyculture', moratorium:3, tenure:9, total:12},
-    {activity:'Polyculture with high value', moratorium:3, tenure:9, total:12},
-  ];
+  const tenureRefMap = {};
+  members.forEach(m=>{
+    if(m.totalLoanPeriod==null) return;
+    const k = m.pgCategory+'||'+m.activity+'||'+m.totalLoanPeriod;
+    if(!tenureRefMap[k]) tenureRefMap[k] = {category:m.pgCategory, activity:m.activity, moratorium:m.moratoriumMonths, tenure:m.tenureMonths, total:m.totalLoanPeriod, members:0};
+    tenureRefMap[k].members++;
+  });
+  const tenureRef = Object.values(tenureRefMap).sort((a,b)=> a.category===b.category ? a.activity.localeCompare(b.activity) : a.category.localeCompare(b.category));
   const anomalies = {
     zeroUpdate: members.filter(m=>m.repaymentsMade===0).map(m=>({member:m.member, pg:m.pg, district:m.district, block:m.block, category:m.pgCategory})),
     dateNoAmount: [].concat(...members.map(m=>(m.schedule||[]).filter(s=>s.paidDate && s.paidAmount===0).map(s=>({member:m.member, pg:m.pg, month:s.month, date:s.paidDate})))),
@@ -1303,7 +1320,7 @@ function memberStatus(m){
 }
 function defaultReason(m){
   const reasons = [];
-  if(m.missedMoratorium) reasons.push('Missed moratorium (3mo, zero repayments)');
+  if(m.missedMoratorium) reasons.push(`Missed moratorium (${m.moratoriumMonths}mo, zero repayments)`);
   if(m.shortfall>1 && !m.missedMoratorium) reasons.push(`Behind by ${fmtRs(m.shortfall)} vs. amount due to date`);
   return reasons.join('; ') || '-';
 }
@@ -1391,8 +1408,8 @@ function render(){
   const started = filtered.filter(m=>m.startedRepayment).length;
   const zeroRepay = filtered.filter(m=>m.zeroRepayments).length;
   const missedMoratorium = filtered.filter(m=>m.missedMoratorium).length;
-  const inMoratorium = filtered.filter(m=>m.monthsSince!=null && m.monthsSince<MORATORIUM_MONTHS).length;
-  const inMoratoriumUnpaid = filtered.filter(m=>m.monthsSince!=null && m.monthsSince<MORATORIUM_MONTHS && m.zeroRepayments).length;
+  const inMoratorium = filtered.filter(m=>m.monthsSince!=null && m.monthsSince<m.moratoriumMonths).length;
+  const inMoratoriumUnpaid = filtered.filter(m=>m.monthsSince!=null && m.monthsSince<m.moratoriumMonths && m.zeroRepayments).length;
   const noDisbDate = filtered.filter(m=>m.monthsSince==null).length;
   const defaulters = filtered.filter(m=>m.isDefaulter).length;
   const completed = filtered.filter(m=>m.isCompleted).length;
@@ -1419,7 +1436,7 @@ function render(){
   document.getElementById('k-overduetodate').textContent = fmtRs(overdueToDate);
   document.getElementById('k-zero').textContent = zeroRepay;
   document.getElementById('k-inmoratorium').textContent = inMoratorium;
-  document.getElementById('k-inmoratorium-note').textContent = `Less than ${MORATORIUM_MONTHS} months since first disbursement, so nothing is due yet — ${inMoratoriumUnpaid} haven't paid, ${inMoratorium-inMoratoriumUnpaid} already paid early. (${noDisbDate} more have no disbursement date recorded, so can't be placed here.)`;
+  document.getElementById('k-inmoratorium-note').textContent = `Still inside their moratorium (Livestock 1 month, Fishery 3, Agri-Horti 4), so nothing is due yet —${inMoratoriumUnpaid} haven't paid, ${inMoratorium-inMoratoriumUnpaid} already paid early. (${noDisbDate} more have no disbursement date recorded, so can't be placed here.)`;
   document.getElementById('k-moratorium').textContent = missedMoratorium;
   document.getElementById('k-def').textContent = defaulters;
   document.getElementById('k-completed').textContent = completed;
@@ -1430,8 +1447,9 @@ function render(){
 
   const tRef = document.getElementById('tenureRefBody');
   tRef.innerHTML = (DATA.tenureRef||[]).map(t=>`<tr>
-    <td>${t.activity}</td><td style="text-align:right">${t.moratorium} months</td>
-    <td style="text-align:right">${t.tenure} months</td><td style="text-align:right">${t.total} months</td></tr>`).join('');
+    <td>${t.category}</td><td>${t.activity}</td><td style="text-align:right">${t.moratorium} month${t.moratorium===1?'':'s'}</td>
+    <td style="text-align:right">${t.moratorium+1}${ordSuffix(t.moratorium+1)} month</td>
+    <td style="text-align:right">${t.tenure} months</td><td style="text-align:right">${t.total} months</td><td style="text-align:right">${t.members}</td></tr>`).join('');
   const unknownHint = document.getElementById('tenureUnknownHint');
   if(DATA.totals.activityUnknownCount>0){
     unknownHint.style.display='block';
