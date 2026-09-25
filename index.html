@@ -189,7 +189,8 @@ tr:hover td{background:var(--blue-light);}
       <!-- OVERVIEW PAGE -->
       <div class="page active" id="page-overview">
         <div class="kpi-grid">
-          <div class="kpi-card"><div class="kpi-value" id="k-mem"></div><div class="kpi-label">Members w/ loan</div></div>
+          <div class="kpi-card"><div class="kpi-value" id="k-memtotal"></div><div class="kpi-label">Total members</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">Every member named in the sheets, whether or not money has been received yet</div></div>
+          <div class="kpi-card"><div class="kpi-value" id="k-mem"></div><div class="kpi-label">Members who received a loan</div><div class="kpi-label" id="k-mem-note" style="font-weight:400;font-size:10.5px;margin-top:2px;"></div></div>
           <div class="kpi-card"><div class="kpi-value" id="k-pg"></div><div class="kpi-label">PGs tracked</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">Producer Groups that have at least one member with money disbursed</div></div>
           <div class="kpi-card"><div class="kpi-value" id="k-pgstarted"></div><div class="kpi-label">PGs where repayment started</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">PGs where at least one member has a repayment amount entered, out of all PGs tracked (a date with no amount doesn't count)</div></div>
           <div class="kpi-card"><div class="kpi-value" id="k-memstarted"></div><div class="kpi-label">Members who started repaying</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">Members with at least one repayment amount entered (a date with no amount doesn't count)</div></div>
@@ -277,7 +278,8 @@ tr:hover td{background:var(--blue-light);}
             <thead><tr>
               <th data-key="district">District / DPMU Zone</th>
               <th data-key="blocks" style="text-align:right">Blocks</th>
-              <th data-key="members" style="text-align:right">Members</th>
+              <th data-key="totalMembers" style="text-align:right">Total members</th>
+              <th data-key="members" style="text-align:right">Received loan</th>
               <th data-key="received" style="text-align:right">Disbursed</th>
               <th data-key="paid" style="text-align:right">Repaid</th>
               <th data-key="defaulters" style="text-align:right">Defaulting</th>
@@ -296,7 +298,8 @@ tr:hover td{background:var(--blue-light);}
           <table id="blockTable">
             <thead><tr>
               <th data-key="district">District / DPMU Zone</th><th data-key="block">Block</th>
-              <th data-key="members" style="text-align:right">Members</th>
+              <th data-key="totalMembers" style="text-align:right">Total members</th>
+              <th data-key="members" style="text-align:right">Received loan</th>
               <th data-key="received" style="text-align:right">Disbursed</th>
               <th data-key="paid" style="text-align:right">Repaid</th>
               <th data-key="defaulters" style="text-align:right">Defaulting</th>
@@ -315,7 +318,8 @@ tr:hover td{background:var(--blue-light);}
           <table id="categoryTable">
             <thead><tr>
               <th data-key="category">Category</th>
-              <th data-key="members" style="text-align:right">Members</th>
+              <th data-key="totalMembers" style="text-align:right">Total members</th>
+              <th data-key="members" style="text-align:right">Received loan</th>
               <th data-key="received" style="text-align:right">Disbursed</th>
               <th data-key="paid" style="text-align:right">Repaid</th>
               <th data-key="defaulters" style="text-align:right">Defaulting</th>
@@ -910,6 +914,14 @@ function buildMemberRecordsFromSheet(rows, source, rowOffset){
     });
   });
   const dataRows = allDataRows.filter(r=>r[COL.member] && r[COL.member].trim());
+  // Every named member, whether or not money has been received yet — used for "Total members".
+  result.roster = dataRows.map(r=>({
+    member: r[COL.member].trim(), pg:(r[COL.pg]||'').trim(),
+    district: source.district, block:(r[COL.block]||'').trim()||source.block,
+    pgCategory: source.category, subCategory:(r[COL.typePg]||'').replace(/\s+/g,' ').trim() || 'Not recorded',
+    vc: normPlace(r[COL.vc]), clf: normPlace(r[COL.clf]),
+    gotLoan: toNum(r[COL.received])>0
+  }));
   allDataRows.forEach((r,i)=>{
     const nameBlank = !r[COL.member] || !r[COL.member].trim();
     const hasData = toNum(r[COL.sanctioned])>0 || toNum(r[COL.received])>0;
@@ -1255,13 +1267,13 @@ async function syncAll(manual){
   document.getElementById('syncProgressBox').style.display = 'block';
   updateSyncProgress(0, SOURCES.length);
 
-  let allMembers = [], allDataNoName = [], allPending = [], allUMismatch = [], allOrphan = [], allFormulaErrors = [], layouts = [], ok=0, fail=0;
+  let allMembers = [], allDataNoName = [], allPending = [], allUMismatch = [], allOrphan = [], allFormulaErrors = [], allRoster = [], layouts = [], ok=0, fail=0;
   await runPool(SOURCES, 6, async(src)=>{
     try{
       const { text, via } = await fetchCsvForSource(src);
       const parsed = Papa.parse(text, {skipEmptyLines:false});
       const rowOffset = via==='published' ? 3 : 1;
-      const { members, dataNoName, pending, uMismatch, orphan, formulaErrors, layout, badShape } = buildMemberRecordsFromSheet(parsed.data, src, rowOffset);
+      const { members, dataNoName, pending, uMismatch, orphan, formulaErrors, roster, layout, badShape } = buildMemberRecordsFromSheet(parsed.data, src, rowOffset);
       if(badShape){
         sourceStatus[src.key] = {ok:false, rows:0, via, error:`Unexpected column count (${badShape}) — sheet layout may have changed`, district:src.district, block:src.block, category:src.category, syncedAt:new Date().toISOString()};
         fail++; return;
@@ -1272,6 +1284,7 @@ async function syncAll(manual){
       allUMismatch = allUMismatch.concat(uMismatch||[]);
       allOrphan = allOrphan.concat(orphan||[]);
       allFormulaErrors = allFormulaErrors.concat(formulaErrors||[]);
+      allRoster = allRoster.concat(roster||[]);
       if(layout) layouts.push({...layout, district:src.district, block:src.block, category:src.category, zone:src.zone});
       sourceStatus[src.key] = {ok:true, rows:members.length, via, error:null, district:src.district, block:src.block, category:src.category, syncedAt:new Date().toISOString()};
       ok++;
@@ -1283,6 +1296,7 @@ async function syncAll(manual){
 
   const newData = aggregate(allMembers, allDataNoName, allPending, allUMismatch, allOrphan);
   newData.formulaErrors = allFormulaErrors;
+  newData.roster = allRoster;
   newData.sheetLayouts = layoutAnomalies(layouts);
   applyNewData(newData, ok, fail);
   if(location.protocol.indexOf('http')===0 && ok>0){
@@ -1526,7 +1540,11 @@ function render(){
   const pgsInView = new Set(filtered.map(m=>m.pg+'||'+m.district+'||'+m.block+'||'+m.vc));
   const pgStartedInView = new Set(filtered.filter(m=>m.startedRepayment).map(m=>m.pg+'||'+m.district+'||'+m.block+'||'+m.vc));
 
+  const totalMembers = rosterInView(filtered).length;
+  document.getElementById('k-memtotal').textContent = totalMembers;
   document.getElementById('k-mem').textContent = filtered.length;
+  document.getElementById('k-mem-note').textContent = document.getElementById('fStatus').value ? 'Member status filter applied' :
+    `${totalMembers - filtered.length} named member(s) haven't received any money yet`;
   document.getElementById('k-pg').textContent = pgSet.size;
   document.getElementById('k-pgstarted').textContent = pgStartedInView.size + ' / ' + pgsInView.size;
   document.getElementById('k-memstarted').textContent = started + ' / ' + filtered.length;
@@ -1663,7 +1681,15 @@ document.querySelectorAll('#pendTable th').forEach(th=>th.addEventListener('clic
   st.dir = (st.key===k) ? -st.dir : 1; st.key = k; renderPending();
 }));
 
+// All named members matching the filters. The member-status filter only applies to members who received a
+// loan, so with it on (or with an older snapshot that has no roster) this falls back to the loan members.
+function rosterInView(filtered){
+  return (document.getElementById('fStatus').value || !DATA.roster) ? filtered : getPendingFiltered(DATA.roster);
+}
+function countBy(list, keyFn){ const o={}; list.forEach(r=>{ const k=keyFn(r); o[k]=(o[k]||0)+1; }); return o; }
 function renderGeography(filtered){
+  const roster = rosterInView(filtered);
+  const totalByDistrict = countBy(roster, r=>r.district), totalByCategory = countBy(roster, r=>r.pgCategory);
   const categoryCounts = {Fishery:0, Livestock:0, 'Agri-Horti':0};
   filtered.forEach(m=>{ if(categoryCounts[m.pgCategory]===undefined) categoryCounts[m.pgCategory]=0; categoryCounts[m.pgCategory]++; });
   if(charts.categoryDonut) charts.categoryDonut.destroy();
@@ -1700,10 +1726,11 @@ function renderGeography(filtered){
   filtered.forEach(m=>{ if(!districtBlockCount[m.district]) districtBlockCount[m.district]=new Set(); districtBlockCount[m.district].add(m.block); });
   window._districtRows = Object.values(distMap).map(d=>{
     const agg = window._districtAggFull(filtered, d.district);
-    return {district:d.district, blocks:(districtBlockCount[d.district]||new Set()).size, ...agg};
+    return {district:d.district, blocks:(districtBlockCount[d.district]||new Set()).size, totalMembers: totalByDistrict[d.district]||0, ...agg};
   });
   districtBody.innerHTML = window._districtRows.sort((a,b)=>b.members-a.members).map(d=>`<tr>
     <td>${d.district}</td><td style="text-align:right">${d.blocks}</td>
+    <td style="text-align:right">${d.totalMembers}</td>
     <td style="text-align:right">${d.members}</td>
     <td style="text-align:right">${fmtRs(d.received)}</td>
     <td style="text-align:right">${fmtRs(d.paid)}</td>
@@ -1717,11 +1744,11 @@ function renderGeography(filtered){
   const cats = ['Fishery','Livestock','Agri-Horti'];
   window._categoryRows = cats.map(c=>{
     const sub = filtered.filter(m=>m.pgCategory===c);
-    return { category:c, members:sub.length, received:sub.reduce((s,m)=>s+m.received,0), paid:sub.reduce((s,m)=>s+m.paid,0),
+    return { category:c, totalMembers: totalByCategory[c]||0, members:sub.length, received:sub.reduce((s,m)=>s+m.received,0), paid:sub.reduce((s,m)=>s+m.paid,0),
       totalToRepay:sub.reduce((s,m)=>s+m.totalToRepay,0), defaulters:sub.filter(m=>m.isDefaulter).length, completedCount:sub.filter(m=>m.isCompleted).length };
   });
   catBody.innerHTML = window._categoryRows.map(c=>`<tr>
-    <td>${c.category}</td><td style="text-align:right">${c.members}</td>
+    <td>${c.category}</td><td style="text-align:right">${c.totalMembers}</td><td style="text-align:right">${c.members}</td>
     <td style="text-align:right">${fmtRs(c.received)}</td><td style="text-align:right">${fmtRs(c.paid)}</td>
     <td style="text-align:right;${c.defaulters>0?'color:var(--red);font-weight:600;':''}">${c.defaulters}</td>
     <td style="text-align:right">${c.completedCount}</td>
@@ -1756,9 +1783,15 @@ window._districtAggFull = function(filtered, district){
 function renderBlockTable(filtered){
   const q = (document.getElementById('blockSearch').value||'').toLowerCase();
   const blockMap = {};
+  const newBlock = (district, block) => ({district, block, totalMembers:0, members:0, received:0, paid:0, totalToRepay:0, defaulters:0, completedCount:0});
+  rosterInView(filtered).forEach(r=>{
+    const k = r.district+'||'+r.block;
+    if(!blockMap[k]) blockMap[k]=newBlock(r.district, r.block);
+    blockMap[k].totalMembers++;
+  });
   filtered.forEach(m=>{
     const k = m.district+'||'+m.block;
-    if(!blockMap[k]) blockMap[k]={district:m.district, block:m.block, members:0, received:0, paid:0, totalToRepay:0, defaulters:0, completedCount:0};
+    if(!blockMap[k]) blockMap[k]=newBlock(m.district, m.block);
     const b = blockMap[k];
     b.members++; b.received+=m.received; b.paid+=m.paid; b.totalToRepay+=m.totalToRepay;
     if(m.isDefaulter) b.defaulters++;
@@ -1772,6 +1805,7 @@ function renderBlockTable(filtered){
   else rows = [...rows].sort((a,b)=>b.defaulters-a.defaulters);
   document.getElementById('blockBody').innerHTML = rows.map(b=>`<tr>
     <td>${b.district}</td><td>${b.block}</td>
+    <td style="text-align:right">${b.totalMembers}</td>
     <td style="text-align:right">${b.members}</td>
     <td style="text-align:right">${fmtRs(b.received)}</td>
     <td style="text-align:right">${fmtRs(b.paid)}</td>
@@ -2070,13 +2104,13 @@ function exportTable(which){
     rows = (window._pgIdUnmatched||[]).map(r=>({Block:r.block,PG:r.pg,Members:r.members}));
     filename = 'TRESP_PG_ID_Unmatched';
   } else if(which==='district'){
-    rows = (window._districtRows||[]).map(d=>({District:d.district,Blocks:d.blocks,Members:d.members,Disbursed:d.received,Repaid:d.paid,'Total To Repay':d.totalToRepay,Defaulting:d.defaulters,Completed:d.completedCount}));
+    rows = (window._districtRows||[]).map(d=>({District:d.district,Blocks:d.blocks,'Total Members':d.totalMembers,'Received Loan':d.members,Disbursed:d.received,Repaid:d.paid,'Total To Repay':d.totalToRepay,Defaulting:d.defaulters,Completed:d.completedCount}));
     filename = 'TRESP_District_Summary';
   } else if(which==='block'){
-    rows = (window._blockRows||[]).map(b=>({District:b.district,Block:b.block,Members:b.members,Disbursed:b.received,Repaid:b.paid,'Total To Repay':b.totalToRepay,Defaulting:b.defaulters,Completed:b.completedCount}));
+    rows = (window._blockRows||[]).map(b=>({District:b.district,Block:b.block,'Total Members':b.totalMembers,'Received Loan':b.members,Disbursed:b.received,Repaid:b.paid,'Total To Repay':b.totalToRepay,Defaulting:b.defaulters,Completed:b.completedCount}));
     filename = 'TRESP_Block_Summary';
   } else if(which==='category'){
-    rows = (window._categoryRows||[]).map(c=>({Category:c.category,Members:c.members,Disbursed:c.received,Repaid:c.paid,'Total To Repay':c.totalToRepay,Defaulting:c.defaulters,Completed:c.completedCount}));
+    rows = (window._categoryRows||[]).map(c=>({Category:c.category,'Total Members':c.totalMembers,'Received Loan':c.members,Disbursed:c.received,Repaid:c.paid,'Total To Repay':c.totalToRepay,Defaulting:c.defaulters,Completed:c.completedCount}));
     filename = 'TRESP_Category_Summary';
   }
   if(!rows || !rows.length){ alert('Nothing to export yet — sync the data first.'); return; }
