@@ -191,15 +191,15 @@ tr:hover td{background:var(--blue-light);}
         <div class="kpi-grid">
           <div class="kpi-card"><div class="kpi-value" id="k-mem"></div><div class="kpi-label">Members w/ loan</div></div>
           <div class="kpi-card"><div class="kpi-value" id="k-pg"></div><div class="kpi-label">PGs tracked</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">Producer Groups that have at least one member with money disbursed</div></div>
-          <div class="kpi-card"><div class="kpi-value" id="k-pgstarted"></div><div class="kpi-label">PGs where repayment started</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">PGs where at least one member has a repayment entered (a date or an amount), out of all PGs tracked</div></div>
-          <div class="kpi-card"><div class="kpi-value" id="k-memstarted"></div><div class="kpi-label">Members who started repaying</div></div>
+          <div class="kpi-card"><div class="kpi-value" id="k-pgstarted"></div><div class="kpi-label">PGs where repayment started</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">PGs where at least one member has a repayment amount entered, out of all PGs tracked (a date with no amount doesn't count)</div></div>
+          <div class="kpi-card"><div class="kpi-value" id="k-memstarted"></div><div class="kpi-label">Members who started repaying</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">Members with at least one repayment amount entered (a date with no amount doesn't count)</div></div>
           <div class="kpi-card"><div class="kpi-value" id="k-recv"></div><div class="kpi-label">Total disbursed</div></div>
           <div class="kpi-card green"><div class="kpi-value" id="k-paid"></div><div class="kpi-label">Total repaid</div><div class="kpi-label" id="k-paid-note" style="font-weight:400;font-size:10.5px;margin-top:2px;"></div></div>
           <div class="kpi-card amber"><div class="kpi-value" id="k-torepay"></div><div class="kpi-label">Total to repay (principal+interest)</div></div>
           <div class="kpi-card amber"><div class="kpi-value" id="k-gap"></div><div class="kpi-label">Repayment gap</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">Total to repay minus total repaid — the full remaining obligation over the whole loan life, not just what's due today</div></div>
           <div class="kpi-card"><div class="kpi-value" id="k-duetodate"></div><div class="kpi-label">Should have been repaid by now</div><div class="kpi-label" id="k-duetodate-note" style="font-weight:400;font-size:10.5px;margin-top:2px;"></div></div>
           <div class="kpi-card red"><div class="kpi-value" id="k-overduetodate"></div><div class="kpi-label">Overdue as of today</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">Sum of (amount each member should have paid by now − what they've actually paid), for members behind schedule only</div></div>
-          <div class="kpi-card amber"><div class="kpi-value" id="k-zero"></div><div class="kpi-label">Never made a repayment</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">Zero months with a repayment date or amount entered — includes members still inside their moratorium, where nothing is due yet</div></div>
+          <div class="kpi-card amber"><div class="kpi-value" id="k-zero"></div><div class="kpi-label">Never made a repayment</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">Zero months with a repayment amount entered (a date with no amount doesn't count) — includes members still inside their moratorium, where nothing is due yet</div></div>
           <div class="kpi-card" id="k-inmoratorium-card"><div class="kpi-value" id="k-inmoratorium"></div><div class="kpi-label">In moratorium period</div><div class="kpi-label" id="k-inmoratorium-note" style="font-weight:400;font-size:10.5px;margin-top:2px;"></div></div>
           <div class="kpi-card red"><div class="kpi-value" id="k-moratorium"></div><div class="kpi-label">Missed moratorium period</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">Zero repayments AND the moratorium is over (Livestock 1 month, Fishery 3, Agri-Horti 4 since first disbursement)</div></div>
           <div class="kpi-card red"><div class="kpi-value" id="k-def"></div><div class="kpi-label">Defaulting members</div></div>
@@ -948,7 +948,7 @@ function buildMemberRecordsFromSheet(rows, source, rowOffset){
       const dRaw = r[mc.dateIdx], d = parseDMonYYYY(dRaw);
       const prin = toNum(r[mc.prinIdx]), interest = toNum(r[mc.intIdx]);
       const paidAmt = prin + interest;
-      if(d || paidAmt>0){ repaymentsMade++; }
+      if(paidAmt>0){ repaymentsMade++; }
       if(d && (!lastRepaymentDate || d>lastRepaymentDate)) lastRepaymentDate=d;
       let due = null;
       if(totalLoanPeriod!=null && tenureMonths){
