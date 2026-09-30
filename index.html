@@ -407,7 +407,7 @@ tr:hover td{background:var(--blue-light);}
 
       <!-- DEFAULTERS PAGE -->
       <div class="page" id="page-defaulters">
-        <div class="hint-box">A member is marked <b>defaulting</b> if either: (a) they made zero repayments even though their <b>moratorium period</b> is over — Livestock repays from the 2nd month (1-month moratorium), Fishery from the 4th (3 months), Agri-Horti from the 5th (4 months) — or (b) the <b>cumulative amount they've paid so far is less than what should have been paid by now</b> (based on an even monthly EMI over their activity's repayment window). This is amount-based, not count-based: a member who skips a month but later pays double to catch up is <b>not</b> flagged, since what matters is whether they're caught up on the total, not whether every single month was paid on time. A member is marked <b>Completed</b> instead of defaulting once their total paid reaches or exceeds the amount they received.</div>
+        <div class="hint-box">A member is marked <b>defaulting</b> if either: (a) they made zero repayments even though their <b>moratorium period</b> is over — Livestock repays from the 2nd month (1-month moratorium), Fishery from the 4th (3 months), Agri-Horti from the 5th (4 months) — or (b) the <b>cumulative amount they've paid so far is less than what should have been paid by now</b> (based on the official TRESP repayment schedule for their loan product — Agri, Polyculture, Nursery, PPU, GPU, GRU or PFU — rebuilt from their own disbursement amounts and dates). This is amount-based, not count-based: a member who skips a month but later pays double to catch up is <b>not</b> flagged, since what matters is whether they're caught up on the total, not whether every single month was paid on time. A member is marked <b>Completed</b> instead of defaulting once their total paid reaches or exceeds the amount they received.</div>
         <div class="table-toolbar">
           <input class="search-input" id="defSearch" placeholder="Search member or PG...">
           <button class="export-btn" onclick="exportTable('defaulters')">⬇ Export to Excel</button>
@@ -573,6 +573,13 @@ tr:hover td{background:var(--blue-light);}
         <div class="table-wrap" style="margin-bottom:10px;max-height:320px;">
           <table><thead><tr><th>Block</th><th>PG name in loan sheet</th><th>PG name in PG Database</th><th>PG ID</th><th>How matched</th><th style="text-align:right">Members</th></tr></thead><tbody id="an-pgnamemismatch"></tbody></table>
         </div>
+
+        <div class="section-title">Tenure code counts up row by row (treated as Agri/Horti-12) <span id="cnt-tenurefill"></span></div>
+        <div class="hint-box">Agri/Horti loans are 12 months, but these members have codes like "Agri/Horti-13", "-14", "-15"… increasing down the sheet — what Google Sheets does when a cell is dragged down. The dashboard uses 12 months for them. Set the "Tenure (in Months)" column back to "Agri/Horti-12" in the sheet.</div>
+        <div class="table-toolbar"><button class="export-btn" onclick="exportAnomaly('tenureFill')">⬇ Export to Excel</button></div>
+        <div class="table-wrap" style="margin-bottom:10px;max-height:320px;">
+          <table><thead><tr><th>Block</th><th>PG</th><th>Member</th><th>Tenure in sheet</th><th>Used by dashboard</th></tr></thead><tbody id="an-tenurefill"></tbody></table>
+        </div>
       </div>
 
       <!-- DATA QUALITY PAGE -->
@@ -674,6 +681,17 @@ const PUB_MAP = {
   '1Rkn3_zh6skLVRxv07Epz1Di3Fh22BkoVEAZaZCrwwkQ': '2PACX-1vSc6OCiG_tb-oiragUn_pbmnKrW55ImDQG01iTmdHouQY-oLr_ybJau3WkdqT98YFovXNn7ypS5ePf1',   // Khowai/Padmabil
   '1Ls9aSMVY1hrNwyI6JPhs6_hkvU2hfZ_-R1rWBMXk7gE': '2PACX-1vR2ZGKnMr51jJjrpG0d9nzY3rzjYbo0uvPWcFXa1FrzGZD0rWDV9KiBhB7jce3dSfdlvR-D0ljNWih5',   // Khowai/Tulashikhar
   '1oliFizzAUy_Gk-64jyqvFIKCK_KnFlpc-nNWx4s_Sww': '2PACX-1vR3OCkmBGpd_qPBWU6T1KKaU4MOAVHvatW0lj3yjrDCa0Fi8MpvpAmN0fz4UfXRbobpxmGor3TcyFk7',   // Khowai/Mungiakami
+};
+// Tab names inside each spreadsheet ("sheetId|gid" -> tab), as listed on its published page.
+const TAB_NAMES = {
+  '1rbXpO60pkShOfPc8ZurOvqjYdX2FO4XgMTtbLjbOHIA|0':'BELBARI_AGRI', '1rbXpO60pkShOfPc8ZurOvqjYdX2FO4XgMTtbLjbOHIA|2013123985':'BELBARI_FISHERY', '1rbXpO60pkShOfPc8ZurOvqjYdX2FO4XgMTtbLjbOHIA|2073601712':'BELBARI_LIVESTOCK',
+  '1ZzM4S7DZ76RKET-DPRW9h81G_Gr3gQUNsBrJECjMDeE|0':'MANDWI_AGRI', '1ZzM4S7DZ76RKET-DPRW9h81G_Gr3gQUNsBrJECjMDeE|1979876275':'MANDWI_FISHERY', '1ZzM4S7DZ76RKET-DPRW9h81G_Gr3gQUNsBrJECjMDeE|1517572113':'MANDWI_LIVESTOCK',
+  '1--7tSBONoWQJk5FyBSwheQZFws5GXV61Y47jVYbzZy0|0':'HEZAMARA_AGRI', '1--7tSBONoWQJk5FyBSwheQZFws5GXV61Y47jVYbzZy0|280289712':'HEZAMARA_FISHERY', '1--7tSBONoWQJk5FyBSwheQZFws5GXV61Y47jVYbzZy0|715401793':'HEZAMARA_LIVESTOCK',
+  '1QDH3twowf05-acmhlWfeIpZOlmLcAt0KbLl-0EUn_q0|0':'LEFUNGA_AGRI', '1QDH3twowf05-acmhlWfeIpZOlmLcAt0KbLl-0EUn_q0|125272854':'LEFUNGA_FISHERY', '1QDH3twowf05-acmhlWfeIpZOlmLcAt0KbLl-0EUn_q0|1805517466':'LEFUNGA_LIVESTOCK',
+  '1EaGuUg10GZDWIbEaah4oIE90RGzCPFfGssROuVqN3C0|0':'JAMPUIJALA_AGRI', '1EaGuUg10GZDWIbEaah4oIE90RGzCPFfGssROuVqN3C0|394538267':'JAMPUIJALA_FISHERY', '1EaGuUg10GZDWIbEaah4oIE90RGzCPFfGssROuVqN3C0|1256132106':'JAMPUIJALA_LIVESTOCK',
+  '1Rkn3_zh6skLVRxv07Epz1Di3Fh22BkoVEAZaZCrwwkQ|0':'PADMABIL_AGRI', '1Rkn3_zh6skLVRxv07Epz1Di3Fh22BkoVEAZaZCrwwkQ|765595870':'PADMABIL_FISHERY', '1Rkn3_zh6skLVRxv07Epz1Di3Fh22BkoVEAZaZCrwwkQ|1406284984':'PADMABIL_LIVESTOCK',
+  '1Ls9aSMVY1hrNwyI6JPhs6_hkvU2hfZ_-R1rWBMXk7gE|0':'TULASIKHAR_AGRI', '1Ls9aSMVY1hrNwyI6JPhs6_hkvU2hfZ_-R1rWBMXk7gE|1786638222':'TULASIKHAR_FISHERY', '1Ls9aSMVY1hrNwyI6JPhs6_hkvU2hfZ_-R1rWBMXk7gE|1577199997':'TULASIKHAR_LIVESTOCK',
+  '1oliFizzAUy_Gk-64jyqvFIKCK_KnFlpc-nNWx4s_Sww|0':'MUNGIAKAMI_AGRI', '1oliFizzAUy_Gk-64jyqvFIKCK_KnFlpc-nNWx4s_Sww|824388260':'MUNGIAKAMI_FISHERY', '1oliFizzAUy_Gk-64jyqvFIKCK_KnFlpc-nNWx4s_Sww|197375460':'MUNGIAKAMI_LIVESTOCK',
 };
 const ALL_SOURCES = [
   // West
@@ -866,6 +884,62 @@ function normPlace(s){
 // Months before the first instalment is due: Livestock repays from the 2nd month, Agri-Horti from the 5th, Fishery from the 4th.
 const MORATORIUM_BY_CATEGORY = { 'Livestock':1, 'Agri-Horti':4, 'Fishery':3 };
 function moratoriumFor(category){ return MORATORIUM_BY_CATEGORY[category] ?? 3; }
+
+// Official repayment schedules ("Repayment Schedule - TRESP - Final structure", 30-09-2026), rebuilt per member.
+// Agri (all crops): nothing in months 1-4, then 8 equal principal instalments + 3% interest on the balance ÷ 8.
+// Fishery Polyculture: nothing in months 1-3, then 9 equal principal instalments + 3% interest on the balance ÷ 9.
+// Fishery Nursery: nothing in months 1-3, then ₹500, ₹500, and the rest in month 6, each + 3% of the balance ÷ 3.
+// Livestock: fixed build-up instalments while the unit is set up, then the remaining balance in equal principal
+// instalments; interest is 3% a year on the running balance, which grows as each tranche is disbursed.
+const LIVESTOCK_PLANS = {
+  PPU: { buildUp:[0,500,500,500,500,500,1000,1000,1000,1000,1000,1000,1500,1500,1500,1500], tail:14 },
+  GPU: { buildUp:[0,500,500,500,500,500,1000,1000,1000,1000,1000,1001,1500,1500,1500,1500], tail:14 },
+  GRU: { buildUp:[0,300,300,300,300,300,300,300,300,300,300,300,300,300,300,300], tail:9 },
+  PFU: { buildUp:[0,100,100,100,100,100,100,100,100], tail:9 },
+};
+function productOf(activity){
+  const a = (activity||'').toLowerCase();
+  if(a.includes('nursery')) return 'Nursery';
+  if(a.includes('polyculture')) return 'Polyculture';
+  if(a.includes('agri')) return 'Agri';
+  const k = (activity||'').toUpperCase().trim();
+  return LIVESTOCK_PLANS[k] ? k : null;
+}
+// Returns {plan:[instalment for month 1, month 2, …], moratorium} or null if the product isn't known.
+// tranches: [{month, amount}] — when each part of the loan was disbursed (month 1 = first disbursement).
+function repaymentPlan(product, received, tranches){
+  if(!product || !(received > 0)) return null;
+  const plan = [];
+  if(product==='Agri' || product==='Polyculture'){
+    const mor = product==='Agri' ? 4 : 3, n = product==='Agri' ? 8 : 9;
+    for(let m=0;m<mor;m++) plan.push(0);
+    let bal = received;
+    for(let k=0;k<n;k++){ const prin = k===n-1 ? bal : Math.round(received/n); plan.push(prin + 0.03*bal/n); bal -= prin; }
+    return {plan, moratorium:mor};
+  }
+  if(product==='Nursery'){
+    plan.push(0,0,0);
+    let bal = received;
+    for(let k=0;k<3;k++){ const prin = k<2 ? Math.min(500, bal) : bal; plan.push(prin + 0.03*bal/3); bal -= prin; }
+    return {plan, moratorium:3};
+  }
+  const def = LIVESTOCK_PLANS[product];
+  const B = def.buildUp.length, T = B + def.tail;
+  const disb = new Array(T+1).fill(0);
+  tranches.forEach(t=>{ disb[Math.min(Math.max(t.month,1),T)] += t.amount; });
+  // Same arithmetic as the schedule sheet: D = balance, E = principal, F = interest, G = instalment.
+  let Dprev = 0, Eprev = 0, tailPrin = null;
+  for(let m=1;m<=T;m++){
+    const D = disb[m] + Dprev - Eprev;
+    const F = m===1 ? 0 : Dprev*0.03/12;
+    let E, G;
+    if(m===1){ E = 0; G = 0; }
+    else if(m<=B){ G = def.buildUp[m-1]; E = G - F; }
+    else { if(tailPrin===null) tailPrin = D/def.tail; E = tailPrin; G = E + F; }
+    plan.push(G); Dprev = D; Eprev = E;
+  }
+  return {plan, moratorium:1};
+}
 function activityAndTenure(tenureStr, moratorium){
   if(!tenureStr) return {activity:'Not recorded', tenureMonths:null, totalLoanPeriod:null};
   const s = String(tenureStr);
@@ -876,8 +950,12 @@ function activityAndTenure(tenureStr, moratorium){
   if(al.includes('nursery')) totalLoanPeriod = 6;
   else if(al.includes('polyculture')) totalLoanPeriod = 12;
   else { const m = s.match(/(\d+)/); totalLoanPeriod = m?parseFloat(m[1]):null; }
+  // Agri/Horti loans are 12 months. Codes like "Agri/Horti-13", "-14" … counting up row by row come from
+  // drag-filling the cell in the sheet, so treat them as 12 and remember the code for the Anomalies page.
+  let tenureCodeInSheet = null;
+  if(al.includes('agri') && totalLoanPeriod>12){ tenureCodeInSheet = s.trim(); totalLoanPeriod = 12; }
   const tenureMonths = totalLoanPeriod!==null ? totalLoanPeriod - moratorium : null;
-  return {activity, tenureMonths, totalLoanPeriod};
+  return {activity, tenureMonths, totalLoanPeriod, tenureCodeInSheet};
 }
 function ordSuffix(n){ return n===1?'st':n===2?'nd':n===3?'rd':'th'; }
 
@@ -903,6 +981,10 @@ function buildMemberRecordsFromSheet(rows, source, rowOffset){
   const header = rows[0];
   if(!header || header.length < EXPECTED_COLS-5){ result.badShape = header?header.length:0; return result; }
   const allDataRows = rows.slice(rowOffset);
+  // Where each record sits in the Google Sheet, so anomalies can point at an exact tab / row / column.
+  const rowNumOf = new Map(); allDataRows.forEach((r,i)=>rowNumOf.set(r, i+rowOffset+1));
+  const tab = TAB_NAMES[source.sheetId+'|'+source.gid] || `${source.block} ${source.category}`;
+  const colLetter = i => { let s=''; i++; while(i>0){ const m=(i-1)%26; s=String.fromCharCode(65+m)+s; i=Math.floor((i-1)/26); } return s; };
   // Some sheets (e.g. Jampuijala) leave VC/CLF/PG blank on every row after the first member of a
   // group — a merged cell in the sheet UI that the CSV export doesn't repeat. Carry the last
   // non-blank value down so every member still gets tagged with the right PG/VC/CLF.
@@ -925,7 +1007,7 @@ function buildMemberRecordsFromSheet(rows, source, rowOffset){
   allDataRows.forEach((r,i)=>{
     const nameBlank = !r[COL.member] || !r[COL.member].trim();
     const hasData = toNum(r[COL.sanctioned])>0 || toNum(r[COL.received])>0;
-    if(nameBlank && hasData) result.dataNoName.push({rowNum:i+rowOffset+1, pg:(r[COL.pg]||'').trim(), district:source.district, block:source.block, category:source.category, source: source.district+' / '+source.block+' / '+source.category});
+    if(nameBlank && hasData) result.dataNoName.push({rowNum:i+rowOffset+1, tab, pg:(r[COL.pg]||'').trim(), district:source.district, block:source.block, category:source.category, source: source.district+' / '+source.block+' / '+source.category});
   });
   // Column positions after the fixed block differ between sheets (e.g. Livestock sheets have 29 monthly
   // repayment groups, others 15), so find them from the header text.
@@ -953,7 +1035,7 @@ function buildMemberRecordsFromSheet(rows, source, rowOffset){
     const named = r[COL.member] && r[COL.member].trim();
     if(p>0 && !(named && toNum(r[COL.received])>0)){
       result.orphan.push({
-        sheetRow: i+rowOffset+1, member: named ? r[COL.member].trim() : '(no name)', pg:(r[COL.pg]||'').trim(),
+        sheetRow: i+rowOffset+1, tab, paidCol: colLetter(totalPaidIdx), member: named ? r[COL.member].trim() : '(no name)', pg:(r[COL.pg]||'').trim(),
         district: source.district, block:(r[COL.block]||'').trim()||source.block,
         pgCategory: source.category, subCategory: (r[COL.typePg]||'').replace(/\s+/g,' ').trim() || 'Not recorded',
         vc: normPlace(r[COL.vc]), clf: normPlace(r[COL.clf]),
@@ -976,7 +1058,6 @@ function buildMemberRecordsFromSheet(rows, source, rowOffset){
       hasOwnHeading.push(!!(top || sub));
     }
   }
-  const colLetter = i => { let s=''; i++; while(i>0){ const m=(i-1)%26; s=String.fromCharCode(65+m)+s; i=Math.floor((i-1)/26); } return s; };
   const ERR_RE = /^#(REF!|VALUE!|N\/A|DIV\/0!|NAME\?|NUM!|NULL!|ERROR!)/i;
   allDataRows.forEach((r,i)=>{
     const named = r[COL.member] && r[COL.member].trim();
@@ -985,7 +1066,7 @@ function buildMemberRecordsFromSheet(rows, source, rowOffset){
     r.forEach((v,ci)=>{ if(v && ERR_RE.test(String(v).trim())) errs.push({col: colLetter(ci), label: colLabels[ci]||'', value: String(v).trim()}); });
     if(!errs.length) return;
     result.formulaErrors.push({
-      sheetRow: i+rowOffset+1, member: named ? r[COL.member].trim() : '(no name)', pg:(r[COL.pg]||'').trim(),
+      sheetRow: i+rowOffset+1, tab, member: named ? r[COL.member].trim() : '(no name)', pg:(r[COL.pg]||'').trim(),
       district: source.district, block:(r[COL.block]||'').trim()||source.block,
       pgCategory: source.category, subCategory: (r[COL.typePg]||'').replace(/\s+/g,' ').trim() || 'Not recorded',
       vc: normPlace(r[COL.vc]), clf: normPlace(r[COL.clf]),
@@ -1008,6 +1089,7 @@ function buildMemberRecordsFromSheet(rows, source, rowOffset){
     const utilized = toNum(r[COL.utilized]), uSheet = toNum(r[COL.pending]);
     if(sanctioned>0 && Math.abs(uSheet - (sanctioned - utilized)) > 1){
       result.uMismatch.push({
+        sheetRow: rowNumOf.get(r), tab,
         member: r[COL.member], pg:(r[COL.pg]||'').trim(),
         district: source.district, block:(r[COL.block]||'').trim()||source.block,
         pgCategory: source.category, subCategory: (r[COL.typePg]||'').replace(/\s+/g,' ').trim() || 'Not recorded', vc: normPlace(r[COL.vc]), clf: normPlace(r[COL.clf]),
@@ -1017,6 +1099,7 @@ function buildMemberRecordsFromSheet(rows, source, rowOffset){
     // Sanctioned but not (fully) disbursed: sanctioned minus disbursed (Total amount Received in Kind and Cash).
     if(sanctioned > received + 1){
       result.pending.push({
+        sheetRow: rowNumOf.get(r), tab,
         member: r[COL.member], pg:(r[COL.pg]||'').trim(),
         district: source.district, block:(r[COL.block]||'').trim()||source.block,
         pgCategory: source.category, subCategory: (r[COL.typePg]||'').replace(/\s+/g,' ').trim() || 'Not recorded', vc: normPlace(r[COL.vc]), clf: normPlace(r[COL.clf]),
@@ -1035,10 +1118,25 @@ function buildMemberRecordsFromSheet(rows, source, rowOffset){
     if(d1 && d2) firstDisb = d1<d2?d1:d2; else firstDisb = d1||d2||null;
     let monthsSince = null;
     if(firstDisb) monthsSince = Math.round(((today - firstDisb)/86400000/30.44)*10)/10;
-    const moratorium = moratoriumFor(source.category);
-    const {activity, tenureMonths, totalLoanPeriod} = activityAndTenure(r[COL.tenure], moratorium);
-    const totalToRepay = received + interestTotal;
-    const emi = (tenureMonths && tenureMonths>0) ? (totalToRepay/tenureMonths) : null;
+    const tenureParsed = activityAndTenure(r[COL.tenure], moratoriumFor(source.category));
+    const {activity, tenureCodeInSheet} = tenureParsed;
+    // Official schedule for this member's loan product, built from their own disbursements.
+    const product = productOf(activity);
+    const monthOf = d => (d && firstDisb) ? 1 + Math.max(0, Math.round((d - firstDisb)/86400000/30.44)) : 1;
+    const cashAmt = toNum(r[COL.amtCash]), kindAmt = toNum(r[COL.amtKind]);
+    const split = cashAmt + kindAmt;
+    const tranches = split > 0
+      ? [{month: monthOf(d1), amount: cashAmt*received/split}, {month: monthOf(d2), amount: kindAmt*received/split}].filter(t=>t.amount>0)
+      : [{month: 1, amount: received}];
+    const official = repaymentPlan(product, received, tranches);
+    const plan = official ? official.plan : null;
+    const moratorium = official ? official.moratorium : moratoriumFor(source.category);
+    const totalLoanPeriod = plan ? plan.length : tenureParsed.totalLoanPeriod;
+    const tenureMonths = plan ? plan.length - moratorium : tenureParsed.tenureMonths;
+    const totalToRepay = plan ? plan.reduce((s,v)=>s+v,0) : received + interestTotal;
+    const emi = plan ? null : ((tenureMonths && tenureMonths>0) ? (totalToRepay/tenureMonths) : null);
+    const dueByMonth = n => plan ? (n<=plan.length ? plan[n-1] : 0)
+      : (totalLoanPeriod==null || !tenureMonths ? null : (n<=moratorium || n>totalLoanPeriod ? 0 : emi));
     let repaymentsMade = 0, lastRepaymentDate = null;
     const schedule = monthCols.map(mc=>{
       const dRaw = r[mc.dateIdx], d = parseDMonYYYY(dRaw);
@@ -1046,19 +1144,23 @@ function buildMemberRecordsFromSheet(rows, source, rowOffset){
       const paidAmt = prin + interest;
       if(paidAmt>0){ repaymentsMade++; }
       if(d && (!lastRepaymentDate || d>lastRepaymentDate)) lastRepaymentDate=d;
-      let due = null;
-      if(totalLoanPeriod!=null && tenureMonths){
-        if(mc.n<=moratorium) due = 0;
-        else if(mc.n<=totalLoanPeriod) due = emi?Math.round(emi*100)/100:0;
-        else due = 0;
-      }
-      return { month: mc.n, dueAmount: due, paidAmount: Math.round(paidAmt*100)/100, paidDate: d?d.toISOString().slice(0,10):null };
+      const dm = dueByMonth(mc.n);
+      const due = dm==null ? null : Math.round(dm*100)/100;
+      return { month: mc.n, dateCol: colLetter(mc.dateIdx), dueAmount: due, paidAmount: Math.round(paidAmt*100)/100, paidDate: d?d.toISOString().slice(0,10):null };
     });
     const startedRepayment = repaymentsMade > 0;
     const zeroRepayments = repaymentsMade === 0;
     const missedMoratorium = monthsSince!==null && monthsSince>=moratorium && zeroRepayments;
     let cumulativeExpected = null, shortfall = null;
-    if(emi!==null && monthsSince!==null){
+    if(plan && monthsSince!==null){
+      // Instalments for every completed month, plus the running share of the current month's instalment.
+      const elapsed = Math.max(0, monthsSince);   // a disbursement date in the future means nothing is due yet
+      const full = Math.min(Math.floor(elapsed), plan.length);
+      let due = plan.slice(0, full).reduce((s,v)=>s+v,0);
+      if(full < plan.length) due += plan[full] * (elapsed - Math.floor(elapsed));
+      cumulativeExpected = Math.round(due);
+      shortfall = Math.max(cumulativeExpected - paid, 0);
+    } else if(emi!==null && monthsSince!==null){
       const monthsElapsedInWindow = Math.max(Math.min(monthsSince-moratorium, tenureMonths), 0);
       cumulativeExpected = Math.round(emi*monthsElapsedInWindow);
       shortfall = Math.max(cumulativeExpected - paid, 0);
@@ -1067,16 +1169,18 @@ function buildMemberRecordsFromSheet(rows, source, rowOffset){
     const isDefaulter = !isCompleted && (missedMoratorium || (shortfall!==null && shortfall>1));
     const lokosId = (r[lokosIdx]||'').toString().trim();
     result.members.push({
+      sheetRow: rowNumOf.get(r), tab, paidCol: colLetter(totalPaidIdx), lokosCol: colLetter(lokosIdx),
       member: r[COL.member], pg: (r[COL.pg]||'').trim(),
       district: source.district,
       block: (r[COL.block]||'').trim() || source.block,
       pgCategory: source.category,
       subCategory: (r[COL.typePg]||'').replace(/\s+/g,' ').trim() || 'Not recorded',
       vc: normPlace(r[COL.vc]), clf: normPlace(r[COL.clf]),
-      designation: r[COL.desig]||'', activity, tenureMonths, totalLoanPeriod, moratoriumMonths: moratorium,
+      designation: r[COL.desig]||'', activity, tenureMonths, totalLoanPeriod, tenureCodeInSheet, moratoriumMonths: moratorium,
       sanctioned: Math.round(sanctioned), received: Math.round(received),
       paid: Math.round(paid), outstanding: Math.round(outstanding),
       totalToRepay: Math.round(totalToRepay), emi: emi?Math.round(emi):null,
+      product: product || null, scheduleBasis: plan ? 'Official schedule' : (emi ? 'Even instalments (tenure code)' : 'No tenure recorded'),
       monthsSince, repaymentsMade, lastRepaymentDate: lastRepaymentDate?lastRepaymentDate.toISOString().slice(0,10):null,
       cumulativeExpected, shortfall,
       startedRepayment, zeroRepayments, missedMoratorium, isCompleted, isDefaulter, lokosId,
@@ -1557,7 +1661,7 @@ function render(){
   document.getElementById('k-torepay').textContent = fmtRs(totalToRepay);
   document.getElementById('k-gap').textContent = fmtRs(repaymentGap);
   document.getElementById('k-duetodate').textContent = fmtRs(dueToDate);
-  document.getElementById('k-duetodate-note').textContent = `As of today, incl. interest, across ${dueToDateMembers.length} member(s) with a usable schedule (excludes ${filtered.length-dueToDateMembers.length} with no disbursement date or tenure recorded)`;
+  document.getElementById('k-duetodate-note').textContent = `As of today, incl. interest, per the official repayment schedule for each loan product, across ${dueToDateMembers.length} member(s) (excludes ${filtered.length-dueToDateMembers.length} with no disbursement date or tenure recorded)`;
   document.getElementById('k-overduetodate').textContent = fmtRs(overdueToDate);
   document.getElementById('k-zero').textContent = zeroRepay;
   document.getElementById('k-inmoratorium').textContent = inMoratorium;
@@ -1896,7 +2000,7 @@ function openScheduleModal(memberName, pgName, district, block, vc){
   if(!m) return;
   document.getElementById('modalMemberName').textContent = m.member;
   const modalPgId = lookupPgId(m.block, m.pg);
-  document.getElementById('modalMemberSub').textContent = `${m.pg}${modalPgId?' ('+modalPgId+')':''} · ${m.district}, ${m.block} · ${m.pgCategory} · ${m.subCategory} · ${m.activity} · ${m.vc}, ${m.clf}`;
+  document.getElementById('modalMemberSub').textContent = `${m.pg}${modalPgId?' ('+modalPgId+')':''} · ${m.district}, ${m.block} · ${m.pgCategory} · ${m.subCategory} · ${m.activity} · ${m.vc}, ${m.clf} · Due amounts: ${m.product?m.product+' ':''}${(m.scheduleBasis||'').toLowerCase()}`;
   document.getElementById('modalKpis').innerHTML = `
     <div class="modal-kpi">Received<b>${fmtRs(m.received)}</b></div>
     <div class="modal-kpi">Paid so far<b>${fmtRs(m.paid)}</b></div>
@@ -1991,6 +2095,7 @@ function computeAnomalies(){
     pendMismatch: getPendingFiltered(DATA.uMismatch).map(m=>({member:m.member, pg:m.pg, district:m.district, block:m.block, category:m.pgCategory, sanctioned:m.sanctioned, utilized:m.utilized, expected:m.expectedU, sheetU:m.sheetU})),
     formulaErrors: getPendingFiltered(DATA.formulaErrors||[]),
     sheetLayouts: (DATA.sheetLayouts||[]).filter(r=>(!district||r.district===district)&&(!block||r.block===block)&&(!category||r.pgCategory===category)),
+    tenureFill: members.filter(m=>m.tenureCodeInSheet).map(m=>({block:m.block, pg:m.pg, member:m.member, inSheet:m.tenureCodeInSheet, used:`${m.activity}-${m.totalLoanPeriod}`})),
     pgNameMismatch: (()=>{
       const seen = {};
       members.forEach(m=>{
@@ -2054,6 +2159,9 @@ function renderAnomalies(){
 
   document.getElementById('cnt-pgnamemismatch').textContent = `(${(an.pgNameMismatch||[]).length})`;
   set('an-pgnamemismatch', an.pgNameMismatch, r=>`<tr><td>${r.block}</td><td>${r.pg}</td><td>${r.dbName}</td><td>${r.pgId}</td><td>${r.how}</td><td style="text-align:right">${r.members}</td></tr>`);
+
+  document.getElementById('cnt-tenurefill').textContent = `(${(an.tenureFill||[]).length})`;
+  set('an-tenurefill', an.tenureFill, r=>`<tr><td>${r.block}</td><td>${r.pg}</td><td>${r.member}</td><td style="color:var(--red);font-weight:600;">${r.inSheet}</td><td>${r.used}</td></tr>`);
 }
 
 function exportAnomaly(which){
@@ -2074,6 +2182,7 @@ function exportAnomaly(which){
   else if(which==='formulaErrors'){ rows=(an.formulaErrors||[]).map(r=>({District:r.district,Block:r.block,Category:r.pgCategory,'Sheet Row':r.sheetRow,Member:r.member,PG:r.pg,Error:r.errorTypes,'Cells With Error':r.count,'Where (column)':r.cells})); filename='Anomaly_FormulaErrors'; }
   else if(which==='sheetLayouts'){ rows=(an.sheetLayouts||[]).map(r=>({District:r.district,Block:r.block,Category:r.pgCategory,Columns:r.cols,'Usual Columns':r.usualCols,Difference:r.diff,"What's Different":r.note})); filename='Anomaly_SheetLayout'; }
   else if(which==='pgNameMismatch'){ rows=(an.pgNameMismatch||[]).map(r=>({Block:r.block,'PG Name In Loan Sheet':r.pg,'PG Name In PG Database':r.dbName,'PG ID':r.pgId,'How Matched':r.how,Members:r.members})); filename='Anomaly_PGNameMismatch'; }
+  else if(which==='tenureFill'){ rows=(an.tenureFill||[]).map(r=>({Block:r.block,PG:r.pg,Member:r.member,'Tenure In Sheet':r.inSheet,'Used By Dashboard':r.used})); filename='Anomaly_TenureAutoFill'; }
   if(!rows || !rows.length){ alert('No rows to export for this check.'); return; }
   if(!window.XLSX){ alert('Excel export library failed to load.'); return; }
   const ws = XLSX.utils.json_to_sheet(rows);
@@ -2089,7 +2198,7 @@ function exportTable(which){
     rows = window._pgRows.map(p=>({PG:p.pg,'PG ID':p.pgId||'',District:p.district,Block:p.block,Category:p.category,'Sub-category':p.subCategory,VC:p.vc,CLF:p.clf,Members:p.members,'Repayment Started':p.pgStartedRepayment?'Yes':'No',Disbursed:p.received,Repaid:p.paid,'Total To Repay':p.totalToRepay,'Repayment Gap':p.repaymentGap,'Never Repaid':p.zeroCount,'Missed Moratorium':p.missedMoratoriumCount,Defaulting:p.defaulters,Completed:p.completedCount}));
     filename = 'TRESP_PG_Summary';
   } else if(which==='members'){
-    rows = window._memberRows.map(m=>({Member:m.member,PG:m.pg,'PG ID':m.pgId||'',District:m.district,Block:m.block,Category:m.pgCategory,'Sub-category':m.subCategory,'Loan Type (Tenure)':m.activity,'Repay Window (months)':m.tenureMonths,'Total Loan Period (months)':m.totalLoanPeriod,Received:m.received,Paid:m.paid,'Total To Repay':m.totalToRepay,'Amount Due To Date (incl. interest)':m.cumulativeExpected,'Paid vs Due':m.dueVsPaid,Shortfall:m.shortfall,'Months Since Loan':m.monthsSince,'Repayments Made':m.repaymentsMade,'Started Repayment':m.startedRepayment?'Yes':'No','Missed Moratorium':m.missedMoratorium?'Yes':'No',Completed:m.isCompleted?'Yes':'No',Status:m.statusLabel}));
+    rows = window._memberRows.map(m=>({Member:m.member,PG:m.pg,'PG ID':m.pgId||'',District:m.district,Block:m.block,Category:m.pgCategory,'Sub-category':m.subCategory,'Loan Type (Tenure)':m.activity,'Repay Window (months)':m.tenureMonths,'Total Loan Period (months)':m.totalLoanPeriod,Received:m.received,Paid:m.paid,'Total To Repay':m.totalToRepay,'Schedule Used':m.product?`${m.product} (${m.scheduleBasis})`:m.scheduleBasis,'Amount Due To Date (incl. interest)':m.cumulativeExpected,'Paid vs Due':m.dueVsPaid,Shortfall:m.shortfall,'Months Since Loan':m.monthsSince,'Repayments Made':m.repaymentsMade,'Started Repayment':m.startedRepayment?'Yes':'No','Missed Moratorium':m.missedMoratorium?'Yes':'No',Completed:m.isCompleted?'Yes':'No',Status:m.statusLabel}));
     filename = 'TRESP_Members';
   } else if(which==='defaulters'){
     rows = window._defRows.map(m=>({Member:m.member,PG:m.pg,District:m.district,Block:m.block,Category:m.pgCategory,'Sub-category':m.subCategory,'Loan Type (Tenure)':m.activity,Received:m.received,'Months Since Loan':m.monthsSince,'Repayments Made':m.repaymentsMade,Shortfall:m.shortfall,Reason:m.reason}));
