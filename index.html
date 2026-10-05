@@ -472,11 +472,18 @@ tr:hover td{background:var(--blue-light);}
       <div class="page" id="page-anomalies">
         <div class="hint-box">These are structural data issues detected across all 69 source sheets — separate from the defaulting/repayment analysis above. Export any section to Excel to share with whoever maintains the sheets. The filters at the top (District, Block, Category, Activity, CLF, VC, PG, Member status) apply to every section below; the "member name is blank" section can only be filtered by District, Block, Category and PG.</div>
 
-        <div class="section-title">Repayment recorded but no disbursed amount <span id="cnt-orphan"></span></div>
-        <div class="hint-box">These rows have a repayment amount but no amount disbursed (and usually no sanctioned amount), so they are not counted as members. Their repayments <b>are</b> included in the Overview "Total repaid" figure so it matches the sheet total. The sanctioned/disbursed amounts need to be filled in at the source.</div>
+        <div class="section-title">Repayment entered but no loan amount received <span id="cnt-orphan"></span></div>
+        <div class="hint-box">These rows have a repayment entered but the amount received (column S) is ₹0 — often sanctioned is blank too. The repayment still counts in every "repaid" figure on the dashboard (Overview, District, Block, Category, Sub-category and PG-wise), since the money was paid. They are not counted as loan members and have no due amount until the amount received is filled in at the source.</div>
         <div class="table-toolbar"><button class="export-btn" onclick="exportAnomaly('orphan')">⬇ Export to Excel</button></div>
         <div class="table-wrap" style="margin-bottom:22px;max-height:280px;">
           <table><thead><tr><th>Sheet row</th><th>Member</th><th>PG</th><th>Block</th><th>Category</th><th style="text-align:right">Sanctioned</th><th style="text-align:right">Disbursed</th><th style="text-align:right">Repaid</th></tr></thead><tbody id="an-orphan"></tbody></table>
+        </div>
+
+        <div class="section-title">Total paid column doesn’t match the monthly repayment entries <span id="cnt-paidmismatch"></span></div>
+        <div class="hint-box">The "Total loan amount paid" cell (column CK in Fishery/Agri tabs, EC in Livestock tabs) should equal the monthly principal + interest entered. In these rows it doesn’t, usually because the total formula is missing or points at the wrong cells. The dashboard uses the total-paid cell, so repaid figures for these members are only as right as that cell.</div>
+        <div class="table-toolbar"><button class="export-btn" onclick="exportAnomaly('paidMismatch')">⬇ Export to Excel</button></div>
+        <div class="table-wrap" style="margin-bottom:22px;max-height:320px;">
+          <table><thead><tr><th>Sheet tab</th><th>Row</th><th>Member</th><th>PG</th><th>Block</th><th style="text-align:right">Total paid cell</th><th style="text-align:right">Monthly entries add up to</th><th style="text-align:right">Difference</th></tr></thead><tbody id="an-paidmismatch"></tbody></table>
         </div>
 
         <div class="section-title">Pending Loan amount (column U) ≠ Sanctioned − Utilized <span id="cnt-pendmismatch"></span></div>
@@ -1653,11 +1660,11 @@ function render(){
   document.getElementById('k-pgstarted').textContent = pgStartedInView.size + ' / ' + pgsInView.size;
   document.getElementById('k-memstarted').textContent = started + ' / ' + filtered.length;
   document.getElementById('k-recv').textContent = fmtRs(received);
-  const orphanRows = getPendingFiltered(DATA.orphanRepay);
+  const orphanRows = orphanInView();
   const orphanPaid = orphanRows.reduce((s,m)=>s+m.paid,0);
   document.getElementById('k-paid').textContent = fmtRs(paid + orphanPaid);
   document.getElementById('k-paid-note').textContent = orphanRows.length
-    ? `Includes ${fmtRs(orphanPaid)} repaid on ${orphanRows.length} row(s) with no disbursed amount (see Anomalies)` : '';
+    ? `Includes ${fmtRs(orphanPaid)} repaid on ${orphanRows.length} row(s) where no loan amount is received yet (listed under Anomalies)` : '';
   document.getElementById('k-torepay').textContent = fmtRs(totalToRepay);
   document.getElementById('k-gap').textContent = fmtRs(repaymentGap);
   document.getElementById('k-duetodate').textContent = fmtRs(dueToDate);
@@ -1712,6 +1719,13 @@ function render(){
     if(m.missedMoratorium) a.missedMoratoriumCount++;
     if(m.isDefaulter) a.defaulters++;
     if(m.isCompleted) a.completedCount++;
+  });
+  orphanRows.forEach(o=>{
+    const k = pgKey(o);
+    (subs[k] = subs[k] || new Set()).add(o.subCategory);
+    if(!pgAgg[k]) pgAgg[k]={pg:o.pg,district:o.district,block:o.block,category:o.pgCategory,vc:o.vc,clf:o.clf,members:0,sanctioned:0,received:0,paid:0,outstanding:0,
+      totalToRepay:0,startedCount:0,zeroCount:0,missedMoratoriumCount:0,defaulters:0,completedCount:0};
+    pgAgg[k].paid += o.paid;
   });
   window._pgRows = Object.values(pgAgg).map(p=>({...p, subCategory:[...(subs[pgKey(p)]||[])].sort().join(', '), pgStartedRepayment: p.startedCount>0, repaymentGap: Math.max(p.totalToRepay-p.paid,0), pgId: lookupPgId(p.block, p.pg)}));
   window._memberRows = filtered.map(m=>({...m, statusLabel: memberStatus(m), reason: defaultReason(m), pgId: lookupPgId(m.block, m.pg), dueVsPaid: m.cumulativeExpected!=null ? Math.round(m.paid - m.cumulativeExpected) : null}));
@@ -1790,10 +1804,18 @@ document.querySelectorAll('#pendTable th').forEach(th=>th.addEventListener('clic
 function rosterInView(filtered){
   return (document.getElementById('fStatus').value || !DATA.roster) ? filtered : getPendingFiltered(DATA.roster);
 }
+// Repayments entered on rows where no loan amount is received (not loan members, but the money was repaid,
+// so it counts in every "repaid" figure). Not applicable when the member-status filter is on.
+function orphanInView(){
+  return document.getElementById('fStatus').value ? [] : getPendingFiltered(DATA.orphanRepay||[]);
+}
+function sumBy(list, keyFn, valFn){ const o={}; list.forEach(r=>{ const k=keyFn(r); o[k]=(o[k]||0)+valFn(r); }); return o; }
 function countBy(list, keyFn){ const o={}; list.forEach(r=>{ const k=keyFn(r); o[k]=(o[k]||0)+1; }); return o; }
 function renderGeography(filtered){
   const roster = rosterInView(filtered);
   const totalByDistrict = countBy(roster, r=>r.district), totalByCategory = countBy(roster, r=>r.pgCategory);
+  const orphans = orphanInView();
+  const orphanPaidByDistrict = sumBy(orphans, o=>o.district, o=>o.paid), orphanPaidByCategory = sumBy(orphans, o=>o.pgCategory, o=>o.paid);
   const categoryCounts = {Fishery:0, Livestock:0, 'Agri-Horti':0};
   filtered.forEach(m=>{ if(categoryCounts[m.pgCategory]===undefined) categoryCounts[m.pgCategory]=0; categoryCounts[m.pgCategory]++; });
   if(charts.categoryDonut) charts.categoryDonut.destroy();
@@ -1830,6 +1852,7 @@ function renderGeography(filtered){
   filtered.forEach(m=>{ if(!districtBlockCount[m.district]) districtBlockCount[m.district]=new Set(); districtBlockCount[m.district].add(m.block); });
   window._districtRows = Object.values(distMap).map(d=>{
     const agg = window._districtAggFull(filtered, d.district);
+    agg.paid += orphanPaidByDistrict[d.district]||0;
     return {district:d.district, blocks:(districtBlockCount[d.district]||new Set()).size, totalMembers: totalByDistrict[d.district]||0, ...agg};
   });
   districtBody.innerHTML = window._districtRows.sort((a,b)=>b.members-a.members).map(d=>`<tr>
@@ -1848,7 +1871,7 @@ function renderGeography(filtered){
   const cats = ['Fishery','Livestock','Agri-Horti'];
   window._categoryRows = cats.map(c=>{
     const sub = filtered.filter(m=>m.pgCategory===c);
-    return { category:c, totalMembers: totalByCategory[c]||0, members:sub.length, received:sub.reduce((s,m)=>s+m.received,0), paid:sub.reduce((s,m)=>s+m.paid,0),
+    return { category:c, totalMembers: totalByCategory[c]||0, members:sub.length, received:sub.reduce((s,m)=>s+m.received,0), paid:sub.reduce((s,m)=>s+m.paid,0) + (orphanPaidByCategory[c]||0),
       totalToRepay:sub.reduce((s,m)=>s+m.totalToRepay,0), defaulters:sub.filter(m=>m.isDefaulter).length, completedCount:sub.filter(m=>m.isCompleted).length };
   });
   catBody.innerHTML = window._categoryRows.map(c=>`<tr>
@@ -1860,16 +1883,18 @@ function renderGeography(filtered){
 }
 function renderActivitySummary(filtered){
   const rows = [];
+  const orphans = orphanInView();
   CATEGORY_ORDER.forEach(c=>{
     const inCat = filtered.filter(m=>m.pgCategory===c);
     if(!inCat.length) return;
     const acts = [...new Set(inCat.map(m=>m.subCategory))].sort();
-    const mk = (label, sub)=>({category:c, activity:label, members:sub.length,
+    const orphanPaid = sub => orphans.filter(o=>o.pgCategory===c && (sub===null || o.subCategory===sub)).reduce((s,o)=>s+o.paid,0);
+    const mk = (label, sub, subName)=>({category:c, activity:label, members:sub.length,
       pgs:new Set(sub.map(m=>m.pg+'||'+m.district+'||'+m.block+'||'+m.vc)).size,
-      received:sub.reduce((s,m)=>s+m.received,0), paid:sub.reduce((s,m)=>s+m.paid,0),
+      received:sub.reduce((s,m)=>s+m.received,0), paid:sub.reduce((s,m)=>s+m.paid,0) + orphanPaid(subName),
       defaulters:sub.filter(m=>m.isDefaulter).length, completedCount:sub.filter(m=>m.isCompleted).length});
-    rows.push({...mk('All '+c, inCat), total:true});
-    acts.forEach(a=>rows.push(mk(a, inCat.filter(m=>m.subCategory===a))));
+    rows.push({...mk('All '+c, inCat, null), total:true});
+    acts.forEach(a=>rows.push(mk(a, inCat.filter(m=>m.subCategory===a), a)));
   });
   window._activityRows = rows;
   document.getElementById('activityBody').innerHTML = rows.map(r=>`<tr${r.total?' style="background:var(--grey-bg);font-weight:700;"':''}>
@@ -1892,6 +1917,11 @@ function renderBlockTable(filtered){
     const k = r.district+'||'+r.block;
     if(!blockMap[k]) blockMap[k]=newBlock(r.district, r.block);
     blockMap[k].totalMembers++;
+  });
+  orphanInView().forEach(o=>{
+    const k = o.district+'||'+o.block;
+    if(!blockMap[k]) blockMap[k]=newBlock(o.district, o.block);
+    blockMap[k].paid += o.paid;
   });
   filtered.forEach(m=>{
     const k = m.district+'||'+m.block;
@@ -2091,7 +2121,9 @@ function computeAnomalies(){
     earlyRepayment: members.filter(m=>m.isCompleted && m.totalLoanPeriod!=null && m.monthsSince!=null && m.monthsSince < m.totalLoanPeriod).map(m=>({member:m.member, pg:m.pg, monthsSince:m.monthsSince, totalPeriod:m.totalLoanPeriod})),
     dataNoName: ((DATA.anomalies||{}).dataNoName||[]).filter(r=>(!district||r.district===district)&&(!block||r.block===block)&&(!category||r.category===category)&&(!pg||r.pg===pg)),
     noLokosId: members.filter(m=>!m.lokosId).map(m=>({member:m.member, pg:m.pg})),
-    orphan: getPendingFiltered(DATA.orphanRepay),
+    orphan: orphanInView(),
+    paidMismatch: members.map(m=>{ const monthly = Math.round((m.schedule||[]).reduce((s,c)=>s+c.paidAmount,0)); return {tab:m.tab, sheetRow:m.sheetRow, member:m.member, pg:m.pg, block:m.block, district:m.district, paid:m.paid, monthly, diff:m.paid-monthly}; })
+      .filter(r=>Math.abs(r.diff)>1).sort((a,b)=>Math.abs(b.diff)-Math.abs(a.diff)),
     pendMismatch: getPendingFiltered(DATA.uMismatch).map(m=>({member:m.member, pg:m.pg, district:m.district, block:m.block, category:m.pgCategory, sanctioned:m.sanctioned, utilized:m.utilized, expected:m.expectedU, sheetU:m.sheetU})),
     formulaErrors: getPendingFiltered(DATA.formulaErrors||[]),
     sheetLayouts: (DATA.sheetLayouts||[]).filter(r=>(!district||r.district===district)&&(!block||r.block===block)&&(!category||r.pgCategory===category)),
@@ -2116,8 +2148,10 @@ function computeAnomalies(){
 }
 function renderAnomalies(){
   const an = window._anomalies = computeAnomalies();
-  document.getElementById('cnt-orphan').textContent = `(${an.orphan.length})`;
-  document.getElementById('an-orphan').innerHTML = an.orphan.map(r=>`<tr><td>Row ${r.sheetRow}</td><td>${r.member}</td><td>${r.pg}</td><td>${r.block}</td><td>${r.pgCategory}</td><td style="text-align:right">${fmtRs(r.sanctioned)}</td><td style="text-align:right">${fmtRs(r.disbursed)}</td><td style="text-align:right;font-weight:600;">${fmtRs(r.paid)}</td></tr>`).join('');
+  document.getElementById('cnt-orphan').textContent = `(${an.orphan.length} rows, ${fmtRs(an.orphan.reduce((s,r)=>s+r.paid,0))} repaid)`;
+  document.getElementById('cnt-paidmismatch').textContent = `(${an.paidMismatch.length})`;
+  document.getElementById('an-paidmismatch').innerHTML = an.paidMismatch.map(r=>`<tr><td>${r.tab||''}</td><td>Row ${r.sheetRow||''}</td><td>${r.member}</td><td>${r.pg}</td><td>${r.block}</td><td style="text-align:right">${fmtRs(r.paid)}</td><td style="text-align:right">${fmtRs(r.monthly)}</td><td style="text-align:right;color:var(--red);font-weight:600;">${r.diff>0?'+':''}${fmtRs(r.diff)}</td></tr>`).join('');
+  document.getElementById('an-orphan').innerHTML = an.orphan.map(r=>`<tr><td>${r.tab||''} · Row ${r.sheetRow}</td><td>${r.member}</td><td>${r.pg}</td><td>${r.block}</td><td>${r.pgCategory}</td><td style="text-align:right">${fmtRs(r.sanctioned)}</td><td style="text-align:right">${fmtRs(r.disbursed)}</td><td style="text-align:right;font-weight:600;">${fmtRs(r.paid)}</td></tr>`).join('');
   document.getElementById('cnt-pendmismatch').textContent = `(${an.pendMismatch.length})`;
   document.getElementById('an-pendmismatch').innerHTML = an.pendMismatch.map(r=>`<tr><td>${r.member}</td><td>${r.pg}</td><td>${r.block}</td><td>${r.category}</td><td style="text-align:right">${fmtRs(r.sanctioned)}</td><td style="text-align:right">${fmtRs(r.utilized)}</td><td style="text-align:right">${fmtRs(r.expected)}</td><td style="text-align:right;color:var(--red);font-weight:600;">${fmtRs(r.sheetU)}</td></tr>`).join('');
   const set = (id, rows, rowFn) => { document.getElementById(id).innerHTML = (rows||[]).map(rowFn).join(''); };
@@ -2167,7 +2201,8 @@ function renderAnomalies(){
 function exportAnomaly(which){
   const an = window._anomalies || computeAnomalies();
   let rows, filename;
-  if(which==='orphan'){ rows=(an.orphan||[]).map(r=>({'Sheet Row':r.sheetRow,Member:r.member,PG:r.pg,District:r.district,Block:r.block,Category:r.pgCategory,Sanctioned:r.sanctioned,Disbursed:r.disbursed,Repaid:r.paid})); filename='Anomaly_RepaymentWithoutDisbursement'; }
+  if(which==='paidMismatch'){ rows=(an.paidMismatch||[]).map(r=>({'Sheet Tab':r.tab,'Sheet Row':r.sheetRow,Member:r.member,PG:r.pg,District:r.district,Block:r.block,'Total Paid Cell':r.paid,'Monthly Entries Total':r.monthly,Difference:r.diff})); filename='Anomaly_TotalPaidVsMonthly'; }
+  else if(which==='orphan'){ rows=(an.orphan||[]).map(r=>({'Sheet Tab':r.tab,'Sheet Row':r.sheetRow,Member:r.member,PG:r.pg,District:r.district,Block:r.block,Category:r.pgCategory,Sanctioned:r.sanctioned,Disbursed:r.disbursed,Repaid:r.paid})); filename='Anomaly_RepaymentWithoutDisbursement'; }
   else if(which==='pendMismatch'){ rows=(an.pendMismatch||[]).map(r=>({Member:r.member,PG:r.pg,District:r.district,Block:r.block,Category:r.category,'Sanctioned (L)':r.sanctioned,'Utilized (T)':r.utilized,'Sanctioned - Utilized':r.expected,'Column U in sheet':r.sheetU})); filename='Anomaly_PendingColumnU_Mismatch'; }
   else if(which==='zeroUpdate'){ rows=(an.zeroUpdate||[]).map(r=>({Member:r.member,PG:r.pg,District:r.district,Block:r.block,Category:r.category})); filename='Anomaly_ZeroRepaymentUpdates'; }
   else if(which==='dateNoAmount'){ rows=(an.dateNoAmount||[]).map(r=>({Member:r.member,PG:r.pg,Month:r.month,'Date Entered':r.date})); filename='Anomaly_DateWithoutAmount'; }
