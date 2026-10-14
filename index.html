@@ -79,6 +79,13 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Ari
 .pill-red{background:var(--red-bg);color:var(--red);}
 .pill-blue{background:#e3edfa;color:var(--blue);}
 .pill-grey{background:var(--grey-bg);color:var(--text-dim);}
+.trk-range{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px;}
+.trk-range label{display:block;font-size:11px;color:var(--text-dim);margin-bottom:3px;}
+.trk-range input[type=date]{padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12.5px;}
+.trk-btn{padding:6px 11px;border:1px solid var(--border);border-radius:6px;background:var(--card);font-size:12px;cursor:pointer;}
+.trk-btn:hover{background:var(--blue-light);}
+#trkDailyBody tr{cursor:pointer;}
+#trkDailyBody tr.sel td{background:#d6e7f7;font-weight:600;}
 .member-link{color:var(--blue);cursor:pointer;text-decoration:underline;text-decoration-style:dotted;}
 .member-link:hover{color:var(--navy);}
 .info-icon-wrap{position:relative;display:inline-flex;align-items:center;margin-left:5px;}
@@ -139,6 +146,7 @@ tr:hover td{background:var(--blue-light);}
       <div class="nav-item" data-page="members">👥 Members</div>
       <div class="nav-item" data-page="defaulters">⚠️ Defaulters</div>
       <div class="nav-item" data-page="pending">⏳ Sanctioned vs Disbursed</div>
+      <div class="nav-item" data-page="tracking">📅 Data Tracking</div>
       <div class="nav-item" data-page="anomalies">🔍 Anomalies</div>
       <div class="nav-item" data-page="dataquality">🔍 Data Quality</div>
       <div class="nav-item" data-page="syncstatus">🔄 Sync Status</div>
@@ -170,6 +178,7 @@ tr:hover td{background:var(--blue-light);}
           </select>
         </div>
         <div class="fgroup"><label>Sub-category (type of PG)</label><select id="fActivity"><option value="">All Sub-categories</option></select></div>
+        <div class="fgroup"><label>Sub-activity (Fishery / Livestock)</label><select id="fSubAct"><option value="">All Sub-activities</option></select></div>
         <div class="fgroup"><label>CLF</label><select id="fClf"><option value="">All CLFs</option></select></div>
         <div class="fgroup"><label>VC</label><select id="fVc"><option value="">All VCs</option></select></div>
         <div class="fgroup"><label>PG</label><select id="fPg"><option value="">All PGs</option></select></div>
@@ -343,6 +352,22 @@ tr:hover td{background:var(--blue-light);}
             <tbody id="activityBody"></tbody>
           </table>
         </div>
+
+        <div class="section-title">Category → Sub-activity summary (Fishery: Nursery / Polyculture · Livestock: PPU / PFU / GPU / GRU)</div>
+        <div class="hint-box">Fishery splits into Nursery and Polyculture, and Livestock into PPU, PFU, GPU and GRU, from each member's tenure code. Agri-Horti is not split. "Wrong code" means the tenure code belongs to another category (e.g. a PPU code in a Fishery sheet); "Tenure code not entered" means column Y is blank.</div>
+        <div class="table-toolbar"><span></span><button class="export-btn" onclick="exportTable('subactivity')">⬇ Export to Excel</button></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Category</th><th>Sub-activity</th><th>How identified</th>
+              <th style="text-align:right">Members</th><th style="text-align:right">PGs</th>
+              <th style="text-align:right">Disbursed</th><th style="text-align:right">Repaid</th>
+              <th style="text-align:right">Should have paid by now</th><th style="text-align:right">Overdue</th>
+              <th style="text-align:right">Defaulting</th><th style="text-align:right">Completed</th>
+            </tr></thead>
+            <tbody id="subActBody"></tbody>
+          </table>
+        </div>
       </div>
 
       <!-- PG-wise PAGE -->
@@ -383,7 +408,7 @@ tr:hover td{background:var(--blue-light);}
             <thead><tr>
               <th data-key="member">Member</th><th data-key="pg">PG</th><th data-key="pgId">PG ID</th>
               <th data-key="district">District / DPMU Zone</th><th data-key="block">Block</th><th data-key="pgCategory">Category</th>
-              <th data-key="subCategory">Sub-category</th><th data-key="activity">Loan type (tenure)</th>
+              <th data-key="subCategory">Sub-category</th><th data-key="subActivity">Sub-activity</th><th data-key="activity">Loan type (tenure)</th>
               <th data-key="tenureMonths" style="text-align:right">Repay window (mo)</th>
               <th data-key="totalLoanPeriod" style="text-align:right">Total loan period (mo)</th>
               <th data-key="sanctioned" style="text-align:right">Received</th>
@@ -417,7 +442,7 @@ tr:hover td{background:var(--blue-light);}
             <thead><tr>
               <th data-key="member">Member</th><th data-key="pg">PG</th>
               <th data-key="district">District / DPMU Zone</th><th data-key="block">Block</th><th data-key="pgCategory">Category</th>
-              <th data-key="subCategory">Sub-category</th><th data-key="activity">Loan type (tenure)</th>
+              <th data-key="subCategory">Sub-category</th><th data-key="subActivity">Sub-activity</th><th data-key="activity">Loan type (tenure)</th>
               <th data-key="sanctioned" style="text-align:right">Received</th>
               <th data-key="monthsSince" style="text-align:right">Months since loan</th>
               <th data-key="repaymentsMade" style="text-align:right">Repayments made</th>
@@ -465,6 +490,50 @@ tr:hover td{background:var(--blue-light);}
         <div class="section-title">Block-wise pending amount</div>
         <div class="table-wrap" style="max-height:320px;">
           <table><thead><tr><th>District / DPMU Zone</th><th>Block</th><th>Category</th><th style="text-align:right">Members</th><th style="text-align:right">Sanctioned</th><th style="text-align:right">Disbursed</th><th style="text-align:right">Pending</th></tr></thead><tbody id="pendGroupBody"></tbody></table>
+        </div>
+      </div>
+
+      <!-- DATA TRACKING PAGE -->
+      <div class="page" id="page-tracking">
+        <div class="hint-box"><b>What this page tracks, day by day:</b>
+          <b>New names added</b>: a member's name appearing in a sheet for the first time. The sheets don't record when a row was typed in, so the dashboard keeps its own log (<span id="trkLogInfo">loading…</span>). Names already in the sheets when tracking started are the starting list and are not counted as new. Each sync adds today's new names, so open or sync the dashboard at least once a day.
+          <b>Repayments</b>: every monthly repayment amount in the sheets, placed on the repayment date entered beside it. "Instalment" is the month column it was entered under (Month 1, Month 2…), and "Due in" is the calendar month that instalment falls due, counted from the member's first disbursement date.
+          <b>Loans disbursed</b>: members whose first disbursement date falls on that day. The filters above apply. Click a day in the table to see only that day.</div>
+        <div class="trk-range">
+          <div><label>From</label><input type="date" id="trkFrom"></div>
+          <div><label>To</label><input type="date" id="trkTo"></div>
+          <button class="trk-btn" data-range="today">Today</button>
+          <button class="trk-btn" data-range="yesterday">Yesterday</button>
+          <button class="trk-btn" data-range="7">Last 7 days</button>
+          <button class="trk-btn" data-range="30">Last 30 days</button>
+          <button class="trk-btn" data-range="month">This month</button>
+          <button class="trk-btn" data-range="all">All dates</button>
+          <input class="search-input" id="trkSearch" placeholder="Search member or PG..." style="margin-left:auto;">
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi-card"><div class="kpi-value" id="t-new"></div><div class="kpi-label">New names added</div><div class="kpi-label" id="t-new-note" style="font-weight:400;font-size:10.5px;margin-top:2px;"></div></div>
+          <div class="kpi-card"><div class="kpi-value" id="t-disb"></div><div class="kpi-label">Loans disbursed</div><div class="kpi-label" id="t-disb-note" style="font-weight:400;font-size:10.5px;margin-top:2px;"></div></div>
+          <div class="kpi-card green"><div class="kpi-value" id="t-repcount"></div><div class="kpi-label">Repayment entries</div><div class="kpi-label" id="t-repmem" style="font-weight:400;font-size:10.5px;margin-top:2px;"></div></div>
+          <div class="kpi-card green"><div class="kpi-value" id="t-repamt"></div><div class="kpi-label">Amount repaid</div><div class="kpi-label" id="t-repsplit" style="font-weight:400;font-size:10.5px;margin-top:2px;"></div></div>
+          <div class="kpi-card amber"><div class="kpi-value" id="t-nodate"></div><div class="kpi-label">Repayments with no date entered</div><div class="kpi-label" id="t-nodate-note" style="font-weight:400;font-size:10.5px;margin-top:2px;">Not placed on any day; listed when you pick "No date entered" in the table</div></div>
+        </div>
+
+        <div class="section-title">Day-by-day summary</div>
+        <div class="table-toolbar"><span id="trkSelInfo" style="font-size:12px;color:var(--text-dim);"></span><button class="export-btn" onclick="exportTable('trackDaily')">⬇ Export to Excel</button></div>
+        <div class="table-wrap" style="max-height:340px;margin-bottom:22px;">
+          <table><thead><tr><th>Date</th><th>Day</th><th style="text-align:right">New names added</th><th style="text-align:right">Loans disbursed</th><th style="text-align:right">Repayment entries</th><th style="text-align:right">Members who repaid</th><th style="text-align:right">Principal</th><th style="text-align:right">Interest</th><th style="text-align:right">Total repaid</th></tr></thead><tbody id="trkDailyBody"></tbody></table>
+        </div>
+
+        <div class="section-title">Repayments made <span id="trkRepTitle"></span></div>
+        <div class="table-toolbar"><span></span><button class="export-btn" onclick="exportTable('trackRepay')">⬇ Export to Excel</button></div>
+        <div class="table-wrap" style="max-height:420px;margin-bottom:22px;">
+          <table><thead><tr><th>Repayment date</th><th>Member</th><th>PG</th><th>Block</th><th>Category</th><th>Instalment</th><th>Due in</th><th style="text-align:right">Principal</th><th style="text-align:right">Interest</th><th style="text-align:right">Total</th><th>Sheet (tab · row · date column)</th><th>Note</th></tr></thead><tbody id="trkRepBody"></tbody></table>
+        </div>
+
+        <div class="section-title">New names added <span id="trkNewTitle"></span></div>
+        <div class="table-toolbar"><span></span><button class="export-btn" onclick="exportTable('trackNew')">⬇ Export to Excel</button></div>
+        <div class="table-wrap" style="max-height:420px;">
+          <table><thead><tr><th>First seen</th><th>Member</th><th>PG</th><th>Block</th><th>Category</th><th>Sub-category</th><th>Sheet (tab · row)</th><th style="text-align:right">Loan received</th><th>First disbursement</th></tr></thead><tbody id="trkNewBody"></tbody></table>
         </div>
       </div>
 
@@ -866,6 +935,7 @@ function toNum(s){
   if(s===undefined||s===null) return 0;
   let str = String(s).replace(/₹/g,'').replace(/,/g,'').replace(/%/g,'').trim();
   if(str===''||str==='nan'||str==='#VALUE!') return 0;
+  if(/^\d{1,2}-[A-Za-z]{3}-\d{4}$/.test(str)) return 0;   // a date typed into an amount cell is not money
   const neg = str.startsWith('-');
   str = str.replace(/^-/,'');
   const v = parseFloat(str);
@@ -881,6 +951,8 @@ function parseDMonYYYY(s){
   if(mon===undefined) return null;
   return new Date(parseInt(m[3]), mon, parseInt(m[1]));
 }
+// YYYY-MM-DD in local time (toISOString() is UTC, which shifts Indian dates back a day).
+function isoDate(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function normPlace(s){
   if(!s) return '';
   s = String(s).replace(/\s+/g,' ').trim();
@@ -904,6 +976,16 @@ const LIVESTOCK_PLANS = {
   GRU: { buildUp:[0,300,300,300,300,300,300,300,300,300,300,300,300,300,300,300], tail:9 },
   PFU: { buildUp:[0,100,100,100,100,100,100,100,100], tail:9 },
 };
+// Sub-activity: Fishery -> Nursery / Polyculture; Livestock -> PPU / PFU / GPU / GRU (from the tenure code).
+// Agri-Horti is not split. A code that belongs to another category is shown as "Wrong code: X".
+const SUBACTS_BY_CATEGORY = { Fishery:['Nursery','Polyculture'], Livestock:['PPU','PFU','GPU','GRU'] };
+function subActivityFor(category, tenureStr){
+  if(category==='Agri-Horti') return {subActivity:'Agri-Horti (not split)', basis:'Not split'};
+  const product = productOf(activityAndTenure(tenureStr, 0).activity);
+  if(!product) return {subActivity:'Tenure code not entered', basis:'Not recorded'};
+  if((SUBACTS_BY_CATEGORY[category]||[]).includes(product)) return {subActivity: product, basis:'Tenure code'};
+  return {subActivity:'Wrong code: '+product, basis:'Tenure code (wrong category)'};
+}
 function productOf(activity){
   const a = (activity||'').toLowerCase();
   if(a.includes('nursery')) return 'Nursery';
@@ -991,6 +1073,7 @@ function buildMemberRecordsFromSheet(rows, source, rowOffset){
   // Where each record sits in the Google Sheet, so anomalies can point at an exact tab / row / column.
   const rowNumOf = new Map(); allDataRows.forEach((r,i)=>rowNumOf.set(r, i+rowOffset+1));
   const tab = TAB_NAMES[source.sheetId+'|'+source.gid] || `${source.block} ${source.category}`;
+  const subActOf = r => subActivityFor(source.category, r[COL.tenure]);
   const colLetter = i => { let s=''; i++; while(i>0){ const m=(i-1)%26; s=String.fromCharCode(65+m)+s; i=Math.floor((i-1)/26); } return s; };
   // Some sheets (e.g. Jampuijala) leave VC/CLF/PG blank on every row after the first member of a
   // group — a merged cell in the sheet UI that the CSV export doesn't repeat. Carry the last
@@ -1004,12 +1087,14 @@ function buildMemberRecordsFromSheet(rows, source, rowOffset){
   });
   const dataRows = allDataRows.filter(r=>r[COL.member] && r[COL.member].trim());
   // Every named member, whether or not money has been received yet — used for "Total members".
+  const firstDisbOf = r => { const a = parseDMonYYYY(r[COL.disb1]), b = parseDMonYYYY(r[COL.disb2]); const d = (a && b) ? (a<b?a:b) : (a||b||null); return d ? isoDate(d) : null; };
   result.roster = dataRows.map(r=>({
     member: r[COL.member].trim(), pg:(r[COL.pg]||'').trim(),
     district: source.district, block:(r[COL.block]||'').trim()||source.block,
-    pgCategory: source.category, subCategory:(r[COL.typePg]||'').replace(/\s+/g,' ').trim() || 'Not recorded',
+    pgCategory: source.category, subCategory:(r[COL.typePg]||'').replace(/\s+/g,' ').trim() || 'Not recorded', subActivity: subActOf(r).subActivity,
     vc: normPlace(r[COL.vc]), clf: normPlace(r[COL.clf]),
-    gotLoan: toNum(r[COL.received])>0
+    gotLoan: toNum(r[COL.received])>0, received: Math.round(toNum(r[COL.received])), disbDate: firstDisbOf(r),
+    tab, sheetRow: rowNumOf.get(r)
   }));
   allDataRows.forEach((r,i)=>{
     const nameBlank = !r[COL.member] || !r[COL.member].trim();
@@ -1044,9 +1129,12 @@ function buildMemberRecordsFromSheet(rows, source, rowOffset){
       result.orphan.push({
         sheetRow: i+rowOffset+1, tab, paidCol: colLetter(totalPaidIdx), member: named ? r[COL.member].trim() : '(no name)', pg:(r[COL.pg]||'').trim(),
         district: source.district, block:(r[COL.block]||'').trim()||source.block,
-        pgCategory: source.category, subCategory: (r[COL.typePg]||'').replace(/\s+/g,' ').trim() || 'Not recorded',
+        pgCategory: source.category, subCategory: (r[COL.typePg]||'').replace(/\s+/g,' ').trim() || 'Not recorded', subActivity: subActOf(r).subActivity, subActivityBasis: subActOf(r).basis,
         vc: normPlace(r[COL.vc]), clf: normPlace(r[COL.clf]),
-        sanctioned: Math.round(toNum(r[COL.sanctioned])), disbursed: Math.round(toNum(r[COL.received])), paid: Math.round(p)
+        sanctioned: Math.round(toNum(r[COL.sanctioned])), disbursed: Math.round(toNum(r[COL.received])), paid: Math.round(p),
+        schedule: monthCols.map(mc=>{ const d = parseDMonYYYY(r[mc.dateIdx]), prin = toNum(r[mc.prinIdx]), int = toNum(r[mc.intIdx]);
+          return {month: mc.n, dateCol: colLetter(mc.dateIdx), paidAmount: Math.round((prin+int)*100)/100, paidDate: d?isoDate(d):null, prin: Math.round(prin*100)/100, int: Math.round(int*100)/100}; })
+          .filter(c=>c.paidAmount>0)
       });
     }
   });
@@ -1075,7 +1163,7 @@ function buildMemberRecordsFromSheet(rows, source, rowOffset){
     result.formulaErrors.push({
       sheetRow: i+rowOffset+1, tab, member: named ? r[COL.member].trim() : '(no name)', pg:(r[COL.pg]||'').trim(),
       district: source.district, block:(r[COL.block]||'').trim()||source.block,
-      pgCategory: source.category, subCategory: (r[COL.typePg]||'').replace(/\s+/g,' ').trim() || 'Not recorded',
+      pgCategory: source.category, subCategory: (r[COL.typePg]||'').replace(/\s+/g,' ').trim() || 'Not recorded', subActivity: subActOf(r).subActivity, subActivityBasis: subActOf(r).basis,
       vc: normPlace(r[COL.vc]), clf: normPlace(r[COL.clf]),
       errorTypes: [...new Set(errs.map(e=>e.value))].join(', '),
       cells: errs.map(e=>`${e.col} (${e.label})`).join('; '),
@@ -1099,7 +1187,7 @@ function buildMemberRecordsFromSheet(rows, source, rowOffset){
         sheetRow: rowNumOf.get(r), tab,
         member: r[COL.member], pg:(r[COL.pg]||'').trim(),
         district: source.district, block:(r[COL.block]||'').trim()||source.block,
-        pgCategory: source.category, subCategory: (r[COL.typePg]||'').replace(/\s+/g,' ').trim() || 'Not recorded', vc: normPlace(r[COL.vc]), clf: normPlace(r[COL.clf]),
+        pgCategory: source.category, subCategory: (r[COL.typePg]||'').replace(/\s+/g,' ').trim() || 'Not recorded', subActivity: subActOf(r).subActivity, subActivityBasis: subActOf(r).basis, vc: normPlace(r[COL.vc]), clf: normPlace(r[COL.clf]),
         sanctioned: Math.round(sanctioned), utilized: Math.round(utilized), expectedU: Math.round(sanctioned - utilized), sheetU: Math.round(uSheet)
       });
     }
@@ -1109,7 +1197,7 @@ function buildMemberRecordsFromSheet(rows, source, rowOffset){
         sheetRow: rowNumOf.get(r), tab,
         member: r[COL.member], pg:(r[COL.pg]||'').trim(),
         district: source.district, block:(r[COL.block]||'').trim()||source.block,
-        pgCategory: source.category, subCategory: (r[COL.typePg]||'').replace(/\s+/g,' ').trim() || 'Not recorded', vc: normPlace(r[COL.vc]), clf: normPlace(r[COL.clf]),
+        pgCategory: source.category, subCategory: (r[COL.typePg]||'').replace(/\s+/g,' ').trim() || 'Not recorded', subActivity: subActOf(r).subActivity, subActivityBasis: subActOf(r).basis, vc: normPlace(r[COL.vc]), clf: normPlace(r[COL.clf]),
         sanctioned: Math.round(sanctioned), disbursed: Math.round(received), pendingAmt: Math.round(sanctioned - received),
         sheetPending: Math.round(toNum(r[COL.pending])),
         kind: received>0 ? 'Partly disbursed' : 'Not disbursed',
@@ -1153,7 +1241,8 @@ function buildMemberRecordsFromSheet(rows, source, rowOffset){
       if(d && (!lastRepaymentDate || d>lastRepaymentDate)) lastRepaymentDate=d;
       const dm = dueByMonth(mc.n);
       const due = dm==null ? null : Math.round(dm*100)/100;
-      return { month: mc.n, dateCol: colLetter(mc.dateIdx), dueAmount: due, paidAmount: Math.round(paidAmt*100)/100, paidDate: d?d.toISOString().slice(0,10):null };
+      return { month: mc.n, dateCol: colLetter(mc.dateIdx), dueAmount: due, paidAmount: Math.round(paidAmt*100)/100, paidDate: d?isoDate(d):null,
+        prin: Math.round(prin*100)/100, int: Math.round(interest*100)/100 };
     });
     const startedRepayment = repaymentsMade > 0;
     const zeroRepayments = repaymentsMade === 0;
@@ -1181,14 +1270,14 @@ function buildMemberRecordsFromSheet(rows, source, rowOffset){
       district: source.district,
       block: (r[COL.block]||'').trim() || source.block,
       pgCategory: source.category,
-      subCategory: (r[COL.typePg]||'').replace(/\s+/g,' ').trim() || 'Not recorded',
+      subCategory: (r[COL.typePg]||'').replace(/\s+/g,' ').trim() || 'Not recorded', subActivity: subActOf(r).subActivity, subActivityBasis: subActOf(r).basis,
       vc: normPlace(r[COL.vc]), clf: normPlace(r[COL.clf]),
       designation: r[COL.desig]||'', activity, tenureMonths, totalLoanPeriod, tenureCodeInSheet, moratoriumMonths: moratorium,
       sanctioned: Math.round(sanctioned), received: Math.round(received),
       paid: Math.round(paid), outstanding: Math.round(outstanding),
       totalToRepay: Math.round(totalToRepay), emi: emi?Math.round(emi):null,
       product: product || null, scheduleBasis: plan ? 'Official schedule' : (emi ? 'Even instalments (tenure code)' : 'No tenure recorded'),
-      monthsSince, repaymentsMade, lastRepaymentDate: lastRepaymentDate?lastRepaymentDate.toISOString().slice(0,10):null,
+      monthsSince, repaymentsMade, lastRepaymentDate: lastRepaymentDate?isoDate(lastRepaymentDate):null, disbDate: firstDisb?isoDate(firstDisb):null,
       cumulativeExpected, shortfall,
       startedRepayment, zeroRepayments, missedMoratorium, isCompleted, isDefaulter, lokosId,
       status: r[COL.status]||'Not started',
@@ -1409,6 +1498,8 @@ async function syncAll(manual){
   newData.formulaErrors = allFormulaErrors;
   newData.roster = allRoster;
   newData.sheetLayouts = layoutAnomalies(layouts);
+  await trackReady;
+  updateTracking(newData.roster, fail===0 && ok>0);   // log new names only from a complete sync
   applyNewData(newData, ok, fail);
   if(location.protocol.indexOf('http')===0 && ok>0){
     fetch('/save-snapshot', {method:'POST', body: JSON.stringify({data:newData, sourceStatus, savedAt:new Date().toISOString()})}).catch(()=>{});
@@ -1451,6 +1542,7 @@ function applyNewData(newData, ok, fail){
   const vcVals = uniqueSorted(newData.members.map(m=>m.vc));
   const pgVals = uniqueSorted(newData.members.map(m=>m.pg));
   populateActivityOptions();
+  populateSubActOptions();
   ['fClf','fVc','fPg'].forEach(id=>{ document.getElementById(id).innerHTML=''; });
   const clfSel=document.getElementById('fClf'); clfSel.appendChild(new Option('All CLFs',''));
   clfVals.forEach(v=>clfSel.appendChild(new Option(v,v)));
@@ -1591,16 +1683,42 @@ function populateActivityOptions(){
   });
   sel.value = [...sel.options].some(o=>o.value===cur) ? cur : '';
 }
+// Sub-activity dropdown, also grouped by category: value = "Category||SubActivity".
+const SUBACT_ORDER = ['Nursery','Polyculture','PPU','PFU','GPU','GRU'];
+function populateSubActOptions(){
+  const sel = document.getElementById('fSubAct'), cur = sel.value;
+  const catFilter = document.getElementById('fCategory').value;
+  const counts = {};
+  DATA.members.forEach(m=>{ const k=m.pgCategory+'||'+(m.subActivity||'Not recorded'); counts[k]=(counts[k]||0)+1; });
+  sel.innerHTML = '';
+  sel.appendChild(new Option(catFilter ? 'All '+catFilter+' sub-activities' : 'All Sub-activities', ''));
+  const rank = a => a==='Tenure code not entered' ? 999 : a.startsWith('Wrong code') ? 998 : (SUBACT_ORDER.indexOf(a)+1 || 100);
+  CATEGORY_ORDER.filter(c=>!catFilter || c===catFilter).forEach(c=>{
+    const acts = Object.keys(counts).filter(k=>k.startsWith(c+'||')).map(k=>k.slice(c.length+2)).sort((a,b)=>rank(a)-rank(b) || a.localeCompare(b));
+    if(!acts.length) return;
+    const g = document.createElement('optgroup'); g.label = c;
+    acts.forEach(a=>g.appendChild(new Option(a+' ('+counts[c+'||'+a]+')', c+'||'+a)));
+    sel.appendChild(g);
+  });
+  sel.value = [...sel.options].some(o=>o.value===cur) ? cur : '';
+}
+function matchesSubAct(m, v){
+  if(!v) return true;
+  const i = v.indexOf('||');
+  return m.pgCategory===v.slice(0,i) && (m.subActivity||'Not recorded')===v.slice(i+2);
+}
 function getFiltered(){
   const district=document.getElementById('fDistrict').value, block=document.getElementById('fBlock').value,
         category=document.getElementById('fCategory').value, activity=document.getElementById('fActivity').value,
         clf=document.getElementById('fClf').value, vc=document.getElementById('fVc').value,
-        pg=document.getElementById('fPg').value, status=document.getElementById('fStatus').value;
+        pg=document.getElementById('fPg').value, status=document.getElementById('fStatus').value,
+        subAct=document.getElementById('fSubAct').value;
   return DATA.members.filter(m=>{
     if(district && m.district!==district) return false;
     if(block && m.block!==block) return false;
     if(category && m.pgCategory!==category) return false;
     if(activity){ const i = activity.indexOf('||'); if(m.pgCategory!==activity.slice(0,i) || m.subCategory!==activity.slice(i+2)) return false; }
+    if(!matchesSubAct(m, subAct)) return false;
     if(clf && m.clf!==clf) return false;
     if(vc && m.vc!==vc) return false;
     if(pg && m.pg!==pg) return false;
@@ -1754,15 +1872,17 @@ function render(){
   renderGeography(filtered);
   renderPending();
   renderActivitySummary(filtered);
+  renderSubActivitySummary(filtered);
+  renderTracking();
 }
-document.getElementById('fCategory').addEventListener('change', ()=>{ populateActivityOptions(); render(); });
+document.getElementById('fCategory').addEventListener('change', ()=>{ populateActivityOptions(); populateSubActOptions(); render(); });
 
 function getPendingFiltered(list){
   const g = id => document.getElementById(id).value;
   const district=g('fDistrict'), block=g('fBlock'), category=g('fCategory'), clf=g('fClf'), vc=g('fVc'), pg=g('fPg'), sub=g('fActivity');
   return (list||DATA.pending||[]).filter(m=>
     (!district||m.district===district) && (!block||m.block===block) && (!category||m.pgCategory===category) &&
-    (!sub || (m.pgCategory+'||'+m.subCategory)===sub) &&
+    (!sub || (m.pgCategory+'||'+m.subCategory)===sub) && matchesSubAct(m, document.getElementById('fSubAct').value) &&
     (!clf||m.clf===clf) && (!vc||m.vc===vc) && (!pg||m.pg===pg));
 }
 sortState.pending = {key:null,dir:1};
@@ -1881,6 +2001,37 @@ function renderGeography(filtered){
     <td style="text-align:right">${c.completedCount}</td>
   </tr>`).join('');
 }
+function renderSubActivitySummary(filtered){
+  const rows = [];
+  const orphans = orphanInView();
+  const rank = a => a==='Tenure code not entered' ? 999 : a.startsWith('Wrong code') ? 998 : (SUBACT_ORDER.indexOf(a)+1 || 100);
+  const mk = (c, label, sub, orphanPaid)=>{
+    const bases = [...new Set(sub.map(m=>m.subActivityBasis).filter(Boolean))];
+    const due = sub.filter(m=>m.cumulativeExpected!=null);
+    return {category:c, subActivity:label, basis: bases.join(', ') || '—', members:sub.length,
+      pgs:new Set(sub.map(m=>m.pg+'||'+m.district+'||'+m.block+'||'+m.vc)).size,
+      received:sub.reduce((s,m)=>s+m.received,0), paid:sub.reduce((s,m)=>s+m.paid,0) + orphanPaid,
+      dueToDate:due.reduce((s,m)=>s+m.cumulativeExpected,0), overdue:due.reduce((s,m)=>s+Math.max(m.cumulativeExpected-m.paid,0),0),
+      defaulters:sub.filter(m=>m.isDefaulter).length, completedCount:sub.filter(m=>m.isCompleted).length};
+  };
+  CATEGORY_ORDER.forEach(c=>{
+    const inCat = filtered.filter(m=>m.pgCategory===c);
+    if(!inCat.length) return;
+    const oCat = orphans.filter(o=>o.pgCategory===c);
+    rows.push({...mk(c, 'All '+c, inCat, oCat.reduce((s,o)=>s+o.paid,0)), basis:'', total:true});
+    const acts = [...new Set(inCat.map(m=>m.subActivity||'Not recorded'))].sort((a,b)=>rank(a)-rank(b) || a.localeCompare(b));
+    acts.forEach(a=>rows.push(mk(c, a, inCat.filter(m=>(m.subActivity||'Not recorded')===a),
+      oCat.filter(o=>(o.subActivity||'Not recorded')===a).reduce((s,o)=>s+o.paid,0))));
+  });
+  window._subActRows = rows;
+  document.getElementById('subActBody').innerHTML = rows.map(r=>`<tr${r.total?' style="background:var(--grey-bg);font-weight:700;"':''}>
+    <td>${r.category}</td><td>${r.total?'All sub-activities':r.subActivity}</td><td style="font-size:11.5px;color:var(--text-dim);">${r.basis}</td>
+    <td style="text-align:right">${r.members}</td><td style="text-align:right">${r.pgs}</td>
+    <td style="text-align:right">${fmtRs(r.received)}</td><td style="text-align:right">${fmtRs(r.paid)}</td>
+    <td style="text-align:right">${fmtRs(r.dueToDate)}</td><td style="text-align:right;${r.overdue>0?'color:var(--red);font-weight:600;':''}">${fmtRs(r.overdue)}</td>
+    <td style="text-align:right;${r.defaulters>0?'color:var(--red);font-weight:600;':''}">${r.defaulters}</td>
+    <td style="text-align:right">${r.completedCount}</td></tr>`).join('');
+}
 function renderActivitySummary(filtered){
   const rows = [];
   const orphans = orphanInView();
@@ -1986,7 +2137,7 @@ function renderMemberTable(){
   body.innerHTML = pageRows.map(m=>`<tr>
     <td><span class="member-link" onclick="openScheduleModal('${m.member.replace(/'/g,"\\'")}','${m.pg.replace(/'/g,"\\'")}','${m.district.replace(/'/g,"\\'")}','${m.block.replace(/'/g,"\\'")}','${(m.vc||'').replace(/'/g,"\\'")}')">${m.member}</span></td>
     <td>${m.pg}</td><td>${m.pgId||'—'}</td><td>${m.district}</td><td>${m.block}</td><td>${m.pgCategory}</td>
-    <td>${m.subCategory}</td><td>${m.activity}</td>
+    <td>${m.subCategory}</td><td>${m.subActivity||'—'}</td><td>${m.activity}</td>
     <td style="text-align:right">${m.tenureMonths!=null?m.tenureMonths:'-'}</td>
     <td style="text-align:right">${m.totalLoanPeriod!=null?m.totalLoanPeriod:'-'}</td>
     <td style="text-align:right">${fmtRs(m.received)}</td>
@@ -2014,7 +2165,7 @@ function renderDefTable(){
   const body = document.getElementById('defBody');
   body.innerHTML = rows.map(m=>`<tr>
     <td><span class="member-link" onclick="openScheduleModal('${m.member.replace(/'/g,"\\'")}','${m.pg.replace(/'/g,"\\'")}','${m.district.replace(/'/g,"\\'")}','${m.block.replace(/'/g,"\\'")}','${(m.vc||'').replace(/'/g,"\\'")}')">${m.member}</span></td>
-    <td>${m.pg}</td><td>${m.district}</td><td>${m.block}</td><td>${m.pgCategory}</td><td>${m.subCategory}</td><td>${m.activity}</td>
+    <td>${m.pg}</td><td>${m.district}</td><td>${m.block}</td><td>${m.pgCategory}</td><td>${m.subCategory}</td><td>${m.subActivity||'—'}</td><td>${m.activity}</td>
     <td style="text-align:right">${fmtRs(m.received)}</td>
     <td style="text-align:right">${m.monthsSince!=null?Math.round(m.monthsSince):'-'}</td>
     <td style="text-align:right">${m.repaymentsMade}</td>
@@ -2081,7 +2232,7 @@ function closeScheduleModal(){ document.getElementById('scheduleModal').classLis
 document.getElementById('pgSearch').addEventListener('input', renderPgTable);
 document.getElementById('memberSearch').addEventListener('input', ()=>{memPage=0; renderMemberTable();});
 document.getElementById('defSearch').addEventListener('input', renderDefTable);
-['fBlock','fCategory','fActivity','fClf','fVc','fPg','fStatus'].forEach(id=>document.getElementById(id).addEventListener('change', render));
+['fBlock','fCategory','fActivity','fSubAct','fClf','fVc','fPg','fStatus'].forEach(id=>document.getElementById(id).addEventListener('change', render));
 
 function clearFilters(){
   document.getElementById('fDistrict').value='';
@@ -2089,7 +2240,9 @@ function clearFilters(){
   document.getElementById('fBlock').value='';
   document.getElementById('fCategory').value='';
   document.getElementById('fActivity').value='';
+  document.getElementById('fSubAct').value='';
   populateActivityOptions();
+  populateSubActOptions();
   document.getElementById('fClf').value='';
   document.getElementById('fVc').value='';
   document.getElementById('fPg').value='';
@@ -2223,9 +2376,175 @@ function exportAnomaly(which){
   const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Data');
-  const date = new Date().toISOString().slice(0,10);
+  const date = isoDate(new Date());
   XLSX.writeFile(wb, `${filename}_${date}.xlsx`);
 }
+
+// ===== Data tracking =====
+// The sheets don't record when a row was added, so the dashboard keeps its own log, tracking_history.json (next to
+// this page): a short hash per named member -> the date they were first seen. The local dashboard server saves it;
+// the shared (GitHub) copy can only read the uploaded log, so names newer than that are remembered in this browser.
+const TRACK_FILE = 'tracking_history.json';
+let TRACK = null;   // {version, startedOn, updated, firstSeen:{hash:'YYYY-MM-DD'}}
+let trackSavedTo = '';
+function cyrb53(str){
+  let h1=0xdeadbeef, h2=0x41c6ce57;
+  for(let i=0;i<str.length;i++){ const ch=str.charCodeAt(i); h1=Math.imul(h1^ch,2654435761); h2=Math.imul(h2^ch,1597334677); }
+  h1=Math.imul(h1^(h1>>>16),2246822507)^Math.imul(h2^(h2>>>13),3266489909);
+  h2=Math.imul(h2^(h2>>>16),2246822507)^Math.imul(h1^(h1>>>13),3266489909);
+  return (4294967296*(2097151&h2)+(h1>>>0)).toString(36);
+}
+const normKey = s => (s||'').toString().trim().toLowerCase().replace(/\s+/g,' ');
+// One key per named row: place + PG + name, plus a counter for same-named members of the same PG.
+function personKeys(roster){
+  const seen = new Map();
+  return roster.map(r=>{
+    const base = [r.district, r.block, r.pgCategory, normKey(r.pg), normKey(r.member)].join('|');
+    const n = (seen.get(base)||0) + 1; seen.set(base, n);
+    return cyrb53(base+'#'+n);
+  });
+}
+async function loadTrackingLog(){
+  try{ const r = await fetch(TRACK_FILE, {cache:'no-store'}); if(r.ok){ TRACK = await r.json(); trackSavedTo = 'file'; } }catch(e){}
+  try{
+    const local = JSON.parse(localStorage.getItem('tresp_track_local')||'null');
+    if(local && local.firstSeen){
+      if(!TRACK){ TRACK = local; trackSavedTo = 'browser'; }
+      else Object.entries(local.firstSeen).forEach(([k,d])=>{ if(!TRACK.firstSeen[k]) TRACK.firstSeen[k] = d; });
+    }
+  }catch(e){}
+}
+const trackReady = loadTrackingLog();
+function saveTrackingLog(){
+  const saveLocal = () => { try{ localStorage.setItem('tresp_track_local', JSON.stringify(TRACK)); trackSavedTo = 'browser'; }catch(e){} renderTrackLogInfo(); };
+  if(location.protocol.indexOf('http')!==0) return saveLocal();
+  const dir = decodeURIComponent(location.pathname.replace(/[^/]*$/,'')).replace(/^\/+|\/+$/g,'');
+  fetch('/save-tracking?dir='+encodeURIComponent(dir), {method:'POST', body: JSON.stringify(TRACK)})
+    .then(r=>{ if(!r.ok) throw new Error(r.status); trackSavedTo = 'file'; renderTrackLogInfo(); }).catch(saveLocal);
+}
+// Tag every roster row with the date it was first seen; on a live, complete sync also log names not seen before.
+// The very first log treats everyone present as the starting list (firstSeen = startedOn), not as new.
+function updateTracking(roster, record){
+  if(!roster || !roster.length) return;
+  const today = isoDate(new Date());
+  if(!TRACK && record) TRACK = {version:1, startedOn: today, firstSeen:{}};
+  const keys = personKeys(roster);
+  let added = 0;
+  roster.forEach((r,i)=>{
+    if(TRACK && record && !TRACK.firstSeen[keys[i]]){ TRACK.firstSeen[keys[i]] = today; added++; }
+    r.firstSeen = TRACK ? (TRACK.firstSeen[keys[i]] || null) : null;
+  });
+  if(added){ TRACK.updated = new Date().toISOString(); saveTrackingLog(); }
+}
+const fmtD = iso => { if(!iso) return '—'; const [y,m,d] = iso.split('-'); return `${d}-${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1]}-${y}`; };
+const dayName = iso => ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(+iso.slice(0,4), +iso.slice(5,7)-1, +iso.slice(8,10)).getDay()];
+// Calendar month an instalment falls due: n months after the first disbursement.
+function dueMonthLabel(disbIso, n){
+  if(!disbIso) return '—';
+  const d = new Date(+disbIso.slice(0,4), +disbIso.slice(5,7)-1+n, 1);
+  return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + ' ' + d.getFullYear();
+}
+function renderTrackLogInfo(){
+  const el = document.getElementById('trkLogInfo'); if(!el) return;
+  if(!TRACK){ el.textContent = 'not started yet — it starts with the first complete sync'; return; }
+  const n = Object.keys(TRACK.firstSeen).length;
+  el.textContent = `started ${fmtD(TRACK.startedOn)}, ${n.toLocaleString('en-IN')} names logged, ` +
+    (trackSavedTo==='browser' ? 'new names are remembered in this browser only' : 'saved in tracking_history.json');
+}
+let trkSel = null;   // a single selected day ('YYYY-MM-DD' or 'nodate'), or null for the whole range
+function setTrackRange(kind){
+  const today = new Date(), t = isoDate(today);
+  const back = n => { const d = new Date(today); d.setDate(d.getDate()-n); return isoDate(d); };
+  const f = document.getElementById('trkFrom'), to = document.getElementById('trkTo');
+  if(kind==='today'){ f.value = t; to.value = t; }
+  else if(kind==='yesterday'){ f.value = back(1); to.value = back(1); }
+  else if(kind==='month'){ f.value = t.slice(0,8)+'01'; to.value = t; }
+  else if(kind==='all'){ f.value = ''; to.value = ''; }
+  else { f.value = back(+kind-1); to.value = t; }
+  trkSel = null; renderTracking();
+}
+function renderTracking(){
+  if(!document.getElementById('trkDailyBody')) return;
+  renderTrackLogInfo();
+  const from = document.getElementById('trkFrom').value, to = document.getElementById('trkTo').value;
+  const q = (document.getElementById('trkSearch').value||'').toLowerCase();
+  const inRange = d => d && (!from || d>=from) && (!to || d<=to);
+  const today = isoDate(new Date());
+  const filtered = getFiltered();
+  const started = TRACK ? TRACK.startedOn : null;
+  // New names: first seen after the starting list. The member-status filter doesn't apply to names.
+  const names = getPendingFiltered(DATA.roster||[]).filter(r=>r.firstSeen && started && r.firstSeen>started);
+  const disb = filtered.filter(m=>m.disbDate);
+  const reps = [];
+  const addReps = (m, isOrphan) => (m.schedule||[]).forEach(c=>{
+    if(!(c.paidAmount>0)) return;
+    const notes = [];
+    if(isOrphan) notes.push('No loan amount received');
+    if(c.paidDate && c.paidDate>today) notes.push('Future date');
+    if(c.paidDate && m.disbDate && c.paidDate<m.disbDate) notes.push('Before disbursement');
+    reps.push({date:c.paidDate, member:(m.member||'').trim(), pg:m.pg, district:m.district, block:m.block, category:m.pgCategory,
+      month:c.month, dueIn: dueMonthLabel(m.disbDate, c.month), prin: c.prin!=null?c.prin:null, int: c.int!=null?c.int:null, amt:c.paidAmount,
+      tab:m.tab, row:m.sheetRow, col:c.dateCol, note:notes.join('; ')});
+  });
+  filtered.forEach(m=>addReps(m,false));
+  orphanInView().forEach(o=>addReps(o,true));
+
+  const day = {};
+  const D = d => day[d] || (day[d] = {date:d, newNames:0, disbursed:0, repEntries:0, repMembers:new Set(), prin:0, int:0, amt:0});
+  names.forEach(r=>{ if(inRange(r.firstSeen)) D(r.firstSeen).newNames++; });
+  disb.forEach(m=>{ if(inRange(m.disbDate)) D(m.disbDate).disbursed++; });
+  const noDate = reps.filter(r=>!r.date);
+  reps.forEach(r=>{ if(!inRange(r.date)) return; const x = D(r.date); x.repEntries++; x.repMembers.add(r.tab+'|'+r.row); x.prin += r.prin||0; x.int += r.int||0; x.amt += r.amt; });
+  const daily = Object.values(day).sort((a,b)=>b.date.localeCompare(a.date));
+
+  const rangeNames = names.filter(r=>inRange(r.firstSeen)), rangeReps = reps.filter(r=>inRange(r.date)), rangeDisb = disb.filter(m=>inRange(m.disbDate));
+  document.getElementById('t-new').textContent = rangeNames.length.toLocaleString('en-IN');
+  document.getElementById('t-new-note').textContent = `${rangeNames.filter(r=>r.gotLoan).length} of them already have a loan amount received` + (started ? ` · tracked since ${fmtD(started)}` : '');
+  document.getElementById('t-disb').textContent = rangeDisb.length.toLocaleString('en-IN');
+  document.getElementById('t-disb-note').textContent = `${fmtRs(rangeDisb.reduce((s,m)=>s+m.received,0))} received by these members (all tranches)`;
+  document.getElementById('t-repcount').textContent = rangeReps.length.toLocaleString('en-IN');
+  document.getElementById('t-repmem').textContent = `by ${new Set(rangeReps.map(r=>r.tab+'|'+r.row)).size.toLocaleString('en-IN')} member(s)`;
+  document.getElementById('t-repamt').textContent = fmtRs(rangeReps.reduce((s,r)=>s+r.amt,0));
+  document.getElementById('t-repsplit').textContent = `Principal ${fmtRs(rangeReps.reduce((s,r)=>s+(r.prin||0),0))} · Interest ${fmtRs(rangeReps.reduce((s,r)=>s+(r.int||0),0))}`;
+  document.getElementById('t-nodate').textContent = noDate.length.toLocaleString('en-IN');
+  document.getElementById('t-nodate-note').textContent = `${fmtRs(noDate.reduce((s,r)=>s+r.amt,0))} entered without a date, so not placed on any day — click "No date entered" in the table`;
+
+  const rs = n => n ? fmtRs(n) : '–';
+  let html = daily.map(x=>`<tr data-day="${x.date}" class="${trkSel===x.date?'sel':''}"><td>${fmtD(x.date)}</td><td>${dayName(x.date)}</td>
+    <td style="text-align:right">${x.newNames||'–'}</td><td style="text-align:right">${x.disbursed||'–'}</td><td style="text-align:right">${x.repEntries||'–'}</td>
+    <td style="text-align:right">${x.repMembers.size||'–'}</td><td style="text-align:right">${rs(x.prin)}</td><td style="text-align:right">${rs(x.int)}</td><td style="text-align:right;font-weight:600">${rs(x.amt)}</td></tr>`).join('');
+  if(noDate.length) html += `<tr data-day="nodate" class="${trkSel==='nodate'?'sel':''}"><td colspan="2" style="color:var(--amber)">No date entered</td><td style="text-align:right">–</td><td style="text-align:right">–</td>
+    <td style="text-align:right">${noDate.length}</td><td style="text-align:right">${new Set(noDate.map(r=>r.tab+'|'+r.row)).size}</td>
+    <td style="text-align:right">${rs(noDate.reduce((s,r)=>s+(r.prin||0),0))}</td><td style="text-align:right">${rs(noDate.reduce((s,r)=>s+(r.int||0),0))}</td><td style="text-align:right;font-weight:600">${rs(noDate.reduce((s,r)=>s+r.amt,0))}</td></tr>`;
+  document.getElementById('trkDailyBody').innerHTML = html || '<tr><td colspan="9" style="text-align:center;color:var(--text-dim)">No activity in this date range</td></tr>';
+  document.getElementById('trkSelInfo').textContent = trkSel ? `Showing ${trkSel==='nodate'?'repayments with no date':fmtD(trkSel)} below — click it again to show the whole range` : 'Click a day to see only that day below';
+
+  const match = r => !q || (r.member||'').toLowerCase().includes(q) || (r.pg||'').toLowerCase().includes(q);
+  const repList = (trkSel==='nodate' ? noDate : trkSel ? reps.filter(r=>r.date===trkSel) : rangeReps).filter(match)
+    .sort((a,b)=>(b.date||'').localeCompare(a.date||'') || a.block.localeCompare(b.block) || a.pg.localeCompare(b.pg) || a.row-b.row);
+  const newList = (trkSel==='nodate' ? [] : trkSel ? names.filter(r=>r.firstSeen===trkSel) : rangeNames).filter(match)
+    .sort((a,b)=>b.firstSeen.localeCompare(a.firstSeen) || a.block.localeCompare(b.block) || a.pg.localeCompare(b.pg) || (a.sheetRow||0)-(b.sheetRow||0));
+  window._trk = {daily, reps: repList, news: newList};
+  const LIMIT = 500, more = (n, cols) => n>LIMIT ? `<tr><td colspan="${cols}" style="text-align:center;color:var(--text-dim)">Showing the first ${LIMIT} of ${n.toLocaleString('en-IN')} — export to Excel for the full list</td></tr>` : '';
+  const amt = v => v==null ? '' : fmtRs(v);
+  document.getElementById('trkRepTitle').textContent = `(${repList.length.toLocaleString('en-IN')} entries, ${fmtRs(repList.reduce((s,r)=>s+r.amt,0))})`;
+  document.getElementById('trkRepBody').innerHTML = repList.slice(0,LIMIT).map(r=>`<tr><td>${fmtD(r.date)}</td><td>${r.member}</td><td>${r.pg}</td><td>${r.block}</td><td>${r.category}</td>
+    <td>Month ${r.month}</td><td>${r.dueIn}</td><td style="text-align:right">${amt(r.prin)}</td><td style="text-align:right">${amt(r.int)}</td><td style="text-align:right;font-weight:600">${fmtRs(r.amt)}</td>
+    <td>${r.tab||''} · row ${r.row||''} · ${r.col||''}</td><td>${r.note?`<span class="pill pill-amber">${r.note}</span>`:''}</td></tr>`).join('') + more(repList.length, 12)
+    || '<tr><td colspan="12" style="text-align:center;color:var(--text-dim)">No repayments</td></tr>';
+  document.getElementById('trkNewTitle').textContent = started ? `(${newList.length.toLocaleString('en-IN')})` : '';
+  document.getElementById('trkNewBody').innerHTML = newList.slice(0,LIMIT).map(r=>`<tr><td>${fmtD(r.firstSeen)}</td><td>${r.member}</td><td>${r.pg}</td><td>${r.block}</td><td>${r.pgCategory}</td><td>${r.subCategory}</td>
+    <td>${r.tab||''} · row ${r.sheetRow||''}</td><td style="text-align:right">${r.received?fmtRs(r.received):'–'}</td><td>${fmtD(r.disbDate)}</td></tr>`).join('') + more(newList.length, 9)
+    || `<tr><td colspan="9" style="text-align:center;color:var(--text-dim)">${started ? 'No new names in this period' : 'Tracking starts with the first complete sync'}</td></tr>`;
+}
+document.querySelectorAll('.trk-btn').forEach(b=>b.addEventListener('click', ()=>setTrackRange(b.dataset.range)));
+['trkFrom','trkTo'].forEach(id=>document.getElementById(id).addEventListener('change', ()=>{ trkSel = null; renderTracking(); }));
+document.getElementById('trkSearch').addEventListener('input', renderTracking);
+document.getElementById('trkDailyBody').addEventListener('click', e=>{
+  const tr = e.target.closest('tr[data-day]'); if(!tr) return;
+  trkSel = trkSel===tr.dataset.day ? null : tr.dataset.day; renderTracking();
+});
+(()=>{ const t = new Date(), b = new Date(t); b.setDate(b.getDate()-29); document.getElementById('trkFrom').value = isoDate(b); document.getElementById('trkTo').value = isoDate(t); })();
 
 function exportTable(which){
   let rows, filename;
@@ -2233,14 +2552,17 @@ function exportTable(which){
     rows = window._pgRows.map(p=>({PG:p.pg,'PG ID':p.pgId||'',District:p.district,Block:p.block,Category:p.category,'Sub-category':p.subCategory,VC:p.vc,CLF:p.clf,Members:p.members,'Repayment Started':p.pgStartedRepayment?'Yes':'No',Disbursed:p.received,Repaid:p.paid,'Total To Repay':p.totalToRepay,'Repayment Gap':p.repaymentGap,'Never Repaid':p.zeroCount,'Missed Moratorium':p.missedMoratoriumCount,Defaulting:p.defaulters,Completed:p.completedCount}));
     filename = 'TRESP_PG_Summary';
   } else if(which==='members'){
-    rows = window._memberRows.map(m=>({Member:m.member,PG:m.pg,'PG ID':m.pgId||'',District:m.district,Block:m.block,Category:m.pgCategory,'Sub-category':m.subCategory,'Loan Type (Tenure)':m.activity,'Repay Window (months)':m.tenureMonths,'Total Loan Period (months)':m.totalLoanPeriod,Received:m.received,Paid:m.paid,'Total To Repay':m.totalToRepay,'Schedule Used':m.product?`${m.product} (${m.scheduleBasis})`:m.scheduleBasis,'Amount Due To Date (incl. interest)':m.cumulativeExpected,'Paid vs Due':m.dueVsPaid,Shortfall:m.shortfall,'Months Since Loan':m.monthsSince,'Repayments Made':m.repaymentsMade,'Started Repayment':m.startedRepayment?'Yes':'No','Missed Moratorium':m.missedMoratorium?'Yes':'No',Completed:m.isCompleted?'Yes':'No',Status:m.statusLabel}));
+    rows = window._memberRows.map(m=>({Member:m.member,PG:m.pg,'PG ID':m.pgId||'',District:m.district,Block:m.block,Category:m.pgCategory,'Sub-category':m.subCategory,'Sub-activity':m.subActivity,'Sub-activity Identified From':m.subActivityBasis,'Loan Type (Tenure)':m.activity,'Repay Window (months)':m.tenureMonths,'Total Loan Period (months)':m.totalLoanPeriod,Received:m.received,Paid:m.paid,'Total To Repay':m.totalToRepay,'Schedule Used':m.product?`${m.product} (${m.scheduleBasis})`:m.scheduleBasis,'Amount Due To Date (incl. interest)':m.cumulativeExpected,'Paid vs Due':m.dueVsPaid,Shortfall:m.shortfall,'Months Since Loan':m.monthsSince,'Repayments Made':m.repaymentsMade,'Started Repayment':m.startedRepayment?'Yes':'No','Missed Moratorium':m.missedMoratorium?'Yes':'No',Completed:m.isCompleted?'Yes':'No',Status:m.statusLabel}));
     filename = 'TRESP_Members';
   } else if(which==='defaulters'){
-    rows = window._defRows.map(m=>({Member:m.member,PG:m.pg,District:m.district,Block:m.block,Category:m.pgCategory,'Sub-category':m.subCategory,'Loan Type (Tenure)':m.activity,Received:m.received,'Months Since Loan':m.monthsSince,'Repayments Made':m.repaymentsMade,Shortfall:m.shortfall,Reason:m.reason}));
+    rows = window._defRows.map(m=>({Member:m.member,PG:m.pg,District:m.district,Block:m.block,Category:m.pgCategory,'Sub-category':m.subCategory,'Sub-activity':m.subActivity,'Sub-activity Identified From':m.subActivityBasis,'Loan Type (Tenure)':m.activity,Received:m.received,'Months Since Loan':m.monthsSince,'Repayments Made':m.repaymentsMade,Shortfall:m.shortfall,Reason:m.reason}));
     filename = 'TRESP_Defaulters';
   } else if(which==='activity'){
     rows = (window._activityRows||[]).map(r=>({Category:r.category,'Sub-category':r.total?'All sub-categories':r.activity,Members:r.members,PGs:r.pgs,Disbursed:r.received,Repaid:r.paid,Defaulting:r.defaulters,Completed:r.completedCount}));
     filename = 'TRESP_Category_Activity_Summary';
+  } else if(which==='subactivity'){
+    rows = (window._subActRows||[]).map(r=>({Category:r.category,'Sub-activity':r.total?'All sub-activities':r.subActivity,'How Identified':r.basis,Members:r.members,PGs:r.pgs,Disbursed:r.received,Repaid:r.paid,'Should Have Paid By Now':Math.round(r.dueToDate),Overdue:Math.round(r.overdue),Defaulting:r.defaulters,Completed:r.completedCount}));
+    filename = 'TRESP_Category_SubActivity_Summary';
   } else if(which==='pending'){
     rows = (window._pendRows||[]).map(m=>({Member:m.member,PG:m.pg,District:m.district,Block:m.block,Category:m.pgCategory,'Sub-category':m.subCategory,VC:m.vc,CLF:m.clf,Sanctioned:m.sanctioned,Disbursed:m.disbursed,'Pending (Sanctioned - Disbursed)':m.pendingAmt,Disbursement:m.kind,'Loan Status':m.status}));
     filename = 'TRESP_Sanctioned_Not_Disbursed';
@@ -2253,6 +2575,15 @@ function exportTable(which){
   } else if(which==='block'){
     rows = (window._blockRows||[]).map(b=>({District:b.district,Block:b.block,'Total Members':b.totalMembers,'Received Loan':b.members,Disbursed:b.received,Repaid:b.paid,'Total To Repay':b.totalToRepay,Defaulting:b.defaulters,Completed:b.completedCount}));
     filename = 'TRESP_Block_Summary';
+  } else if(which==='trackDaily'){
+    rows = ((window._trk||{}).daily||[]).map(x=>({Date:fmtD(x.date),Day:dayName(x.date),'New Names Added':x.newNames,'Loans Disbursed':x.disbursed,'Repayment Entries':x.repEntries,'Members Who Repaid':x.repMembers.size,Principal:Math.round(x.prin),Interest:Math.round(x.int),'Total Repaid':Math.round(x.amt)}));
+    filename = 'TRESP_Tracking_Daily';
+  } else if(which==='trackRepay'){
+    rows = ((window._trk||{}).reps||[]).map(r=>({'Repayment Date':fmtD(r.date),Member:r.member,PG:r.pg,District:r.district,Block:r.block,Category:r.category,'Instalment Month':r.month,'Due In':r.dueIn,Principal:r.prin,Interest:r.int,Total:r.amt,'Sheet Tab':r.tab,'Sheet Row':r.row,'Date Column':r.col,Note:r.note}));
+    filename = 'TRESP_Tracking_Repayments';
+  } else if(which==='trackNew'){
+    rows = ((window._trk||{}).news||[]).map(r=>({'First Seen':fmtD(r.firstSeen),Member:r.member,PG:r.pg,District:r.district,Block:r.block,Category:r.pgCategory,'Sub-category':r.subCategory,'Sheet Tab':r.tab,'Sheet Row':r.sheetRow,'Loan Received':r.received,'First Disbursement':fmtD(r.disbDate)}));
+    filename = 'TRESP_Tracking_New_Names';
   } else if(which==='category'){
     rows = (window._categoryRows||[]).map(c=>({Category:c.category,'Total Members':c.totalMembers,'Received Loan':c.members,Disbursed:c.received,Repaid:c.paid,'Total To Repay':c.totalToRepay,Defaulting:c.defaulters,Completed:c.completedCount}));
     filename = 'TRESP_Category_Summary';
@@ -2262,7 +2593,7 @@ function exportTable(which){
   const ws = XLSX.utils.json_to_sheet(rows);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Data');
-  const date = new Date().toISOString().slice(0,10);
+  const date = isoDate(new Date());
   XLSX.writeFile(wb, `${filename}_${date}.xlsx`);
 }
 
@@ -2299,6 +2630,7 @@ if(location.protocol==='file:'){
     sourceStatus = window.SNAPSHOT.sourceStatus || {};
     const oks = Object.values(sourceStatus).filter(s=>s.ok).length;
     applyNewData(window.SNAPSHOT.data, oks, 0);
+    trackReady.then(()=>{ updateTracking(DATA.roster, false); renderTracking(); });
     document.getElementById('asofTop').textContent = new Date(window.SNAPSHOT.savedAt).toLocaleString();
     renderSyncStatus();
   } else { render(); renderSyncStatus(); }
