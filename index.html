@@ -86,6 +86,13 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Ari
 .trk-btn{padding:6px 11px;border:1px solid var(--border);border-radius:6px;background:var(--card);font-size:12px;cursor:pointer;}
 .trk-btn:hover{background:var(--blue-light);}
 #trkDailyBody tr{cursor:pointer;}
+.trk-pivot table{border-collapse:separate;border-spacing:0;}
+.trk-pivot th, .trk-pivot td{white-space:nowrap;text-align:right;padding:6px 8px;}
+.trk-pivot th:first-child, .trk-pivot td:first-child{position:sticky;left:0;background:var(--card);text-align:left;z-index:1;border-right:1px solid var(--border);}
+.trk-pivot thead th{position:sticky;top:0;z-index:2;}
+.trk-pivot thead th:first-child{z-index:3;}
+.trk-pivot tr.tot td, .trk-pivot tr.tot td:first-child{font-weight:700;background:var(--grey-bg);}
+.trk-pivot td.rowtot{font-weight:700;border-left:1px solid var(--border);}
 #trkDailyBody tr.sel td{background:#d6e7f7;font-weight:600;}
 .member-link{color:var(--blue);cursor:pointer;text-decoration:underline;text-decoration-style:dotted;}
 .member-link:hover{color:var(--navy);}
@@ -529,6 +536,25 @@ tr:hover td{background:var(--blue-light);}
         <div class="table-toolbar"><span style="font-size:12px;color:var(--text-dim);">Every block in view, including blocks with no activity. Follows the date range, the day clicked above and the search box.</span><button class="export-btn" onclick="exportTable('trackBlock')">⬇ Export to Excel</button></div>
         <div class="table-wrap" style="max-height:420px;margin-bottom:22px;">
           <table><thead><tr><th>District</th><th>Block</th><th style="text-align:right">New names added</th><th style="text-align:right">Loans disbursed</th><th style="text-align:right">Repayment entries</th><th style="text-align:right">Members who repaid</th><th style="text-align:right">Principal</th><th style="text-align:right">Interest</th><th style="text-align:right">Total repaid</th><th>Last repayment date</th></tr></thead><tbody id="trkBlockBody"></tbody></table>
+        </div>
+
+        <div class="section-title">Block-wise day by day <span id="trkPivotTitle"></span></div>
+        <div class="table-toolbar">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <label for="trkPivotMetric" style="font-size:12px;color:var(--text-dim);">Show</label>
+            <select id="trkPivotMetric" class="search-input" style="min-width:200px;">
+              <option value="amt">Amount repaid (₹)</option>
+              <option value="repEntries">Repayment entries</option>
+              <option value="repMembers">Members who repaid</option>
+              <option value="newNames">New names added</option>
+              <option value="disbursed">Loans disbursed</option>
+            </select>
+            <span style="font-size:12px;color:var(--text-dim);">One column per day in the date range above, newest first; days with nothing in any block are left out. Darker cells = more. Follows the filters and search box.</span>
+          </div>
+          <button class="export-btn" onclick="exportTable('trackPivot')">⬇ Export to Excel</button>
+        </div>
+        <div class="table-wrap trk-pivot" style="max-height:460px;margin-bottom:22px;">
+          <table><thead id="trkPivotHead"></thead><tbody id="trkPivotBody"></tbody></table>
         </div>
 
         <div class="section-title">Repayments made <span id="trkRepTitle"></span></div>
@@ -2540,6 +2566,7 @@ const EXPORT_TITLES = {
   category: 'Category-wise summary',
   trackDaily: 'Data tracking: day-by-day summary',
   trackBlock: 'Data tracking: block-wise summary',
+  trackPivot: 'Data tracking: block-wise day by day',
   trackRepay: 'Data tracking: repayments made',
   trackNew: 'Data tracking: new names added to the sheets',
 };
@@ -2566,7 +2593,8 @@ function buildExportSheet(rows, key, note, filename){
   if(note) lines.push([note]);
   if(/^track/.test(key)){
     const f = document.getElementById('trkFrom').value, t = document.getElementById('trkTo').value;
-    const period = trkSel==='nodate' ? 'Repayments with no date entered' : trkSel ? fmtD(trkSel) : (f||t) ? `${f?fmtD(f):'start'} to ${t?fmtD(t):'today'}` : 'All dates';
+    const sel = key==='trackPivot' ? null : trkSel;   // the block × day grid always covers the whole range
+    const period = sel==='nodate' ? 'Repayments with no date entered' : sel ? fmtD(sel) : (f||t) ? `${f?fmtD(f):'start'} to ${t?fmtD(t):'today'}` : 'All dates';
     const q = document.getElementById('trkSearch').value.trim();
     lines.push(['Period: ' + period + (q ? ` · Search: "${q}"` : '')]);
   }
@@ -2763,6 +2791,31 @@ function renderTracking(){
     <td style="text-align:right">${rs(x.prin)}</td><td style="text-align:right">${rs(x.int)}</td><td style="text-align:right;font-weight:600">${rs(x.amt)}</td><td>${x.lastDate?fmtD(x.lastDate):'–'}</td></tr>`).join('')
     + (blocks.length>1 ? `<tr style="background:var(--grey-bg);font-weight:700;"><td colspan="2">All blocks</td><td style="text-align:right">${n0(tot.newNames)}</td><td style="text-align:right">${n0(tot.disbursed)}</td><td style="text-align:right">${n0(tot.repEntries)}</td><td style="text-align:right">${n0(tot.repMembers)}</td><td style="text-align:right">${rs(tot.prin)}</td><td style="text-align:right">${rs(tot.int)}</td><td style="text-align:right">${rs(tot.amt)}</td><td></td></tr>` : '')
     || '<tr><td colspan="10" style="text-align:center;color:var(--text-dim)">No blocks in view</td></tr>';
+  // Block × day grid for the chosen measure, over the whole date range (a clicked day doesn't narrow it).
+  const metric = document.getElementById('trkPivotMetric').value;
+  const cell = {}, C = (b, day) => { const k = b.district+'||'+b.block+'||'+day; return cell[k] || (cell[k] = {amt:0, repEntries:0, repMembers:new Set(), newNames:0, disbursed:0}); };
+  const blockOf = r => blk[r.district+'||'+r.block] || BK(r.district, r.block);
+  names.filter(r=>inRange(r.firstSeen) && match(r)).forEach(r=>C(blockOf(r), r.firstSeen).newNames++);
+  disb.filter(m=>inRange(m.disbDate) && match(m)).forEach(m=>C(blockOf(m), m.disbDate).disbursed++);
+  reps.filter(r=>r.date && inRange(r.date) && match(r)).forEach(r=>{ const c = C(blockOf(r), r.date); c.amt += r.amt; c.repEntries++; c.repMembers.add(r.tab+'|'+r.row); });
+  const val = c => !c ? 0 : metric==='repMembers' ? c.repMembers.size : c[metric];
+  const pvBlocks = Object.values(blk).sort((a,b)=>a.district.localeCompare(b.district) || a.block.localeCompare(b.block));
+  let pvDays = [...new Set(Object.keys(cell).filter(k=>val(cell[k])>0).map(k=>k.split('||')[2]))].sort().reverse();
+  const MAXDAYS = 92, cut = pvDays.length > MAXDAYS ? pvDays.length - MAXDAYS : 0;
+  pvDays = pvDays.slice(0, MAXDAYS);
+  const get = (b, d) => val(cell[b.district+'||'+b.block+'||'+d]);
+  const rowTot = b => pvDays.reduce((s,d)=>s+get(b,d), 0), dayTot = d => pvBlocks.reduce((s,b)=>s+get(b,d), 0);
+  const max = Math.max(1, ...pvBlocks.flatMap(b=>pvDays.map(d=>get(b,d))));
+  const showV = v => !v ? '' : metric==='amt' ? fmtRs(v) : v.toLocaleString('en-IN');
+  const metricLabel = document.getElementById('trkPivotMetric').selectedOptions[0].text;
+  document.getElementById('trkPivotTitle').textContent = `(${metricLabel}, ${pvDays.length} day${pvDays.length===1?'':'s'} with activity${cut ? `; ${cut} older day${cut===1?'':'s'} not shown — narrow the date range` : ''})`;
+  document.getElementById('trkPivotHead').innerHTML = `<tr><th>Block</th>${pvDays.map(d=>`<th>${fmtD(d).slice(0,6)}<br><span style="font-weight:400;color:var(--text-dim)">${dayName(d)}</span></th>`).join('')}<th>Total</th></tr>`;
+  document.getElementById('trkPivotBody').innerHTML = pvDays.length ? pvBlocks.map(b=>{ const t = rowTot(b);
+      return `<tr${t?'':' style="color:var(--text-dim)"'}><td>${b.block} <span style="color:var(--text-dim);font-size:11px;">${b.district}</span></td>${pvDays.map(d=>{ const v = get(b,d);
+        return `<td style="${v?`background:rgba(46,125,50,${(0.08+0.55*v/max).toFixed(2)});`:''}">${showV(v)}</td>`; }).join('')}<td class="rowtot">${showV(t)||'–'}</td></tr>`; }).join('')
+      + `<tr class="tot"><td>All blocks</td>${pvDays.map(d=>`<td>${showV(dayTot(d))}</td>`).join('')}<td class="rowtot">${showV(pvDays.reduce((s,d)=>s+dayTot(d),0))}</td></tr>`
+    : '<tr><td style="text-align:center;color:var(--text-dim)">No activity in this date range</td></tr>';
+  window._trkPivot = {metric, metricLabel, days: pvDays, rows: pvBlocks.map(b=>({district:b.district, block:b.block, values: pvDays.map(d=>get(b,d)), total: rowTot(b)})), dayTotals: pvDays.map(dayTot)};
   window._trk = {daily, blocks, reps: repList, news: newList};
   const LIMIT = 500, more = (n, cols) => n>LIMIT ? `<tr><td colspan="${cols}" style="text-align:center;color:var(--text-dim)">Showing the first ${LIMIT} of ${n.toLocaleString('en-IN')} — export to Excel for the full list</td></tr>` : '';
   const amt = v => v==null ? '' : fmtRs(v);
@@ -2780,6 +2833,7 @@ function renderTracking(){
 document.querySelectorAll('.trk-btn').forEach(b=>b.addEventListener('click', ()=>setTrackRange(b.dataset.range)));
 ['trkFrom','trkTo'].forEach(id=>document.getElementById(id).addEventListener('change', ()=>{ trkSel = null; renderTracking(); }));
 document.getElementById('trkSearch').addEventListener('input', renderTracking);
+document.getElementById('trkPivotMetric').addEventListener('change', renderTracking);
 document.getElementById('trkDailyBody').addEventListener('click', e=>{
   const tr = e.target.closest('tr[data-day]'); if(!tr) return;
   trkSel = trkSel===tr.dataset.day ? null : tr.dataset.day; renderTracking();
@@ -2818,6 +2872,14 @@ function exportTable(which){
   } else if(which==='trackDaily'){
     rows = ((window._trk||{}).daily||[]).map(x=>({Date:fmtD(x.date),Day:dayName(x.date),'New Names Added':x.newNames,'Loans Disbursed':x.disbursed,'Repayment Entries':x.repEntries,'Members Who Repaid':x.repMembers.size,Principal:Math.round(x.prin),Interest:Math.round(x.int),'Total Repaid':Math.round(x.amt)}));
     filename = 'TRESP_Tracking_Daily';
+  } else if(which==='trackPivot'){
+    const p = window._trkPivot || {days:[], rows:[]};
+    const isAmt = p.metric==='amt';
+    rows = p.rows.map(r=>{ const o = {District:r.district, Block:r.block}; p.days.forEach((d,i)=>{ o[fmtD(d)] = isAmt ? Math.round(r.values[i]) : r.values[i]; }); o.Total = isAmt ? Math.round(r.total) : r.total; return o; });
+    if(rows.length && p.days.length){ const t = {District:'', Block:'All blocks'}; p.days.forEach((d,i)=>{ t[fmtD(d)] = isAmt ? Math.round(p.dayTotals[i]) : p.dayTotals[i]; }); t.Total = p.dayTotals.reduce((s,v)=>s+v,0); if(isAmt) t.Total = Math.round(t.Total); rows.push(t); }
+    if(!p.days.length) rows = [];
+    EXPORT_TITLES.trackPivot = 'Data tracking: block-wise day by day — ' + (p.metricLabel||'');
+    filename = 'TRESP_Tracking_Block_Day';
   } else if(which==='trackBlock'){
     rows = ((window._trk||{}).blocks||[]).map(x=>({District:x.district,Block:x.block,'New Names Added':x.newNames,'Loans Disbursed':x.disbursed,'Repayment Entries':x.repEntries,'Members Who Repaid':x.repMembers.size,Principal:Math.round(x.prin),Interest:Math.round(x.int),'Total Repaid':Math.round(x.amt),'Last Repayment Date':x.lastDate?fmtD(x.lastDate):''}));
     filename = 'TRESP_Tracking_Blockwise';
