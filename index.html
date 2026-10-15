@@ -48,12 +48,13 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Ari
 .filter-clear:hover{background:var(--grey-bg);}
 .filter-count{font-size:12px;color:var(--text-dim);margin-left:auto;padding:6px 0;}
 .filter-count b{color:var(--navy);}
-.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:22px;}
-.kpi-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;border-top:3px solid var(--blue);}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:12px;margin-bottom:22px;}
+.kpi-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;border-top:3px solid var(--blue);min-width:0;overflow:hidden;}
 .kpi-card.green{border-top-color:var(--green);}
 .kpi-card.amber{border-top-color:var(--amber);}
 .kpi-card.red{border-top-color:var(--red);}
-.kpi-value{font-size:24px;font-weight:800;color:var(--navy);line-height:1.1;}
+.kpi-value{font-size:24px;font-weight:800;color:var(--navy);line-height:1.1;white-space:nowrap;letter-spacing:-0.2px;}
+.kpi-value.kpi-wrap{white-space:normal;overflow-wrap:anywhere;}   /* last resort if even the smallest size doesn't fit */
 .kpi-label{font-size:11.5px;color:var(--text-dim);margin-top:4px;font-weight:600;}
 .kpi-grid-primary{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;margin-bottom:18px;}
 .kpi-grid-primary .kpi-card{padding:18px 20px;}
@@ -522,6 +523,12 @@ tr:hover td{background:var(--blue-light);}
         <div class="table-toolbar"><span id="trkSelInfo" style="font-size:12px;color:var(--text-dim);"></span><button class="export-btn" onclick="exportTable('trackDaily')">⬇ Export to Excel</button></div>
         <div class="table-wrap" style="max-height:340px;margin-bottom:22px;">
           <table><thead><tr><th>Date</th><th>Day</th><th style="text-align:right">New names added</th><th style="text-align:right">Loans disbursed</th><th style="text-align:right">Repayment entries</th><th style="text-align:right">Members who repaid</th><th style="text-align:right">Principal</th><th style="text-align:right">Interest</th><th style="text-align:right">Total repaid</th></tr></thead><tbody id="trkDailyBody"></tbody></table>
+        </div>
+
+        <div class="section-title">Block-wise summary <span id="trkBlockTitle"></span></div>
+        <div class="table-toolbar"><span style="font-size:12px;color:var(--text-dim);">Every block in view, including blocks with no activity. Follows the date range, the day clicked above and the search box.</span><button class="export-btn" onclick="exportTable('trackBlock')">⬇ Export to Excel</button></div>
+        <div class="table-wrap" style="max-height:420px;margin-bottom:22px;">
+          <table><thead><tr><th>District</th><th>Block</th><th style="text-align:right">New names added</th><th style="text-align:right">Loans disbursed</th><th style="text-align:right">Repayment entries</th><th style="text-align:right">Members who repaid</th><th style="text-align:right">Principal</th><th style="text-align:right">Interest</th><th style="text-align:right">Total repaid</th><th>Last repayment date</th></tr></thead><tbody id="trkBlockBody"></tbody></table>
         </div>
 
         <div class="section-title">Repayments made <span id="trkRepTitle"></span></div>
@@ -1643,8 +1650,23 @@ document.querySelectorAll('.nav-item').forEach(item=>{
     const page = item.dataset.page;
     document.getElementById('page-'+page).classList.add('active');
     document.getElementById('pageTitle').textContent = item.textContent.trim().replace(/^\S+\s/, '');
+    fitKpis();
   });
 });
+
+// Shrink a KPI number's font until it fits its card (crore amounts like ₹26,69,25,384 are wider than a card at 24px).
+// Only visible cards can be measured, so this reruns on page switch and window resize as well as after each render.
+function fitKpis(){
+  document.querySelectorAll('.kpi-value').forEach(el=>{
+    if(el.offsetParent===null) return;
+    el.style.fontSize = ''; el.classList.remove('kpi-wrap');
+    let size = parseFloat(getComputedStyle(el).fontSize);
+    while(el.scrollWidth > el.clientWidth && size > 15){ size -= 1; el.style.fontSize = size + 'px'; }
+    if(el.scrollWidth > el.clientWidth) el.classList.add('kpi-wrap');
+  });
+}
+let _fitTimer = null;
+window.addEventListener('resize', ()=>{ clearTimeout(_fitTimer); _fitTimer = setTimeout(fitKpis, 150); });
 
 function uniqueSorted(arr){ return [...new Set(arr)].sort(); }
 function populateSelect(id, values){
@@ -1923,6 +1945,7 @@ function render(){
   renderActivitySummary(filtered);
   renderSubActivitySummary(filtered);
   renderTracking();
+  fitKpis();
 }
 document.getElementById('fCategory').addEventListener('change', ()=>{ populateActivityOptions(); populateSubActOptions(); render(); });
 
@@ -2478,6 +2501,7 @@ const EXPORT_TITLES = {
   block: 'Block-wise summary',
   category: 'Category-wise summary',
   trackDaily: 'Data tracking: day-by-day summary',
+  trackBlock: 'Data tracking: block-wise summary',
   trackRepay: 'Data tracking: repayments made',
   trackNew: 'Data tracking: new names added to the sheets',
 };
@@ -2683,7 +2707,25 @@ function renderTracking(){
     .sort((a,b)=>(b.date||'').localeCompare(a.date||'') || a.block.localeCompare(b.block) || a.pg.localeCompare(b.pg) || a.row-b.row);
   const newList = (trkSel==='nodate' ? [] : trkSel ? names.filter(r=>r.firstSeen===trkSel) : rangeNames).filter(match)
     .sort((a,b)=>b.firstSeen.localeCompare(a.firstSeen) || a.block.localeCompare(b.block) || a.pg.localeCompare(b.pg) || (a.sheetRow||0)-(b.sheetRow||0));
-  window._trk = {daily, reps: repList, news: newList};
+  // Block-wise: the same selection as the lists below (range or clicked day, search), one row per block in view.
+  const disbList = (trkSel==='nodate' ? [] : trkSel ? disb.filter(m=>m.disbDate===trkSel) : rangeDisb).filter(match);
+  const blk = {};
+  const BK = (district, block) => blk[district+'||'+block] || (blk[district+'||'+block] = {district, block, newNames:0, disbursed:0, repEntries:0, repMembers:new Set(), prin:0, int:0, amt:0, lastDate:null});
+  getPendingFiltered(DATA.roster||[]).forEach(r=>BK(r.district, r.block));
+  newList.forEach(r=>BK(r.district, r.block).newNames++);
+  disbList.forEach(m=>BK(m.district, m.block).disbursed++);
+  repList.forEach(r=>{ const x = BK(r.district, r.block); x.repEntries++; x.repMembers.add(r.tab+'|'+r.row); x.prin += r.prin||0; x.int += r.int||0; x.amt += r.amt; if(r.date && (!x.lastDate || r.date>x.lastDate)) x.lastDate = r.date; });
+  const blocks = Object.values(blk).sort((a,b)=>a.district.localeCompare(b.district) || a.block.localeCompare(b.block));
+  const tot = blocks.reduce((t,x)=>({newNames:t.newNames+x.newNames, disbursed:t.disbursed+x.disbursed, repEntries:t.repEntries+x.repEntries, repMembers:t.repMembers+x.repMembers.size, prin:t.prin+x.prin, int:t.int+x.int, amt:t.amt+x.amt}), {newNames:0, disbursed:0, repEntries:0, repMembers:0, prin:0, int:0, amt:0});
+  const quiet = blocks.filter(x=>!x.newNames && !x.disbursed && !x.repEntries).length;
+  document.getElementById('trkBlockTitle').textContent = `(${blocks.length} block${blocks.length===1?'':'s'}${quiet ? `, ${quiet} with no activity in this period` : ''})`;
+  const n0 = v => v ? v.toLocaleString('en-IN') : '–';
+  document.getElementById('trkBlockBody').innerHTML = blocks.map(x=>`<tr${(!x.newNames && !x.disbursed && !x.repEntries)?' style="color:var(--text-dim)"':''}><td>${x.district}</td><td>${x.block}</td>
+    <td style="text-align:right">${n0(x.newNames)}</td><td style="text-align:right">${n0(x.disbursed)}</td><td style="text-align:right">${n0(x.repEntries)}</td><td style="text-align:right">${n0(x.repMembers.size)}</td>
+    <td style="text-align:right">${rs(x.prin)}</td><td style="text-align:right">${rs(x.int)}</td><td style="text-align:right;font-weight:600">${rs(x.amt)}</td><td>${x.lastDate?fmtD(x.lastDate):'–'}</td></tr>`).join('')
+    + (blocks.length>1 ? `<tr style="background:var(--grey-bg);font-weight:700;"><td colspan="2">All blocks</td><td style="text-align:right">${n0(tot.newNames)}</td><td style="text-align:right">${n0(tot.disbursed)}</td><td style="text-align:right">${n0(tot.repEntries)}</td><td style="text-align:right">${n0(tot.repMembers)}</td><td style="text-align:right">${rs(tot.prin)}</td><td style="text-align:right">${rs(tot.int)}</td><td style="text-align:right">${rs(tot.amt)}</td><td></td></tr>` : '')
+    || '<tr><td colspan="10" style="text-align:center;color:var(--text-dim)">No blocks in view</td></tr>';
+  window._trk = {daily, blocks, reps: repList, news: newList};
   const LIMIT = 500, more = (n, cols) => n>LIMIT ? `<tr><td colspan="${cols}" style="text-align:center;color:var(--text-dim)">Showing the first ${LIMIT} of ${n.toLocaleString('en-IN')} — export to Excel for the full list</td></tr>` : '';
   const amt = v => v==null ? '' : fmtRs(v);
   document.getElementById('trkRepTitle').textContent = `(${repList.length.toLocaleString('en-IN')} entries, ${fmtRs(repList.reduce((s,r)=>s+r.amt,0))})`;
@@ -2695,6 +2737,7 @@ function renderTracking(){
   document.getElementById('trkNewBody').innerHTML = newList.slice(0,LIMIT).map(r=>`<tr><td>${fmtD(r.firstSeen)}</td><td>${r.member}</td><td>${r.pg}</td><td>${r.block}</td><td>${r.pgCategory}</td><td>${r.subCategory}</td>
     <td>${r.tab||''} · row ${r.sheetRow||''}</td><td style="text-align:right">${r.received?fmtRs(r.received):'–'}</td><td>${fmtD(r.disbDate)}</td></tr>`).join('') + more(newList.length, 9)
     || `<tr><td colspan="9" style="text-align:center;color:var(--text-dim)">${started ? 'No new names in this period' : 'Tracking starts with the first complete sync'}</td></tr>`;
+  fitKpis();
 }
 document.querySelectorAll('.trk-btn').forEach(b=>b.addEventListener('click', ()=>setTrackRange(b.dataset.range)));
 ['trkFrom','trkTo'].forEach(id=>document.getElementById(id).addEventListener('change', ()=>{ trkSel = null; renderTracking(); }));
@@ -2737,6 +2780,9 @@ function exportTable(which){
   } else if(which==='trackDaily'){
     rows = ((window._trk||{}).daily||[]).map(x=>({Date:fmtD(x.date),Day:dayName(x.date),'New Names Added':x.newNames,'Loans Disbursed':x.disbursed,'Repayment Entries':x.repEntries,'Members Who Repaid':x.repMembers.size,Principal:Math.round(x.prin),Interest:Math.round(x.int),'Total Repaid':Math.round(x.amt)}));
     filename = 'TRESP_Tracking_Daily';
+  } else if(which==='trackBlock'){
+    rows = ((window._trk||{}).blocks||[]).map(x=>({District:x.district,Block:x.block,'New Names Added':x.newNames,'Loans Disbursed':x.disbursed,'Repayment Entries':x.repEntries,'Members Who Repaid':x.repMembers.size,Principal:Math.round(x.prin),Interest:Math.round(x.int),'Total Repaid':Math.round(x.amt),'Last Repayment Date':x.lastDate?fmtD(x.lastDate):''}));
+    filename = 'TRESP_Tracking_Blockwise';
   } else if(which==='trackRepay'){
     rows = ((window._trk||{}).reps||[]).map(r=>({'Repayment Date':fmtD(r.date),Member:r.member,PG:r.pg,District:r.district,Block:r.block,Category:r.category,'Instalment Month':r.month,'Due In':r.dueIn,Principal:r.prin,Interest:r.int,Total:r.amt,'Sheet Tab':r.tab,'Sheet Row':r.row,'Date Column':r.col,Note:r.note}));
     filename = 'TRESP_Tracking_Repayments';
