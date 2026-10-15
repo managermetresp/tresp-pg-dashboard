@@ -664,6 +664,13 @@ tr:hover td{background:var(--blue-light);}
         <div class="table-wrap" style="margin-bottom:10px;max-height:320px;">
           <table><thead><tr><th>Block</th><th>PG</th><th>Member</th><th>Tenure in sheet</th><th>Used by dashboard</th></tr></thead><tbody id="an-tenurefill"></tbody></table>
         </div>
+
+        <div class="section-title">Wrong sub-activity: tenure code doesn't match the PG type <span id="cnt-subactmismatch"></span></div>
+        <div class="hint-box">The "Tenure (in Months)" code (column Y) belongs to a different activity than the sheet or the PG's "Type of PG" (column G). For example, an <b>Agri/Horti</b> code on a <b>Piggery</b> PG, a pig code (PPU/PFU) on a Goatery PG, or a livestock code in the Fishery sheet. The dashboard picks each member's repayment schedule from this code, so members with a loan are on the wrong schedule until the code is corrected. Expected codes: Agri-Horti → Agri/Horti; Fishery → Polyculture or Nursery; Piggery → PPU or PFU; Goatery → GPU or GRU. Members without a loan yet are listed too, so the code can be fixed before money is released.</div>
+        <div class="table-toolbar"><button class="export-btn" onclick="exportAnomaly('subActMismatch')">⬇ Export to Excel</button></div>
+        <div class="table-wrap" style="margin-bottom:10px;max-height:360px;">
+          <table><thead><tr><th>Sheet tab</th><th>Row</th><th>Block</th><th>PG</th><th>Member</th><th>Type of PG (col G)</th><th>Tenure code (col Y)</th><th>What's wrong</th><th>Should be</th><th style="text-align:right">Loan received</th><th>Schedule the dashboard is using</th></tr></thead><tbody id="an-subactmismatch"></tbody></table>
+        </div>
       </div>
 
       <!-- DATA QUALITY PAGE -->
@@ -1150,7 +1157,8 @@ function buildMemberRecordsFromSheet(rows, source, rowOffset){
     pgCategory: source.category, subCategory:(r[COL.typePg]||'').replace(/\s+/g,' ').trim() || 'Not recorded', subActivity: subActOf(r).subActivity,
     vc: normPlace(r[COL.vc]), clf: normPlace(r[COL.clf]),
     gotLoan: toNum(r[COL.received])>0, received: Math.round(toNum(r[COL.received])), disbDate: firstDisbOf(r),
-    tab, sheetRow: rowNumOf.get(r), sourceKey: source.key
+    tab, sheetRow: rowNumOf.get(r), sourceKey: source.key,
+    tenureRaw: (r[COL.tenure]||'').toString().replace(/\s+/g,' ').trim(), tenureProduct: productOf(activityAndTenure(r[COL.tenure], 0).activity)
   }));
   allDataRows.forEach((r,i)=>{
     const nameBlank = !r[COL.member] || !r[COL.member].trim();
@@ -2323,6 +2331,26 @@ function clearFilters(){
 }
 
 // Anomalies follow the filters at the top (District, Block, Category, Activity, CLF, VC, PG, Member status).
+// Tenure code (column Y) that belongs to a different activity than the sheet / Type of PG — e.g. an Agri/Horti code
+// on a Piggery PG, or a pig code (PPU/PFU) on a Goatery PG. The dashboard picks the repayment schedule from the code,
+// so these members are on the wrong schedule until the code is corrected.
+const PRODUCT_LABEL = {Agri:'Agri/Horti', Polyculture:'Polyculture', Nursery:'Nursery', PPU:'PPU', PFU:'PFU', GPU:'GPU', GRU:'GRU'};
+const PRODUCT_KIND = {Agri:'Agri/Horti code', Polyculture:'Fishery code', Nursery:'Fishery code', PPU:'pig code', PFU:'pig code', GPU:'goat code', GRU:'goat code'};
+function subActivityMismatch(r){
+  const product = r.tenureProduct !== undefined ? r.tenureProduct : r.product;
+  if(!product) return null;
+  const sub = r.subCategory || '';
+  let allowed, what;
+  if(r.pgCategory==='Agri-Horti'){ allowed = ['Agri']; what = 'Agri-Horti sheet'; }
+  else if(r.pgCategory==='Fishery'){ allowed = ['Polyculture','Nursery']; what = 'Fishery sheet'; }
+  else if(/pig/i.test(sub)){ allowed = ['PPU','PFU']; what = 'Piggery PG'; }
+  else if(/goat/i.test(sub)){ allowed = ['GPU','GRU']; what = 'Goatery PG'; }
+  else { allowed = ['PPU','PFU','GPU','GRU']; what = 'Livestock sheet'; }
+  if(allowed.includes(product)) return null;
+  const plan = product==='Agri' ? 'Agri (4-month moratorium, 8 instalments)' : product==='Polyculture' ? 'Polyculture (3-month moratorium, 9 instalments)'
+    : product==='Nursery' ? 'Nursery (3-month moratorium, 3 instalments)' : `${product} livestock schedule (1-month moratorium)`;
+  return {problem: `${PRODUCT_KIND[product]} (${PRODUCT_LABEL[product]}) on ${/^[AEIOU]/i.test(what)?'an':'a'} ${what}`, expected: allowed.map(p=>PRODUCT_LABEL[p]).join(' or '), scheduleUsed: plan};
+}
 function computeAnomalies(){
   const members = getFiltered();
   const g = id => document.getElementById(id).value;
@@ -2353,6 +2381,9 @@ function computeAnomalies(){
     formulaErrors: getPendingFiltered(DATA.formulaErrors||[]),
     sheetLayouts: (DATA.sheetLayouts||[]).filter(r=>(!district||r.district===district)&&(!block||r.block===block)&&(!category||r.pgCategory===category)),
     tenureFill: members.filter(m=>m.tenureCodeInSheet).map(m=>({block:m.block, pg:m.pg, member:m.member, inSheet:m.tenureCodeInSheet, used:`${m.activity}-${m.totalLoanPeriod}`})),
+    subActMismatch: rosterInView(members).map(r=>{ const x = subActivityMismatch(r); return x && {tab:r.tab, sheetRow:r.sheetRow, member:r.member, pg:r.pg, district:r.district, block:r.block,
+        category:r.pgCategory, subCategory:r.subCategory, tenure: r.tenureRaw!==undefined ? r.tenureRaw : (r.activity||''), received: r.received||0, ...x}; })
+      .filter(Boolean).sort((a,b)=>a.block.localeCompare(b.block) || (a.tab||'').localeCompare(b.tab||'') || (a.sheetRow||0)-(b.sheetRow||0)),
     pgNameMismatch: (()=>{
       const seen = {};
       members.forEach(m=>{
@@ -2421,6 +2452,11 @@ function renderAnomalies(){
 
   document.getElementById('cnt-tenurefill').textContent = `(${(an.tenureFill||[]).length})`;
   set('an-tenurefill', an.tenureFill, r=>`<tr><td>${r.block}</td><td>${r.pg}</td><td>${r.member}</td><td style="color:var(--red);font-weight:600;">${r.inSheet}</td><td>${r.used}</td></tr>`);
+
+  const sam = an.subActMismatch||[];
+  document.getElementById('cnt-subactmismatch').textContent = `(${sam.length} row${sam.length===1?'':'s'}, ${new Set(sam.map(r=>r.block+'|'+r.pg)).size} PGs)`;
+  set('an-subactmismatch', sam, r=>`<tr><td>${r.tab||''}</td><td>Row ${r.sheetRow||''}</td><td>${r.block}</td><td>${r.pg}</td><td>${r.member}</td><td>${r.subCategory}</td>
+    <td style="color:var(--red);font-weight:600;">${r.tenure}</td><td>${r.problem}</td><td>${r.expected}</td><td style="text-align:right">${r.received?fmtRs(r.received):'–'}</td><td style="font-size:11.5px;">${r.received?r.scheduleUsed:'—'}</td></tr>`);
 }
 
 function exportAnomaly(which){
@@ -2435,7 +2471,7 @@ const ANOMALY_SHEETS = [
   ['noSanctioned','Sanctioned not recorded'], ['dupLokos','Duplicate LokOS ID'], ['overpaid','Repaid > total due'],
   ['overMonths','Beyond loan tenure'], ['earlyRepayment','Completed early'], ['dataNoName','Data but no name'],
   ['noLokosId','No LokOS ID'], ['formulaErrors','Formula errors'], ['sheetLayouts','Sheet layout differs'],
-  ['pgNameMismatch','PG name differs'], ['tenureFill','Tenure code counts up'],
+  ['pgNameMismatch','PG name differs'], ['tenureFill','Tenure code counts up'], ['subActMismatch','Wrong sub-activity code'],
 ];
 function exportAllAnomalies(){
   if(!window.XLSX){ alert('Excel export library failed to load.'); return; }
@@ -2467,6 +2503,7 @@ function anomalyExportRows(which){
   else if(which==='sheetLayouts'){ rows=(an.sheetLayouts||[]).map(r=>({District:r.district,Block:r.block,Category:r.pgCategory,Columns:r.cols,'Usual Columns':r.usualCols,Difference:r.diff,"What's Different":r.note})); filename='Anomaly_SheetLayout'; }
   else if(which==='pgNameMismatch'){ rows=(an.pgNameMismatch||[]).map(r=>({Block:r.block,'PG Name In Loan Sheet':r.pg,'PG Name In PG Database':r.dbName,'PG ID':r.pgId,'How Matched':r.how,Members:r.members})); filename='Anomaly_PGNameMismatch'; }
   else if(which==='tenureFill'){ rows=(an.tenureFill||[]).map(r=>({Block:r.block,PG:r.pg,Member:r.member,'Tenure In Sheet':r.inSheet,'Used By Dashboard':r.used})); filename='Anomaly_TenureAutoFill'; }
+  else if(which==='subActMismatch'){ rows=(an.subActMismatch||[]).map(r=>({'Sheet Tab':r.tab,'Sheet Row':r.sheetRow,District:r.district,Block:r.block,PG:r.pg,Member:r.member,Category:r.category,'Type of PG (col G)':r.subCategory,'Tenure Code (col Y)':r.tenure,"What's Wrong":r.problem,'Should Be':r.expected,'Loan Received':r.received,'Schedule Dashboard Is Using':r.received?r.scheduleUsed:''})); filename='Anomaly_WrongSubActivityCode'; }
   return {rows, filename};
 }
 
@@ -2490,6 +2527,7 @@ const EXPORT_TITLES = {
   sheetLayouts: 'Anomaly: Sheet column layout differs from other sheets',
   pgNameMismatch: 'Anomaly: PG name differs from the PG Database',
   tenureFill: 'Anomaly: Tenure code counts up row by row (treated as Agri/Horti-12)',
+  subActMismatch: "Anomaly: Wrong sub-activity: tenure code doesn't match the PG type",
   pg: 'PG-wise summary',
   members: 'Member-wise loan and repayment details',
   defaulters: 'Defaulting members',
