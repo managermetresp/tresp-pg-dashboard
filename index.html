@@ -967,8 +967,8 @@ const PG_ID_INDEX = (()=>{
 // Verified by cross-checking VC/CLF between the loan sheet and the PG Database instead of name.
 const PG_ID_OVERRIDES = {
   // Rupaichari has two "Sunflower" PGs in the PG Database (Fishery -046, North Bijoypur; Goatery -103, East Manubankul).
-  'Rupaichari||Sun Flower  PG': 'PG-ST-RUP-046',   // Fishery tab, VC Uttar (North) Bijoypur, Manubankul CLF
-  'Rupaichari||Sunflower  PG': 'PG-ST-RUP-103',    // Livestock (Goatery) tab, VC East Manbankul, Manubankul CLF
+  'Rupaichari||Sun Flower PG': 'PG-ST-RUP-046',    // Fishery tab, VC Uttar (North) Bijoypur, Manubankul CLF
+  'Rupaichari||Sunflower PG': 'PG-ST-RUP-103',     // Livestock (Goatery) tab, VC East Manbankul, Manubankul CLF
   'Lefunga||BUDHUK PG': 'PG-WT-LEF-005',  // as close to "BUCHUK PG" as to "BUDUK PG"; VC Abhicharan + Holong CLF match BUDUK (-005), not BUCHUK (Sambhuram Para / Aichuk CLF)
   'Manu||Athukiri PG': 'PG-DHL-MAN-031',   // two "Athukri PG" in the DB; VC North Mainama + Tripureswari CLF match -031 (-173 is Naitang Cherra / Sunshine CLF)
   'Karbook||Lama Kaham Poggery PG': 'PG-GMT-KAR-057',      // "Lama Kaham Piggery PG" in the PG Database
@@ -1548,6 +1548,25 @@ function layoutAnomalies(layouts){
 }
 const PG_ID_NAME = (()=>{ const m={}; for(let i=0;i<PG_ID_DATA.length;i+=3) m[PG_ID_DATA[i+2]] = PG_ID_DATA[i+1].replace(/\s+/g,' ').trim(); return m; })();
 
+// PG names typed with different capitals or extra spaces ("Khumpui  PG", "KHUMPUI PG", "Khumpui PG") are one PG.
+// Within each block, every variant gets the spelling used on the most rows, so the PG counts once everywhere.
+// Different spellings ("Kaisa" / "Kaisha") are not merged here — they're matched to PG IDs separately.
+function canonicalizePgNames(lists){
+  const tidy = s => (s||'').toString().replace(/\s+/g,' ').trim();
+  const freq = {};
+  lists.forEach(list=>(list||[]).forEach(r=>{ if(!r.pg) return; const t = tidy(r.pg), k = r.block+'||'+t.toLowerCase(); const f = freq[k] || (freq[k] = {}); f[t] = (f[t]||0) + 1; }));
+  const pick = {};
+  Object.entries(freq).forEach(([k,v])=>{ pick[k] = Object.entries(v).sort((a,b)=>b[1]-a[1] || a[0].localeCompare(b[0]))[0][0]; });
+  lists.forEach(list=>(list||[]).forEach(r=>{ if(r.pg) r.pg = pick[r.block+'||'+tidy(r.pg).toLowerCase()]; }));
+  // Same for VC names, which also tell PGs apart: "Sambhurampara" / "Sambhurampara VC" / "SAMBHURAMPARA VC" are one VC.
+  const vcKey = s => tidy(s).toLowerCase().replace(/\s*\bvc\b\.?$/,'').trim();
+  const vf = {};
+  lists.forEach(list=>(list||[]).forEach(r=>{ if(!r.vc) return; const k = r.block+'||'+vcKey(r.vc); const f = vf[k] || (vf[k] = {}); f[r.vc] = (f[r.vc]||0) + 1; }));
+  const vpick = {};
+  Object.entries(vf).forEach(([k,v])=>{ vpick[k] = Object.entries(v).sort((a,b)=>b[1]-a[1] || a[0].localeCompare(b[0]))[0][0]; });
+  lists.forEach(list=>(list||[]).forEach(r=>{ if(r.vc) r.vc = vpick[r.block+'||'+vcKey(r.vc)]; }));
+}
+
 async function syncAll(manual){
   if(syncing) return;
   syncing = true;
@@ -1584,6 +1603,7 @@ async function syncAll(manual){
     }
   });
 
+  canonicalizePgNames([allRoster, allMembers, allOrphan, allPending, allUMismatch, allFormulaErrors, allDataNoName]);
   const newData = aggregate(allMembers, allDataNoName, allPending, allUMismatch, allOrphan);
   newData.formulaErrors = allFormulaErrors;
   newData.roster = allRoster;
@@ -1871,19 +1891,26 @@ function render(){
   const zeroNotDefaulting = filtered.filter(m=>m.zeroRepayments && !m.isDefaulter && !m.isCompleted).length;
   const onTrack = filtered.length - defaulters - completed - zeroNotDefaulting;
 
-  const pgsInView = new Set(filtered.map(m=>m.pg+'||'+m.district+'||'+m.block+'||'+m.vc));
-  const pgStartedInView = new Set(filtered.filter(m=>m.startedRepayment).map(m=>m.pg+'||'+m.district+'||'+m.block+'||'+m.vc));
+  // A named member who is repaying counts as having a loan even if the amount-received cell (S) is blank —
+  // the repayment shows the money was given. Their PG counts as tracked and as started repaying too.
+  const orphanRows = orphanInView();
+  const repayingNoLoan = orphanRows.filter(o=>o.member && o.member!=='(no name)');
+  const pgKeyOf = m => m.pg+'||'+m.district+'||'+m.block+'||'+m.vc;
+  orphanRows.forEach(o=>{ if(o.pg) pgSet.add(pgKeyOf(o)); });
+  const pgsInView = pgSet;
+  const pgStartedInView = new Set(filtered.filter(m=>m.startedRepayment).map(pgKeyOf).concat(orphanRows.filter(o=>o.pg).map(pgKeyOf)));
+  const loanMembers = filtered.length + repayingNoLoan.length;
 
   const totalMembers = rosterInView(filtered).length;
   document.getElementById('k-memtotal').textContent = totalMembers;
-  document.getElementById('k-mem').textContent = filtered.length;
+  document.getElementById('k-mem').textContent = loanMembers;
   document.getElementById('k-mem-note').textContent = document.getElementById('fStatus').value ? 'Member status filter applied' :
-    `${totalMembers - filtered.length} named member(s) haven't received any money yet`;
+    `${Math.max(totalMembers - loanMembers, 0)} named member(s) haven't received any money yet` +
+    (repayingNoLoan.length ? ` · includes ${repayingNoLoan.length} member(s) who are repaying but have no amount received entered (see Anomalies)` : '');
   document.getElementById('k-pg').textContent = pgSet.size;
   document.getElementById('k-pgstarted').textContent = pgStartedInView.size + ' / ' + pgsInView.size;
-  document.getElementById('k-memstarted').textContent = started + ' / ' + filtered.length;
+  document.getElementById('k-memstarted').textContent = (started + repayingNoLoan.length) + ' / ' + loanMembers;
   document.getElementById('k-recv').textContent = fmtRs(received);
-  const orphanRows = orphanInView();
   const orphanPaid = orphanRows.reduce((s,m)=>s+m.paid,0);
   document.getElementById('k-paid').textContent = fmtRs(paid + orphanPaid);
   document.getElementById('k-paid-note').textContent = orphanRows.length
