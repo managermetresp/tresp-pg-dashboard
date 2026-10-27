@@ -362,7 +362,7 @@ tr:hover td{background:var(--blue-light);}
         </div>
 
         <div class="section-title">Category → Sub-activity summary (Fishery: Nursery / Polyculture · Livestock: PPU / PFU / GPU / GRU)</div>
-        <div class="hint-box">Each member's loan type comes from column Y ("Type of activity and Tenure"). Allowed: Agri-Horti sheet → Agri-Horti; Fishery → Nursery, Polyculture, Polyculture with high value; Livestock → PPU, PFU, GPU, GRU. "Wrong code" = a loan type from another sheet (e.g. PPU in a Fishery sheet); "Not an allowed loan type" = anything else written in column Y; "Loan type not entered" = column Y is blank. All three are listed under Anomalies.</div>
+        <div class="hint-box">Each member's loan type comes from column Y ("Type of activity and Tenure"). Allowed: Agri-Horti sheet → Agri-Horti; Fishery → Nursery, Polyculture, Polyculture with high value; Livestock → PPU, PFU, GPU, GRU. "Not an allowed loan type" = anything else in column Y, including a loan type of another sheet (e.g. PPU in a Fishery sheet); "Loan type not entered" = column Y is blank. Both are listed row by row under Anomalies.</div>
         <div class="table-toolbar"><span></span><button class="export-btn" onclick="exportTable('subactivity')">⬇ Export to Excel</button></div>
         <div class="table-wrap">
           <table>
@@ -1074,8 +1074,8 @@ const LIVESTOCK_PLANS = {
 };
 // Loan type = column Y "Type of activity and Tenure" without its months ("PFU-18" -> PFU). Only these are allowed:
 // Agri-Horti sheet: Agri-Horti; Fishery: Nursery, Polyculture, Polyculture with high value; Livestock: PPU, PFU,
-// GPU, GRU. A type from another sheet is "Wrong code: X"; anything else written there is "Not an allowed loan type".
-// Both are listed under Anomalies. (Polyculture with high value is repaid on the Polyculture schedule.)
+// GPU, GRU. Anything else — a loan type of another sheet or any other text — is "Not an allowed loan type" and is
+// detailed under Anomalies. (Polyculture with high value is repaid on the Polyculture schedule.)
 const LOAN_TYPES = { 'Agri-Horti':['Agri-Horti'], Fishery:['Nursery','Polyculture','Polyculture with high value'], Livestock:['PPU','PFU','GPU','GRU'] };
 const LOAN_TYPE_SHEET = { 'Agri-Horti':'Agri-Horti', Nursery:'Fishery', Polyculture:'Fishery', 'Polyculture with high value':'Fishery', PPU:'Livestock', PFU:'Livestock', GPU:'Livestock', GRU:'Livestock' };
 function loanTypeOf(tenureStr){
@@ -1093,8 +1093,7 @@ function subActivityFor(category, tenureStr){
   const lt = loanTypeOf(tenureStr);
   if(!lt) return {subActivity:'Loan type not entered', basis:'Not recorded'};
   if((LOAN_TYPES[category]||[]).includes(lt)) return {subActivity: lt, basis:'Loan type (column Y)'};
-  if(lt.startsWith('Other: ')) return {subActivity:'Not an allowed loan type', basis:'Loan type (column Y)'};
-  return {subActivity:'Wrong code: ' + lt, basis:'Loan type of another sheet'};
+  return {subActivity:'Not an allowed loan type', basis:'See Anomalies'};
 }
 function productOf(activity){
   const a = (activity||'').toLowerCase();
@@ -1893,7 +1892,7 @@ function populateSubActOptions(){
   DATA.members.forEach(m=>{ const k=m.pgCategory+'||'+(m.subActivity||'Not recorded'); counts[k]=(counts[k]||0)+1; });
   sel.innerHTML = '';
   sel.appendChild(new Option(catFilter ? 'All '+catFilter+' sub-activities' : 'All Sub-activities', ''));
-  const rank = a => a==='Loan type not entered' ? 999 : a==='Not an allowed loan type' ? 998 : a.startsWith('Wrong code') ? 997 : (SUBACT_ORDER.indexOf(a)+1 || 100);
+  const rank = a => a==='Loan type not entered' ? 999 : a==='Not an allowed loan type' ? 998 : (SUBACT_ORDER.indexOf(a)+1 || 100);
   CATEGORY_ORDER.filter(c=>!catFilter || c===catFilter).forEach(c=>{
     const acts = Object.keys(counts).filter(k=>k.startsWith(c+'||')).map(k=>k.slice(c.length+2)).sort((a,b)=>rank(a)-rank(b) || a.localeCompare(b));
     if(!acts.length) return;
@@ -2007,15 +2006,22 @@ function render(){
   document.getElementById('a-zero').textContent = zeroRepay;
   document.getElementById('a-pgstarted').textContent = pgStartedInView.size + ' / ' + pgsInView.size;
 
+  // Only each sheet's allowed loan types are listed; any other code is counted in the note and detailed under Anomalies.
   const tRef = document.getElementById('tenureRefBody');
-  tRef.innerHTML = (DATA.tenureRef||[]).map(t=>`<tr>
-    <td>${t.category}</td><td>${t.activity}</td><td style="text-align:right">${t.moratorium} month${t.moratorium===1?'':'s'}</td>
+  const tenureRows = (DATA.tenureRef||[]).map(t=>({...t, loanType: loanTypeOf(t.activity)}));
+  const allowedRows = tenureRows.filter(t=>(LOAN_TYPES[t.category]||[]).includes(t.loanType));
+  const notAllowed = tenureRows.filter(t=>t.loanType && !(LOAN_TYPES[t.category]||[]).includes(t.loanType)).reduce((s,t)=>s+t.members,0);
+  tRef.innerHTML = allowedRows.map(t=>`<tr>
+    <td>${t.category}</td><td>${t.loanType}</td><td style="text-align:right">${t.moratorium} month${t.moratorium===1?'':'s'}</td>
     <td style="text-align:right">${t.moratorium+1}${ordSuffix(t.moratorium+1)} month</td>
     <td style="text-align:right">${t.tenure} months</td><td style="text-align:right">${t.total} months</td><td style="text-align:right">${t.members}</td></tr>`).join('');
   const unknownHint = document.getElementById('tenureUnknownHint');
-  if(DATA.totals.activityUnknownCount>0){
+  const hintParts = [];
+  if(DATA.totals.activityUnknownCount>0) hintParts.push(`${DATA.totals.activityUnknownCount} loaned members have no loan type in column Y`);
+  if(notAllowed>0) hintParts.push(`${notAllowed} have a loan type that isn't allowed for their sheet`);
+  if(hintParts.length){
     unknownHint.style.display='block';
-    unknownHint.textContent = `${DATA.totals.activityUnknownCount} loaned members have no activity/tenure recorded in the sheet — this table's rule can't be applied to them (see Data Quality page).`;
+    unknownHint.textContent = `Allowed loan types: Agri-Horti → Agri-Horti; Fishery → Nursery, Polyculture, Polyculture with high value; Livestock → GPU, PPU, GRU, PFU. ${hintParts.join(', and ')} — not shown in this table; listed under Anomalies.`;
   } else { unknownHint.style.display='none'; }
 
   destroyCharts();
@@ -2213,7 +2219,7 @@ function renderGeography(filtered){
 function renderSubActivitySummary(filtered){
   const rows = [];
   const orphans = orphanInView();
-  const rank = a => a==='Loan type not entered' ? 999 : a==='Not an allowed loan type' ? 998 : a.startsWith('Wrong code') ? 997 : (SUBACT_ORDER.indexOf(a)+1 || 100);
+  const rank = a => a==='Loan type not entered' ? 999 : a==='Not an allowed loan type' ? 998 : (SUBACT_ORDER.indexOf(a)+1 || 100);
   const mk = (c, label, sub, orphanPaid)=>{
     const bases = [...new Set(sub.map(m=>m.subActivityBasis).filter(Boolean))];
     const due = sub.filter(m=>m.cumulativeExpected!=null);
