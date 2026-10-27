@@ -535,7 +535,7 @@ tr:hover td{background:var(--blue-light);}
         <div class="section-title">Block-wise summary <span id="trkBlockTitle"></span></div>
         <div class="table-toolbar"><span style="font-size:12px;color:var(--text-dim);">Every block in view, including blocks with no activity. Follows the date range, the day clicked above and the search box.</span><button class="export-btn" onclick="exportTable('trackBlock')">⬇ Export to Excel</button></div>
         <div class="table-wrap" style="max-height:420px;margin-bottom:22px;">
-          <table><thead><tr><th>District</th><th>Block</th><th style="text-align:right">New names added</th><th style="text-align:right">Loans disbursed</th><th style="text-align:right">Repayment entries</th><th style="text-align:right">Members who repaid</th><th style="text-align:right">Principal</th><th style="text-align:right">Interest</th><th style="text-align:right">Total repaid</th><th>Last repayment date</th></tr></thead><tbody id="trkBlockBody"></tbody></table>
+          <table><thead><tr><th>District</th><th>Block</th><th style="text-align:right">New names added</th><th style="text-align:right">Loans disbursed</th><th style="text-align:right">Repayment entries</th><th style="text-align:right">Members who repaid</th><th style="text-align:right">Principal</th><th style="text-align:right">Interest</th><th style="text-align:right">Total repaid</th><th>Last repayment date</th><th style="text-align:right;color:var(--amber)">Repayments with no date (entries)</th><th style="text-align:right;color:var(--amber)">No-date amount</th></tr></thead><tbody id="trkBlockBody"></tbody></table>
         </div>
 
         <div class="section-title">Block-wise day by day <span id="trkPivotTitle"></span></div>
@@ -2867,7 +2867,7 @@ function renderTracking(){
   document.getElementById('t-repamt').textContent = fmtRs(rangeReps.reduce((s,r)=>s+r.amt,0));
   document.getElementById('t-repsplit').textContent = `Principal ${fmtRs(rangeReps.reduce((s,r)=>s+(r.prin||0),0))} · Interest ${fmtRs(rangeReps.reduce((s,r)=>s+(r.int||0),0))}`;
   document.getElementById('t-nodate').textContent = noDate.length.toLocaleString('en-IN');
-  document.getElementById('t-nodate-note').textContent = `${fmtRs(noDate.reduce((s,r)=>s+r.amt,0))} entered without a date, so not placed on any day — click "No date entered" in the table`;
+  document.getElementById('t-nodate-note').textContent = `${fmtRs(noDate.reduce((s,r)=>s+r.amt,0))} entered without a date, so not placed on any day. See the "No date" columns in the Block-wise tables below, or click "No date entered" in the day-by-day table for the list`;
 
   const rs = n => n ? fmtRs(n) : '–';
   let html = daily.map(x=>`<tr data-day="${x.date}" class="${trkSel===x.date?'sel':''}"><td>${fmtD(x.date)}</td><td>${dayName(x.date)}</td>
@@ -2887,21 +2887,27 @@ function renderTracking(){
   // Block-wise: the same selection as the lists below (range or clicked day, search), one row per block in view.
   const disbList = (trkSel==='nodate' ? [] : trkSel ? disb.filter(m=>m.disbDate===trkSel) : rangeDisb).filter(match);
   const blk = {};
-  const BK = (district, block) => blk[district+'||'+block] || (blk[district+'||'+block] = {district, block, newNames:0, disbursed:0, repEntries:0, repMembers:new Set(), prin:0, int:0, amt:0, lastDate:null});
+  const BK = (district, block) => blk[district+'||'+block] || (blk[district+'||'+block] = {district, block, newNames:0, disbursed:0, repEntries:0, repMembers:new Set(), prin:0, int:0, amt:0, lastDate:null, ndEntries:0, ndAmt:0});
   getPendingFiltered(DATA.roster||[]).forEach(r=>BK(r.district, r.block));
   newList.forEach(r=>BK(r.district, r.block).newNames++);
   disbList.forEach(m=>BK(m.district, m.block).disbursed++);
   repList.forEach(r=>{ const x = BK(r.district, r.block); x.repEntries++; x.repMembers.add(r.tab+'|'+r.row); x.prin += r.prin||0; x.int += r.int||0; x.amt += r.amt; if(r.date && (!x.lastDate || r.date>x.lastDate)) x.lastDate = r.date; });
+  // Repayments entered without a date can't be placed on a day, so they're shown per block in their own columns
+  // (all of them, whatever the date range; the filters and search box still apply).
+  const noDateInView = noDate.filter(match);
+  noDateInView.forEach(r=>{ const x = BK(r.district, r.block); x.ndEntries++; x.ndAmt += r.amt; });
   const blocks = Object.values(blk).sort((a,b)=>a.district.localeCompare(b.district) || a.block.localeCompare(b.block));
-  const tot = blocks.reduce((t,x)=>({newNames:t.newNames+x.newNames, disbursed:t.disbursed+x.disbursed, repEntries:t.repEntries+x.repEntries, repMembers:t.repMembers+x.repMembers.size, prin:t.prin+x.prin, int:t.int+x.int, amt:t.amt+x.amt}), {newNames:0, disbursed:0, repEntries:0, repMembers:0, prin:0, int:0, amt:0});
-  const quiet = blocks.filter(x=>!x.newNames && !x.disbursed && !x.repEntries).length;
+  const tot = blocks.reduce((t,x)=>({newNames:t.newNames+x.newNames, disbursed:t.disbursed+x.disbursed, repEntries:t.repEntries+x.repEntries, repMembers:t.repMembers+x.repMembers.size, prin:t.prin+x.prin, int:t.int+x.int, amt:t.amt+x.amt, ndEntries:t.ndEntries+x.ndEntries, ndAmt:t.ndAmt+x.ndAmt}), {newNames:0, disbursed:0, repEntries:0, repMembers:0, prin:0, int:0, amt:0, ndEntries:0, ndAmt:0});
+  const quiet = blocks.filter(x=>!x.newNames && !x.disbursed && !x.repEntries && !x.ndEntries).length;
   document.getElementById('trkBlockTitle').textContent = `(${blocks.length} block${blocks.length===1?'':'s'}${quiet ? `, ${quiet} with no activity in this period` : ''})`;
   const n0 = v => v ? v.toLocaleString('en-IN') : '–';
-  document.getElementById('trkBlockBody').innerHTML = blocks.map(x=>`<tr${(!x.newNames && !x.disbursed && !x.repEntries)?' style="color:var(--text-dim)"':''}><td>${x.district}</td><td>${x.block}</td>
+  const ndStyle = 'text-align:right;color:var(--amber);';
+  document.getElementById('trkBlockBody').innerHTML = blocks.map(x=>`<tr${(!x.newNames && !x.disbursed && !x.repEntries && !x.ndEntries)?' style="color:var(--text-dim)"':''}><td>${x.district}</td><td>${x.block}</td>
     <td style="text-align:right">${n0(x.newNames)}</td><td style="text-align:right">${n0(x.disbursed)}</td><td style="text-align:right">${n0(x.repEntries)}</td><td style="text-align:right">${n0(x.repMembers.size)}</td>
-    <td style="text-align:right">${rs(x.prin)}</td><td style="text-align:right">${rs(x.int)}</td><td style="text-align:right;font-weight:600">${rs(x.amt)}</td><td>${x.lastDate?fmtD(x.lastDate):'–'}</td></tr>`).join('')
-    + (blocks.length>1 ? `<tr style="background:var(--grey-bg);font-weight:700;"><td colspan="2">All blocks</td><td style="text-align:right">${n0(tot.newNames)}</td><td style="text-align:right">${n0(tot.disbursed)}</td><td style="text-align:right">${n0(tot.repEntries)}</td><td style="text-align:right">${n0(tot.repMembers)}</td><td style="text-align:right">${rs(tot.prin)}</td><td style="text-align:right">${rs(tot.int)}</td><td style="text-align:right">${rs(tot.amt)}</td><td></td></tr>` : '')
-    || '<tr><td colspan="10" style="text-align:center;color:var(--text-dim)">No blocks in view</td></tr>';
+    <td style="text-align:right">${rs(x.prin)}</td><td style="text-align:right">${rs(x.int)}</td><td style="text-align:right;font-weight:600">${rs(x.amt)}</td><td>${x.lastDate?fmtD(x.lastDate):'–'}</td>
+    <td style="${ndStyle}">${n0(x.ndEntries)}</td><td style="${ndStyle}font-weight:600">${rs(x.ndAmt)}</td></tr>`).join('')
+    + (blocks.length>1 ? `<tr style="background:var(--grey-bg);font-weight:700;"><td colspan="2">All blocks</td><td style="text-align:right">${n0(tot.newNames)}</td><td style="text-align:right">${n0(tot.disbursed)}</td><td style="text-align:right">${n0(tot.repEntries)}</td><td style="text-align:right">${n0(tot.repMembers)}</td><td style="text-align:right">${rs(tot.prin)}</td><td style="text-align:right">${rs(tot.int)}</td><td style="text-align:right">${rs(tot.amt)}</td><td></td><td style="${ndStyle}">${n0(tot.ndEntries)}</td><td style="${ndStyle}">${rs(tot.ndAmt)}</td></tr>` : '')
+    || '<tr><td colspan="12" style="text-align:center;color:var(--text-dim)">No blocks in view</td></tr>';
   // Block × day grid for the chosen measure, over the whole date range (a clicked day doesn't narrow it).
   const metric = document.getElementById('trkPivotMetric').value;
   const cell = {}, C = (b, day) => { const k = b.district+'||'+b.block+'||'+day; return cell[k] || (cell[k] = {amt:0, repEntries:0, repMembers:new Set(), newNames:0, disbursed:0}); };
@@ -2920,13 +2926,20 @@ function renderTracking(){
   const showV = v => !v ? '' : metric==='amt' ? fmtRs(v) : v.toLocaleString('en-IN');
   const metricLabel = document.getElementById('trkPivotMetric').selectedOptions[0].text;
   document.getElementById('trkPivotTitle').textContent = `(${metricLabel}, ${pvDays.length} day${pvDays.length===1?'':'s'} with activity${cut ? `; ${cut} older day${cut===1?'':'s'} not shown — narrow the date range` : ''})`;
-  document.getElementById('trkPivotHead').innerHTML = `<tr><th>Block</th>${pvDays.map(d=>`<th>${fmtD(d).slice(0,6)}<br><span style="font-weight:400;color:var(--text-dim)">${dayName(d)}</span></th>`).join('')}<th>Total</th></tr>`;
-  document.getElementById('trkPivotBody').innerHTML = pvDays.length ? pvBlocks.map(b=>{ const t = rowTot(b);
-      return `<tr${t?'':' style="color:var(--text-dim)"'}><td>${b.block} <span style="color:var(--text-dim);font-size:11px;">${b.district}</span></td>${pvDays.map(d=>{ const v = get(b,d);
-        return `<td style="${v?`background:rgba(46,125,50,${(0.08+0.55*v/max).toFixed(2)});`:''}">${showV(v)}</td>`; }).join('')}<td class="rowtot">${showV(t)||'–'}</td></tr>`; }).join('')
-      + `<tr class="tot"><td>All blocks</td>${pvDays.map(d=>`<td>${showV(dayTot(d))}</td>`).join('')}<td class="rowtot">${showV(pvDays.reduce((s,d)=>s+dayTot(d),0))}</td></tr>`
+  // For the repayment measures, an extra "No date" column holds each block's repayments entered without a date.
+  const withNd = ['amt','repEntries','repMembers'].includes(metric);
+  const ndVal = b => !withNd ? 0 : metric==='amt' ? b.ndAmt : metric==='repEntries' ? b.ndEntries
+    : new Set(noDateInView.filter(r=>r.district===b.district && r.block===b.block).map(r=>r.tab+'|'+r.row)).size;
+  const ndTotal = pvBlocks.reduce((s,b)=>s+ndVal(b), 0);
+  const ndHead = withNd ? `<th style="color:var(--amber)">No date<br><span style="font-weight:400">entered</span></th>` : '';
+  const ndCell = v => withNd ? `<td class="rowtot" style="color:var(--amber)">${showV(v)||'–'}</td>` : '';
+  document.getElementById('trkPivotHead').innerHTML = `<tr><th>Block</th>${pvDays.map(d=>`<th>${fmtD(d).slice(0,6)}<br><span style="font-weight:400;color:var(--text-dim)">${dayName(d)}</span></th>`).join('')}<th>Total</th>${ndHead}</tr>`;
+  document.getElementById('trkPivotBody').innerHTML = (pvDays.length || ndTotal) ? pvBlocks.map(b=>{ const t = rowTot(b), nd = ndVal(b);
+      return `<tr${(t||nd)?'':' style="color:var(--text-dim)"'}><td>${b.block} <span style="color:var(--text-dim);font-size:11px;">${b.district}</span></td>${pvDays.map(d=>{ const v = get(b,d);
+        return `<td style="${v?`background:rgba(46,125,50,${(0.08+0.55*v/max).toFixed(2)});`:''}">${showV(v)}</td>`; }).join('')}<td class="rowtot">${showV(t)||'–'}</td>${ndCell(nd)}</tr>`; }).join('')
+      + `<tr class="tot"><td>All blocks</td>${pvDays.map(d=>`<td>${showV(dayTot(d))}</td>`).join('')}<td class="rowtot">${showV(pvDays.reduce((s,d)=>s+dayTot(d),0))}</td>${ndCell(ndTotal)}</tr>`
     : '<tr><td style="text-align:center;color:var(--text-dim)">No activity in this date range</td></tr>';
-  window._trkPivot = {metric, metricLabel, days: pvDays, rows: pvBlocks.map(b=>({district:b.district, block:b.block, values: pvDays.map(d=>get(b,d)), total: rowTot(b)})), dayTotals: pvDays.map(dayTot)};
+  window._trkPivot = {metric, metricLabel, days: pvDays, withNd, rows: pvBlocks.map(b=>({district:b.district, block:b.block, values: pvDays.map(d=>get(b,d)), total: rowTot(b), noDate: ndVal(b)})), dayTotals: pvDays.map(dayTot), ndTotal};
   window._trk = {daily, blocks, reps: repList, news: newList};
   const LIMIT = 500, more = (n, cols) => n>LIMIT ? `<tr><td colspan="${cols}" style="text-align:center;color:var(--text-dim)">Showing the first ${LIMIT} of ${n.toLocaleString('en-IN')} — export to Excel for the full list</td></tr>` : '';
   const amt = v => v==null ? '' : fmtRs(v);
@@ -2986,13 +2999,13 @@ function exportTable(which){
   } else if(which==='trackPivot'){
     const p = window._trkPivot || {days:[], rows:[]};
     const isAmt = p.metric==='amt';
-    rows = p.rows.map(r=>{ const o = {District:r.district, Block:r.block}; p.days.forEach((d,i)=>{ o[fmtD(d)] = isAmt ? Math.round(r.values[i]) : r.values[i]; }); o.Total = isAmt ? Math.round(r.total) : r.total; return o; });
-    if(rows.length && p.days.length){ const t = {District:'', Block:'All blocks'}; p.days.forEach((d,i)=>{ t[fmtD(d)] = isAmt ? Math.round(p.dayTotals[i]) : p.dayTotals[i]; }); t.Total = p.dayTotals.reduce((s,v)=>s+v,0); if(isAmt) t.Total = Math.round(t.Total); rows.push(t); }
-    if(!p.days.length) rows = [];
+    rows = p.rows.map(r=>{ const o = {District:r.district, Block:r.block}; p.days.forEach((d,i)=>{ o[fmtD(d)] = isAmt ? Math.round(r.values[i]) : r.values[i]; }); o.Total = isAmt ? Math.round(r.total) : r.total; if(p.withNd) o['No Date Entered'] = isAmt ? Math.round(r.noDate) : r.noDate; return o; });
+    if(rows.length && (p.days.length || p.ndTotal)){ const t = {District:'', Block:'All blocks'}; p.days.forEach((d,i)=>{ t[fmtD(d)] = isAmt ? Math.round(p.dayTotals[i]) : p.dayTotals[i]; }); t.Total = p.dayTotals.reduce((s,v)=>s+v,0); if(isAmt) t.Total = Math.round(t.Total); if(p.withNd) t['No Date Entered'] = isAmt ? Math.round(p.ndTotal) : p.ndTotal; rows.push(t); }
+    if(!p.days.length && !p.ndTotal) rows = [];
     EXPORT_TITLES.trackPivot = 'Data tracking: block-wise day by day — ' + (p.metricLabel||'');
     filename = 'TRESP_Tracking_Block_Day';
   } else if(which==='trackBlock'){
-    rows = ((window._trk||{}).blocks||[]).map(x=>({District:x.district,Block:x.block,'New Names Added':x.newNames,'Loans Disbursed':x.disbursed,'Repayment Entries':x.repEntries,'Members Who Repaid':x.repMembers.size,Principal:Math.round(x.prin),Interest:Math.round(x.int),'Total Repaid':Math.round(x.amt),'Last Repayment Date':x.lastDate?fmtD(x.lastDate):''}));
+    rows = ((window._trk||{}).blocks||[]).map(x=>({District:x.district,Block:x.block,'New Names Added':x.newNames,'Loans Disbursed':x.disbursed,'Repayment Entries':x.repEntries,'Members Who Repaid':x.repMembers.size,Principal:Math.round(x.prin),Interest:Math.round(x.int),'Total Repaid':Math.round(x.amt),'Last Repayment Date':x.lastDate?fmtD(x.lastDate):'','Repayments With No Date (entries)':x.ndEntries,'No-Date Amount':Math.round(x.ndAmt)}));
     filename = 'TRESP_Tracking_Blockwise';
   } else if(which==='trackRepay'){
     rows = ((window._trk||{}).reps||[]).map(r=>({'Repayment Date':fmtD(r.date),Member:r.member,PG:r.pg,District:r.district,Block:r.block,Category:r.category,'Instalment Month':r.month,'Due In':r.dueIn,Principal:r.prin,Interest:r.int,Total:r.amt,'Sheet Tab':r.tab,'Sheet Row':r.row,'Date Column':r.col,Note:r.note}));
