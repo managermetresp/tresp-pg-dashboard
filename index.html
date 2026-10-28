@@ -3,6 +3,8 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TRESP Combined PG Loan Monitoring Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
@@ -138,6 +140,109 @@ tr:hover td{background:var(--blue-light);}
 .progress-outer{background:var(--grey-bg);border-radius:20px;height:8px;overflow:hidden;width:100%;}
 .progress-inner{background:var(--blue);height:100%;transition:width 0.2s;}
 .sync-summary{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px;}
+
+/* ===================== Theme: clean, card-based layout (overrides the rules above) ===================== */
+:root{
+  --navy:#14213d; --navy-2:#1f3a63; --blue:#2563eb; --blue-light:#eef4ff;
+  --green:#15803d; --green-bg:#e8f7ee; --amber:#b45309; --amber-bg:#fff4e2;
+  --red:#b91c1c; --red-bg:#fdecec; --grey:#64748b; --grey-bg:#f1f5f9;
+  --border:#e3e8ef; --bg:#f4f6fb; --card:#ffffff; --text:#0f172a; --text-dim:#64748b; --radius:12px;
+  --shadow:0 1px 2px rgba(15,23,42,.05), 0 1px 3px rgba(15,23,42,.06);
+}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;}
+/* sidebar */
+.sidebar{width:244px;background:linear-gradient(180deg,#14213d 0%,#1d355c 100%);}
+.sidebar-header{padding:20px 18px 16px;border-bottom:1px solid rgba(255,255,255,.08);}
+.sidebar-header .title{font-size:15.5px;font-weight:800;letter-spacing:-.2px;}
+.sidebar-header .subtitle{color:#9fb3d1;font-size:11.5px;}
+.nav-group{padding:6px 0 20px;}
+.nav-section{padding:16px 22px 6px;font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7f97bd;}
+.nav-item{margin:2px 10px;padding:9px 12px;border-radius:9px;border-left:none;color:#cfdaeb;font-weight:500;transition:background .12s,color .12s;}
+.nav-item:hover{background:rgba(255,255,255,.08);}
+.nav-item.active{background:rgba(255,255,255,.15);color:#fff;font-weight:600;box-shadow:inset 3px 0 0 #60a5fa;}
+/* top bar */
+.topbar{background:rgba(255,255,255,.92);backdrop-filter:blur(8px);padding:14px 28px;}
+.topbar h1{font-size:20px;font-weight:800;letter-spacing:-.3px;color:var(--text);}
+.page-sub{font-size:12.5px;color:var(--text-dim);margin-top:2px;}
+.datasource{font-size:12px;}
+.badge{padding:3px 10px;}
+.refresh-btn{background:var(--blue);border-radius:9px;padding:8px 14px;font-size:12.5px;box-shadow:0 1px 2px rgba(37,99,235,.3);}
+.refresh-btn:hover{background:#1d4ed8;}
+.content{padding:22px 28px 60px;max-width:1560px;}
+.changeBanner{border-radius:10px;}
+/* filters */
+.filterbox{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:22px;}
+.filterbox > summary{list-style:none;cursor:pointer;padding:12px 16px;display:flex;align-items:center;gap:10px;font-weight:700;font-size:13.5px;color:var(--text);user-select:none;}
+.filterbox > summary::-webkit-details-marker{display:none;}
+.filterbox > summary:before{content:'▸';color:var(--text-dim);transition:transform .15s;display:inline-block;}
+.filterbox[open] > summary:before{transform:rotate(90deg);}
+.filterbox > summary .active-filters{font-weight:600;font-size:11.5px;padding:2px 9px;border-radius:20px;background:var(--blue-light);color:var(--blue);}
+.filterbox > summary .active-filters:empty{display:none;}
+.filterbox > summary .filter-summary-count{margin-left:auto;font-weight:500;font-size:12px;color:var(--text-dim);}
+.filterbar{background:none;border:none;border-top:1px solid var(--border);border-radius:0;margin:0;padding:14px 16px 16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:12px 14px;align-items:end;}
+.filterbar .fgroup{min-width:0;}
+.filterbar label{font-size:10.5px;letter-spacing:.05em;}
+.filterbar select, .filterbar input{width:100%;min-width:0;padding:8px 10px;border-radius:8px;font-size:13px;}
+.filterbar select:focus, .search-input:focus, .trk-range input:focus{outline:2px solid #bfdbfe;border-color:var(--blue);}
+.filter-clear{border-radius:8px;padding:8px 12px;font-weight:600;}
+.filter-count{margin-left:0;grid-column:span 2;align-self:center;}
+/* KPI cards */
+.kpi-group{margin-bottom:26px;}
+.kpi-group-title{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0 0 10px;font-size:12.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--navy-2);}
+.kpi-group-title span{font-size:12.5px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--text-dim);}
+.kpi-grid{grid-template-columns:repeat(auto-fill,minmax(205px,1fr));gap:14px;margin-bottom:0;}
+.kpi-grid.cols-3{grid-template-columns:repeat(3,minmax(0,1fr));}
+@media (max-width:760px){ .kpi-grid.cols-3{grid-template-columns:repeat(auto-fill,minmax(205px,1fr));} }
+.filterbar .filter-count{display:none;}   /* shown in the Filters header instead */
+.kpi-card{display:flex;flex-direction:column;border:1px solid var(--border);border-top:1px solid var(--border);border-left:4px solid var(--blue);border-radius:var(--radius);padding:14px 16px 13px;box-shadow:var(--shadow);transition:box-shadow .15s,transform .15s;}
+.kpi-card:hover{box-shadow:0 8px 20px rgba(15,23,42,.08);transform:translateY(-1px);}
+.kpi-card.green{border-left-color:var(--green);}
+.kpi-card.amber{border-left-color:#f59e0b;}
+.kpi-card.red{border-left-color:var(--red);}
+.kpi-value{order:2;font-size:26px;color:var(--text);margin-top:6px;font-variant-numeric:tabular-nums;letter-spacing:-.5px;}
+.kpi-card.red .kpi-value{color:var(--red);}
+.kpi-card.green .kpi-value{color:var(--green);}
+.kpi-value + .kpi-label{order:1;margin-top:0;font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text-dim);}
+.kpi-label + .kpi-label{order:3;margin-top:7px !important;font-size:11.5px !important;font-weight:400 !important;color:#7b8794;line-height:1.45;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+/* sections, cards */
+.section-title{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:800;letter-spacing:-.2px;color:var(--text);margin:32px 0 12px;padding-bottom:0;border-bottom:none;}
+.section-title:before{content:'';width:4px;height:18px;border-radius:2px;background:var(--blue);flex-shrink:0;}
+.section-title span{font-weight:500;font-size:13px;color:var(--text-dim);}
+.card{border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;}
+.card h3{font-size:14px;font-weight:700;color:var(--text);}
+.attn-card{border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px;}
+.modal-box{border-radius:16px;}
+/* explanation boxes, folded */
+.hint-box{background:#f5f8ff;border:1px solid #dbe6ff;border-radius:10px;padding:12px 14px;font-size:12.5px;line-height:1.6;color:#1e3a5f;}
+.hint-details{margin:0 0 12px;}
+.hint-details > summary{list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--blue);padding:4px 0;user-select:none;}
+.hint-details > summary::-webkit-details-marker{display:none;}
+.hint-details > summary:hover{text-decoration:underline;}
+.hint-details[open] > summary{margin-bottom:8px;}
+/* tables */
+table{font-variant-numeric:tabular-nums;font-size:13px;}
+.table-wrap{background:var(--card);border-radius:10px;box-shadow:var(--shadow);}
+th{position:sticky;top:0;z-index:1;background:#f8fafc;color:#475569;font-size:11px;padding:10px 12px;border-bottom:1px solid var(--border);}
+td{padding:8px 12px;border-bottom:1px solid #eef2f7;}
+tbody tr:nth-child(even){background:#fbfcfe;}
+tbody tr:hover td{background:var(--blue-light);}
+.trk-pivot thead th{z-index:2;} .trk-pivot thead th:first-child{z-index:3;}
+.search-input, .trk-range input[type=date]{border-radius:8px;padding:8px 11px;}
+.export-btn{background:#fff;color:var(--green);border:1px solid #b7e4c7;border-radius:8px;padding:7px 13px;font-weight:600;}
+.export-btn:hover{background:var(--green-bg);opacity:1;}
+.trk-btn{border-radius:8px;padding:7px 12px;font-weight:500;}
+.pill{padding:3px 10px;}
+/* phones and small screens: sidebar becomes a scrollable bar at the top */
+@media (max-width:900px){
+  .app{flex-direction:column;}
+  .sidebar{width:100%;height:auto;position:sticky;top:0;z-index:30;}
+  .sidebar-header, .nav-section{display:none;}
+  .nav-group{display:flex;overflow-x:auto;padding:6px 6px;gap:2px;}
+  .nav-item{white-space:nowrap;margin:0;}
+  .topbar{position:static;padding:12px 16px;}
+  .content{padding:14px 16px 40px;}
+  .filter-count{grid-column:auto;}
+}
 </style>
 </head>
 <body>
@@ -148,21 +253,25 @@ tr:hover td{background:var(--blue-light);}
       <div class="subtitle">All Districts — Combined MPR Tracking</div>
     </div>
     <div class="nav-group">
+      <div class="nav-section">Summary</div>
       <div class="nav-item active" data-page="overview">📊 Overview</div>
       <div class="nav-item" data-page="geography">🗺️ District / Block / Category</div>
       <div class="nav-item" data-page="pgwise">🏘️ PG-wise</div>
+      <div class="nav-section">Members &amp; loans</div>
       <div class="nav-item" data-page="members">👥 Members</div>
       <div class="nav-item" data-page="defaulters">⚠️ Defaulters</div>
       <div class="nav-item" data-page="pending">⏳ Sanctioned vs Disbursed</div>
+      <div class="nav-section">Tracking</div>
       <div class="nav-item" data-page="tracking">📅 Data Tracking</div>
-      <div class="nav-item" data-page="anomalies">🔍 Anomalies</div>
-      <div class="nav-item" data-page="dataquality">🔍 Data Quality</div>
+      <div class="nav-section">Data checks</div>
+      <div class="nav-item" data-page="anomalies">🚩 Anomalies</div>
+      <div class="nav-item" data-page="dataquality">🧪 Data Quality</div>
       <div class="nav-item" data-page="syncstatus">🔄 Sync Status</div>
     </div>
   </nav>
   <div class="main">
     <div class="topbar">
-      <h1 id="pageTitle">Overview</h1>
+      <div><h1 id="pageTitle">Overview</h1><div class="page-sub" id="pageSub">Headline figures for all PGs and members in view</div></div>
       <div class="datasource">
         <span class="badge" id="liveBadge">● Loading…</span>
         <span>Sources: <b id="sourceCountTop">0</b> sheets (DPMU <span id="sourceScopeTop"></span>)</span>
@@ -174,6 +283,8 @@ tr:hover td{background:var(--blue-light);}
       <div id="changeBanner" class="changeBanner" style="display:none;"></div>
       <div id="syncProgressBox" class="hint-box" style="display:none;"><div id="syncProgressText" style="margin-bottom:6px;">Syncing…</div><div class="progress-outer"><div class="progress-inner" id="syncProgressBar" style="width:0%;"></div></div></div>
 
+<details class="filterbox" open>
+      <summary>Filters <span class="active-filters" id="activeFilters"></span><span class="filter-summary-count" id="filterSummaryCount"></span></summary>
 <div class="filterbar">
         <div class="fgroup"><label>District / DPMU Zone</label><select id="fDistrict"><option value="">All Districts / Zones</option></select></div>
         <div class="fgroup"><label>Block</label><select id="fBlock"><option value="">All Blocks</option></select></div>
@@ -202,27 +313,38 @@ tr:hover td{background:var(--blue-light);}
         <button class="filter-clear" onclick="clearFilters()">Clear filters</button>
         <div class="filter-count">Showing <b id="filterCount">0</b> of <b id="filterTotal">0</b> members</div>
       </div>
+      </details>
 
       <!-- OVERVIEW PAGE -->
       <div class="page active" id="page-overview">
+        <div class="kpi-group">
+        <div class="kpi-group-title">👥 Members &amp; PGs <span>who is in the programme and who has started repaying</span></div>
         <div class="kpi-grid">
           <div class="kpi-card"><div class="kpi-value" id="k-memtotal"></div><div class="kpi-label">Total members</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">Every member named in the sheets, whether or not money has been received yet</div></div>
           <div class="kpi-card"><div class="kpi-value" id="k-mem"></div><div class="kpi-label">Members who received a loan</div><div class="kpi-label" id="k-mem-note" style="font-weight:400;font-size:10.5px;margin-top:2px;"></div></div>
           <div class="kpi-card"><div class="kpi-value" id="k-pg"></div><div class="kpi-label">PGs tracked</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">Producer Groups that have at least one member with money disbursed</div></div>
           <div class="kpi-card"><div class="kpi-value" id="k-pgstarted"></div><div class="kpi-label">PGs where repayment started</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">PGs where at least one member has a repayment amount entered, out of all PGs tracked (a date with no amount doesn't count)</div></div>
           <div class="kpi-card"><div class="kpi-value" id="k-memstarted"></div><div class="kpi-label">Members who started repaying</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">Members with at least one repayment amount entered (a date with no amount doesn't count)</div></div>
-          <div class="kpi-card"><div class="kpi-value" id="k-recv"></div><div class="kpi-label">Total disbursed</div></div>
+        </div></div>
+        <div class="kpi-group">
+        <div class="kpi-group-title">💰 Money <span>given out, paid back, and still to come</span></div>
+        <div class="kpi-grid cols-3">
+          <div class="kpi-card"><div class="kpi-value" id="k-recv"></div><div class="kpi-label">Total disbursed</div><div class="kpi-label">Amount received by members in cash and kind (column S)</div></div>
           <div class="kpi-card green"><div class="kpi-value" id="k-paid"></div><div class="kpi-label">Total repaid</div><div class="kpi-label" id="k-paid-note" style="font-weight:400;font-size:10.5px;margin-top:2px;"></div></div>
-          <div class="kpi-card amber"><div class="kpi-value" id="k-torepay"></div><div class="kpi-label">Total to repay (principal+interest)</div></div>
+          <div class="kpi-card amber"><div class="kpi-value" id="k-torepay"></div><div class="kpi-label">Total to repay (principal+interest)</div><div class="kpi-label">Everything owed over the whole loan life, per the official repayment schedule</div></div>
           <div class="kpi-card amber"><div class="kpi-value" id="k-gap"></div><div class="kpi-label">Repayment gap</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">Total to repay minus total repaid — the full remaining obligation over the whole loan life, not just what's due today</div></div>
           <div class="kpi-card"><div class="kpi-value" id="k-duetodate"></div><div class="kpi-label">Should have been repaid by now</div><div class="kpi-label" id="k-duetodate-note" style="font-weight:400;font-size:10.5px;margin-top:2px;"></div></div>
           <div class="kpi-card red"><div class="kpi-value" id="k-overduetodate"></div><div class="kpi-label">Overdue as of today</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">Sum of (amount each member should have paid by now − what they've actually paid), for members behind schedule only</div></div>
+        </div></div>
+        <div class="kpi-group">
+        <div class="kpi-group-title">📈 Repayment health <span>where members stand against their schedule</span></div>
+        <div class="kpi-grid">
           <div class="kpi-card amber"><div class="kpi-value" id="k-zero"></div><div class="kpi-label">Never made a repayment</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">Zero months with a repayment amount entered (a date with no amount doesn't count) — includes members still inside their moratorium, where nothing is due yet</div></div>
           <div class="kpi-card" id="k-inmoratorium-card"><div class="kpi-value" id="k-inmoratorium"></div><div class="kpi-label">In moratorium period</div><div class="kpi-label" id="k-inmoratorium-note" style="font-weight:400;font-size:10.5px;margin-top:2px;"></div></div>
           <div class="kpi-card red"><div class="kpi-value" id="k-moratorium"></div><div class="kpi-label">Missed moratorium period</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">Zero repayments AND the moratorium is over (Livestock 1 month, Fishery 3, Agri-Horti 4 since first disbursement)</div></div>
-          <div class="kpi-card red"><div class="kpi-value" id="k-def"></div><div class="kpi-label">Defaulting members</div></div>
-          <div class="kpi-card"><div class="kpi-value" id="k-completed"></div><div class="kpi-label">Loans completed (paid ≥ received)</div></div>
-        </div>
+          <div class="kpi-card red"><div class="kpi-value" id="k-def"></div><div class="kpi-label">Defaulting members</div><div class="kpi-label">Missed the moratorium, or paid less than the schedule says by today</div></div>
+          <div class="kpi-card green"><div class="kpi-value" id="k-completed"></div><div class="kpi-label">Loans completed (paid ≥ received)</div><div class="kpi-label">Repaid at least the amount received</div></div>
+        </div></div>
 
         <div class="section-title">Loan tenure by activity type</div>
         <div class="hint-box" id="tenureUnknownHint" style="display: block;"></div>
@@ -1779,13 +1901,46 @@ document.querySelectorAll('.nav-item').forEach(item=>{
     const page = item.dataset.page;
     document.getElementById('page-'+page).classList.add('active');
     document.getElementById('pageTitle').textContent = item.textContent.trim().replace(/^\S+\s/, '');
+    document.getElementById('pageSub').textContent = PAGE_DESC[page] || '';
+    window.scrollTo({top:0});
     fitKpis();
   });
 });
+// One-line description under each page title.
+const PAGE_DESC = {
+  overview: 'Headline figures for all PGs and members in view',
+  geography: 'Totals split by district, block, category and sub-activity',
+  pgwise: 'Every PG with its disbursement, repayment and defaulters',
+  members: 'Every member with a loan, with their schedule and what they have paid',
+  defaulters: 'Members who missed the moratorium or are behind schedule',
+  pending: 'Loan amount sanctioned but not yet released',
+  tracking: 'What was added or repaid, day by day and block by block',
+  anomalies: 'Problems found in the sheets, with tab, row and column to fix',
+  dataquality: 'Spelling, naming and PG ID matching checks',
+  syncstatus: 'Which of the 69 source sheets loaded, and when',
+};
+// Long explanation boxes are folded behind a link so pages stay readable. Boxes whose text the dashboard
+// writes live (they have an id) stay open.
+document.querySelectorAll('.hint-box').forEach(h=>{
+  if(h.id || h.closest('.hint-details')) return;
+  const d = document.createElement('details'); d.className = 'hint-details';
+  d.innerHTML = '<summary>ℹ️ How to read this section</summary>';
+  h.parentNode.insertBefore(d, h); d.appendChild(h);
+});
+// On phones the filter panel fills the screen, so start it folded there.
+if(window.innerWidth < 900){ const fb = document.querySelector('.filterbox'); if(fb) fb.open = false; }
+if(window.Chart){ Chart.defaults.font.family = "Inter, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif"; Chart.defaults.color = '#475569'; }
 
 // Shrink a KPI number's font until it fits its card (crore amounts like ₹26,69,25,384 are wider than a card at 24px).
 // Only visible cards can be measured, so this reruns on page switch and window resize as well as after each render.
 function fitKpis(){
+  // Card notes are clipped to three lines; hovering shows the whole note.
+  document.querySelectorAll('.kpi-label + .kpi-label').forEach(n=>{ n.title = n.textContent.trim(); });
+  // Filter summary: how many filters are set, and how many members are showing.
+  const af = [...document.querySelectorAll('.filterbar select')].filter(s=>s.value).length;
+  const afEl = document.getElementById('activeFilters'), fsEl = document.getElementById('filterSummaryCount');
+  if(afEl) afEl.textContent = af ? `${af} active` : '';
+  if(fsEl) fsEl.textContent = `Showing ${document.getElementById('filterCount').textContent} of ${document.getElementById('filterTotal').textContent} members`;
   document.querySelectorAll('.kpi-value').forEach(el=>{
     if(el.offsetParent===null) return;
     el.style.fontSize = ''; el.classList.remove('kpi-wrap');
