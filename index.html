@@ -2910,8 +2910,12 @@ function personKeys(roster){
     return cyrb53(base+'#'+n);
   });
 }
+// True when the page is on a shared web host (e.g. GitHub Pages) and tracking_history.json wasn't uploaded next to it:
+// without the log, every name looks like part of the starting list and "New names added" would wrongly show 0.
+let trackFileMissing = false;
 async function loadTrackingLog(){
-  try{ const r = await fetch(TRACK_FILE, {cache:'no-store'}); if(r.ok){ TRACK = await r.json(); trackSavedTo = 'file'; } }catch(e){}
+  try{ const r = await fetch(TRACK_FILE, {cache:'no-store'}); if(r.ok){ TRACK = await r.json(); trackSavedTo = 'file'; } else if(r.status===404) trackFileMissing = true; }catch(e){}
+  if(trackFileMissing && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)) trackFileMissing = false;   // the local server creates it
   try{
     const local = JSON.parse(localStorage.getItem('tresp_track_local')||'null');
     if(local && local.firstSeen){
@@ -2982,6 +2986,7 @@ function dueMonthLabel(disbIso, n){
 }
 function renderTrackLogInfo(){
   const el = document.getElementById('trkLogInfo'); if(!el) return;
+  if(trackFileMissing){ el.textContent = 'NOT FOUND on this site — upload tracking_history.json next to index.html, otherwise new names and undated repayments cannot be dated'; return; }
   if(!TRACK){ el.textContent = 'not started yet — it starts with the first complete sync'; return; }
   const n = Object.keys(TRACK.firstSeen).length;
   const later = {};
@@ -3042,8 +3047,10 @@ function renderTracking(){
   const daily = Object.values(day).sort((a,b)=>b.date.localeCompare(a.date));
 
   const rangeNames = names.filter(r=>inRange(r.firstSeen)), rangeReps = reps.filter(r=>inRange(r.date)), rangeDisb = disb.filter(m=>inRange(m.disbDate));
-  document.getElementById('t-new').textContent = rangeNames.length.toLocaleString('en-IN');
-  document.getElementById('t-new-note').textContent = `${rangeNames.filter(r=>r.gotLoan).length} of them already have a loan amount received` + (started ? ` · tracked since ${fmtD(started)}` : '');
+  document.getElementById('t-new').textContent = trackFileMissing ? '—' : rangeNames.length.toLocaleString('en-IN');
+  document.getElementById('t-new-note').textContent = trackFileMissing
+    ? '⚠ The tracking log (tracking_history.json) is not on this site, so new names can\'t be counted. Upload tracking_history.json next to index.html.'
+    : `${rangeNames.filter(r=>r.gotLoan).length} of them already have a loan amount received` + (started ? ` · tracked since ${fmtD(started)}` : '');
   document.getElementById('t-disb').textContent = rangeDisb.length.toLocaleString('en-IN');
   document.getElementById('t-disb-note').textContent = `${fmtRs(rangeDisb.reduce((s,m)=>s+m.received,0))} received by these members (all tranches)`;
   document.getElementById('t-repcount').textContent = rangeReps.length.toLocaleString('en-IN');
