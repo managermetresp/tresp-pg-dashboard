@@ -1806,7 +1806,7 @@ async function syncAll(manual){
   newData.roster = allRoster;
   newData.sheetLayouts = layoutAnomalies(layouts);
   await trackReady;
-  updateTracking(newData.roster, fail===0 && ok>0);   // log new names only from a complete sync
+  updateTracking(newData.roster, fail===0 && ok>0, newData);   // log new names / undated repayments only from a complete sync
   applyNewData(newData, ok, fail);
   if(location.protocol.indexOf('http')===0 && ok>0){
     fetch('/save-snapshot', {method:'POST', body: JSON.stringify({data:newData, sourceStatus, savedAt:new Date().toISOString()})}).catch(()=>{});
@@ -2930,12 +2930,13 @@ function saveTrackingLog(){
 }
 // Tag every roster row with the date it was first seen; on a live, complete sync also log names not seen before.
 // The very first log treats everyone present as the starting list (firstSeen = startedOn), not as new.
-function updateTracking(roster, record){
+function updateTracking(roster, record, data){
   if(!roster || !roster.length) return;
   const today = isoDate(new Date());
   if(!TRACK && record) TRACK = {version:1, startedOn: today, firstSeen:{}};
   const keys = personKeys(roster);
   let added = 0;
+  const newSources = new Set();
   if(TRACK && record){
     // A sheet synced for the first time (a newly connected block): its names are its starting list, not new names.
     TRACK.sources = TRACK.sources || {};
@@ -2945,6 +2946,7 @@ function updateTracking(roster, record){
       if(!src || src==='undefined') return;
       const known = TRACK.sources[src] || idx.some(i=>TRACK.firstSeen[keys[i]]);
       if(!known){ idx.forEach(i=>{ if(!TRACK.firstSeen[keys[i]]){ TRACK.firstSeen[keys[i]] = TRACK.startedOn; added++; } }); }
+      if(!known) newSources.add(src);
       if(!TRACK.sources[src]){ TRACK.sources[src] = known ? TRACK.startedOn : today; added++; }
     });
   }
@@ -2952,6 +2954,22 @@ function updateTracking(roster, record){
     if(TRACK && record && !TRACK.firstSeen[keys[i]]){ TRACK.firstSeen[keys[i]] = today; added++; }
     r.firstSeen = TRACK ? (TRACK.firstSeen[keys[i]] || null) : null;
   });
+  // Repayments entered without a date: log the day each one is first seen (member + month column), so the date
+  // range can place them. Entries already in the sheets when this log began (or in a newly connected sheet)
+  // are marked 'base' — their entry day is unknown, so they only count under "All dates".
+  if(TRACK && data){
+    const firstRun = !TRACK.repSeen;
+    if(firstRun && record){ TRACK.repSeen = {}; TRACK.repSeenStarted = today; added++; }
+    const repSeen = TRACK.repSeen || {};
+    const keyByRow = new Map(); roster.forEach((r,i)=>keyByRow.set(r.tab+'|'+r.sheetRow, keys[i]));
+    const visit = m => (m.schedule||[]).forEach(c=>{
+      if(!(c.paidAmount>0) || c.paidDate) return;
+      const k = cyrb53((keyByRow.get(m.tab+'|'+m.sheetRow) || (m.sourceKey+'|'+m.tab+'|'+m.sheetRow)) + '|m' + c.month);
+      if(record && !(k in repSeen)){ repSeen[k] = (firstRun || newSources.has(m.sourceKey)) ? 'base' : today; added++; }
+      c.seenDate = repSeen[k] && repSeen[k] !== 'base' ? repSeen[k] : null;
+    });
+    (data.members||[]).forEach(visit); (data.orphanRepay||[]).forEach(visit);
+  }
   if(added){ TRACK.updated = new Date().toISOString(); saveTrackingLog(); }
 }
 const fmtD = iso => { if(!iso) return '—'; const [y,m,d] = iso.split('-'); return `${d}-${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1]}-${y}`; };
@@ -2996,6 +3014,7 @@ function renderTracking(){
   // New names: first seen after the starting list. The member-status filter doesn't apply to names.
   const names = getPendingFiltered(DATA.roster||[]).filter(r=>r.firstSeen && started && r.firstSeen>started);
   const disb = filtered.filter(m=>m.disbDate);
+  const repSeenStart = (TRACK && TRACK.repSeenStarted) || today;
   const reps = [];
   const addReps = (m, isOrphan) => (m.schedule||[]).forEach(c=>{
     if(!(c.paidAmount>0)) return;
@@ -3003,7 +3022,8 @@ function renderTracking(){
     if(isOrphan) notes.push('No loan amount received');
     if(c.paidDate && c.paidDate>today) notes.push('Future date');
     if(c.paidDate && m.disbDate && c.paidDate<m.disbDate) notes.push('Before disbursement');
-    reps.push({date:c.paidDate, member:(m.member||'').trim(), pg:m.pg, district:m.district, block:m.block, category:m.pgCategory,
+    if(!c.paidDate) notes.push(c.seenDate ? `No date in sheet · first seen ${fmtD(c.seenDate)}` : `No date in sheet · already there on ${fmtD(repSeenStart)}`);
+    reps.push({date:c.paidDate, seen:c.seenDate||null, member:(m.member||'').trim(), pg:m.pg, district:m.district, block:m.block, category:m.pgCategory,
       month:c.month, dueIn: dueMonthLabel(m.disbDate, c.month), prin: c.prin!=null?c.prin:null, int: c.int!=null?c.int:null, amt:c.paidAmount,
       tab:m.tab, row:m.sheetRow, col:c.dateCol, note:notes.join('; ')});
   });
@@ -3014,7 +3034,10 @@ function renderTracking(){
   const D = d => day[d] || (day[d] = {date:d, newNames:0, disbursed:0, repEntries:0, repMembers:new Set(), prin:0, int:0, amt:0});
   names.forEach(r=>{ if(inRange(r.firstSeen)) D(r.firstSeen).newNames++; });
   disb.forEach(m=>{ if(inRange(m.disbDate)) D(m.disbDate).disbursed++; });
-  const noDate = reps.filter(r=>!r.date);
+  // Repayments without a date follow the date range by the day the dashboard first saw them. Those already in the
+  // sheets when that log began have no known day, so they are counted only when "All dates" is chosen.
+  const allDates = !from && !to;
+  const noDate = reps.filter(r=>!r.date && (r.seen ? inRange(r.seen) : allDates));
   reps.forEach(r=>{ if(!inRange(r.date)) return; const x = D(r.date); x.repEntries++; x.repMembers.add(r.tab+'|'+r.row); x.prin += r.prin||0; x.int += r.int||0; x.amt += r.amt; });
   const daily = Object.values(day).sort((a,b)=>b.date.localeCompare(a.date));
 
@@ -3028,7 +3051,11 @@ function renderTracking(){
   document.getElementById('t-repamt').textContent = fmtRs(rangeReps.reduce((s,r)=>s+r.amt,0));
   document.getElementById('t-repsplit').textContent = `Principal ${fmtRs(rangeReps.reduce((s,r)=>s+(r.prin||0),0))} · Interest ${fmtRs(rangeReps.reduce((s,r)=>s+(r.int||0),0))}`;
   document.getElementById('t-nodate').textContent = noDate.length.toLocaleString('en-IN');
-  document.getElementById('t-nodate-note').textContent = `${fmtRs(noDate.reduce((s,r)=>s+r.amt,0))} entered without a date, so not placed on any day. See the "No date" columns in the Block-wise tables below, or click "No date entered" in the day-by-day table for the list`;
+  const olderUndated = reps.filter(r=>!r.date && !r.seen);
+  document.getElementById('t-nodate-note').textContent = `${fmtRs(noDate.reduce((s,r)=>s+r.amt,0))} entered without a repayment date, ` +
+    (allDates ? `all time (${olderUndated.length} were already in the sheets on ${fmtD(repSeenStart)}; later ones are dated by the day the dashboard first saw them)`
+              : `first seen by the dashboard in this period (the ${olderUndated.length} already in the sheets on ${fmtD(repSeenStart)} count only under "All dates")`) +
+    `. By block: see the "No date" columns below`;
 
   const rs = n => n ? fmtRs(n) : '–';
   let html = daily.map(x=>`<tr data-day="${x.date}" class="${trkSel===x.date?'sel':''}"><td>${fmtD(x.date)}</td><td>${dayName(x.date)}</td>
@@ -3054,7 +3081,7 @@ function renderTracking(){
   disbList.forEach(m=>BK(m.district, m.block).disbursed++);
   repList.forEach(r=>{ const x = BK(r.district, r.block); x.repEntries++; x.repMembers.add(r.tab+'|'+r.row); x.prin += r.prin||0; x.int += r.int||0; x.amt += r.amt; if(r.date && (!x.lastDate || r.date>x.lastDate)) x.lastDate = r.date; });
   // Repayments entered without a date can't be placed on a day, so they're shown per block in their own columns
-  // (all of them, whatever the date range; the filters and search box still apply).
+  // (placed in the date range by the day the dashboard first saw them; the filters and search box apply).
   const noDateInView = noDate.filter(match);
   noDateInView.forEach(r=>{ const x = BK(r.district, r.block); x.ndEntries++; x.ndAmt += r.amt; });
   const blocks = Object.values(blk).sort((a,b)=>a.district.localeCompare(b.district) || a.block.localeCompare(b.block));
@@ -3215,7 +3242,7 @@ if(location.protocol==='file:'){
     sourceStatus = window.SNAPSHOT.sourceStatus || {};
     const oks = Object.values(sourceStatus).filter(s=>s.ok).length;
     applyNewData(window.SNAPSHOT.data, oks, 0);
-    trackReady.then(()=>{ updateTracking(DATA.roster, false); renderTracking(); });
+    trackReady.then(()=>{ updateTracking(DATA.roster, false, DATA); renderTracking(); });
     document.getElementById('asofTop').textContent = new Date(window.SNAPSHOT.savedAt).toLocaleString();
     renderSyncStatus();
   } else { render(); renderSyncStatus(); }
