@@ -194,6 +194,26 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Aria
 .kpi-grid.cols-3{grid-template-columns:repeat(3,minmax(0,1fr));}
 @media (max-width:760px){ .kpi-grid.cols-3{grid-template-columns:repeat(auto-fill,minmax(205px,1fr));} }
 .filterbar .filter-count{display:none;}   /* shown in the Filters header instead */
+.kpi-grid.cols-5{grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;}
+@media (max-width:1100px){ .kpi-grid.cols-5{gap:8px;} .kpi-grid.compact .kpi-card{padding:9px 10px;} .kpi-grid.compact .kpi-value{font-size:19px;} }
+@media (max-width:760px){ .kpi-grid.cols-5{grid-template-columns:repeat(3,minmax(0,1fr));} }
+@media (max-width:520px){ .kpi-grid.cols-5{grid-template-columns:repeat(2,minmax(0,1fr));} }
+.kpi-grid.compact .kpi-card{padding:11px 13px 11px;}
+.kpi-grid.compact .kpi-value{font-size:22px;margin-top:4px;}
+.kpi-grid.compact .kpi-value + .kpi-label{font-size:10.5px;}
+.kpi-grid.compact .kpi-label + .kpi-label{font-size:11px !important;-webkit-line-clamp:2;}
+.kpi-pct{order:4;margin-top:9px;}
+.kpi-bar{height:6px;background:#eef2f7;border-radius:4px;overflow:hidden;}
+.kpi-bar span{display:block;height:100%;width:0;background:var(--blue);border-radius:4px;transition:width .4s;}
+.kpi-card.green .kpi-bar span{background:var(--green);}
+.kpi-pct-text{margin-top:5px;font-size:11.5px;font-weight:600;color:var(--text-dim);}
+.kpi-pct-text b{color:var(--text);}
+.kpi-group-title.sub{margin-top:18px;font-size:11.5px;}
+.kpi-grid.pct-row{margin-top:8px;}
+.kpi-card.pct-box{background:#f6f9fe;border-left-color:#7aa7e0;box-shadow:none;padding-top:8px;padding-bottom:9px;}
+.kpi-grid.compact .pct-box .kpi-value{font-size:18px;color:var(--blue);margin-top:2px;}
+.kpi-grid.compact .pct-box .kpi-label + .kpi-label{margin-top:3px !important;font-size:10.5px !important;}
+.pct-box .kpi-pct{margin-top:6px;}
 .kpi-card{display:flex;flex-direction:column;border:1px solid var(--border);border-top:1px solid var(--border);border-left:4px solid var(--blue);border-radius:var(--radius);padding:14px 16px 13px;box-shadow:var(--shadow);transition:box-shadow .15s,transform .15s;}
 .kpi-card:hover{box-shadow:0 8px 20px rgba(15,23,42,.08);transform:translateY(-1px);}
 .kpi-card.green{border-left-color:var(--green);}
@@ -317,33 +337,58 @@ tbody tr:hover td{background:var(--blue-light);}
 
       <!-- OVERVIEW PAGE -->
       <div class="page active" id="page-overview">
+        <div class="table-toolbar" style="margin-bottom:4px;"><span style="font-size:12px;color:var(--text-dim);">Every figure on this page, district-wise and block-wise, for the filters applied</span><button class="export-btn" onclick="exportOverview()">⬇ Download Overview (district &amp; block-wise)</button></div>
         <div class="kpi-group">
-        <div class="kpi-group-title">👥 Members &amp; PGs <span>who is in the programme and who has started repaying</span></div>
-        <div class="kpi-grid">
-          <div class="kpi-card"><div class="kpi-value" id="k-memtotal"></div><div class="kpi-label">Total members</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">Every member named in the sheets, whether or not money has been received yet</div></div>
-          <div class="kpi-card"><div class="kpi-value" id="k-mem"></div><div class="kpi-label">Members who received a loan</div><div class="kpi-label" id="k-mem-note" style="font-weight:400;font-size:10.5px;margin-top:2px;"></div></div>
-          <div class="kpi-card"><div class="kpi-value" id="k-pg"></div><div class="kpi-label">PGs tracked</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">Producer Groups that have at least one member with money disbursed</div></div>
-          <div class="kpi-card"><div class="kpi-value" id="k-pgstarted"></div><div class="kpi-label">PGs where repayment started</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">PGs where at least one member has a repayment amount entered, out of all PGs tracked (a date with no amount doesn't count)</div></div>
-          <div class="kpi-card"><div class="kpi-value" id="k-memstarted"></div><div class="kpi-label">Members who started repaying</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">Members with at least one repayment amount entered (a date with no amount doesn't count)</div></div>
+        <div class="kpi-group-title">👥 Members &amp; PGs <span>compared with the TRESP PG Database (Compiled Data)</span></div>
+        <div class="kpi-grid cols-5 compact">
+          <div class="kpi-card"><div class="kpi-value" id="k-memtotal"></div><div class="kpi-label">Total members</div><div class="kpi-label" id="k-memtotal-note">Named in the MPR sheets</div></div>
+          <div class="kpi-card"><div class="kpi-value" id="k-mem"></div><div class="kpi-label">Members who received a loan</div><div class="kpi-label" id="k-mem-note"></div></div>
+          <div class="kpi-card"><div class="kpi-value" id="k-pg"></div><div class="kpi-label">PGs tracked</div><div class="kpi-label">PGs with at least one member who received money</div></div>
+          <div class="kpi-card"><div class="kpi-value" id="k-pgstarted"></div><div class="kpi-label">PGs where repayment started</div><div class="kpi-label">At least one member has a repayment amount entered</div></div>
+          <div class="kpi-card"><div class="kpi-value" id="k-memstarted"></div><div class="kpi-label">Members who started repaying</div><div class="kpi-label">At least one repayment amount entered (a date alone doesn't count)</div></div>
+        </div>
+        <!-- Percentage of each box above, in its own box directly below it. -->
+        <div class="kpi-grid cols-5 compact pct-row">
+          <div class="kpi-card pct-box"><div class="kpi-value" id="k-memtotal-pct"></div><div class="kpi-label">Total members %</div><div class="kpi-label" id="k-memtotal-pctof"></div><div class="kpi-pct"><div class="kpi-bar"><span id="k-memtotal-bar"></span></div></div></div>
+          <div class="kpi-card pct-box"><div class="kpi-value" id="k-mem-pct"></div><div class="kpi-label">Received a loan %</div><div class="kpi-label" id="k-mem-pctof"></div><div class="kpi-pct"><div class="kpi-bar"><span id="k-mem-bar"></span></div></div></div>
+          <div class="kpi-card pct-box"><div class="kpi-value" id="k-pg-pct"></div><div class="kpi-label">PGs tracked %</div><div class="kpi-label" id="k-pg-pctof"></div><div class="kpi-pct"><div class="kpi-bar"><span id="k-pg-bar"></span></div></div></div>
+          <div class="kpi-card pct-box"><div class="kpi-value" id="k-pgstarted-pct"></div><div class="kpi-label">PGs repayment started %</div><div class="kpi-label" id="k-pgstarted-pctof"></div><div class="kpi-pct"><div class="kpi-bar"><span id="k-pgstarted-bar"></span></div></div></div>
+          <div class="kpi-card pct-box"><div class="kpi-value" id="k-memstarted-pct"></div><div class="kpi-label">Members started repaying %</div><div class="kpi-label" id="k-memstarted-pctof"></div><div class="kpi-pct"><div class="kpi-bar"><span id="k-memstarted-bar"></span></div></div></div>
         </div></div>
         <div class="kpi-group">
-        <div class="kpi-group-title">💰 Money <span>given out, paid back, and still to come</span></div>
+        <div class="kpi-group-title">💰 Money <span>given out, paid back, and due as per the MPR sheets</span></div>
         <div class="kpi-grid cols-3">
-          <div class="kpi-card"><div class="kpi-value" id="k-recv"></div><div class="kpi-label">Total disbursed</div><div class="kpi-label">Amount received by members in cash and kind (column S)</div></div>
-          <div class="kpi-card green"><div class="kpi-value" id="k-paid"></div><div class="kpi-label">Total repaid</div><div class="kpi-label" id="k-paid-note" style="font-weight:400;font-size:10.5px;margin-top:2px;"></div></div>
+          <div class="kpi-card"><div class="kpi-value" id="k-recv"></div><div class="kpi-label">Total disbursed</div><div class="kpi-label">Amount received by members in cash and kind</div></div>
+          <div class="kpi-card green"><div class="kpi-value" id="k-paid"></div><div class="kpi-label">Total repaid</div><div class="kpi-label" id="k-paid-note"></div></div>
           <div class="kpi-card amber"><div class="kpi-value" id="k-torepay"></div><div class="kpi-label">Total to repay (principal+interest)</div><div class="kpi-label">Everything owed over the whole loan life, per the official repayment schedule</div></div>
-          <div class="kpi-card amber"><div class="kpi-value" id="k-gap"></div><div class="kpi-label">Repayment gap</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">Total to repay minus total repaid — the full remaining obligation over the whole loan life, not just what's due today</div></div>
-          <div class="kpi-card"><div class="kpi-value" id="k-duetodate"></div><div class="kpi-label">Should have been repaid by now</div><div class="kpi-label" id="k-duetodate-note" style="font-weight:400;font-size:10.5px;margin-top:2px;"></div></div>
-          <div class="kpi-card red"><div class="kpi-value" id="k-overduetodate"></div><div class="kpi-label">Overdue as of today</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">Sum of (amount each member should have paid by now − what they've actually paid), for members behind schedule only</div></div>
+          <div class="kpi-card amber"><div class="kpi-value" id="k-gap"></div><div class="kpi-label">Repayment gap</div><div class="kpi-label">Total to repay minus total repaid — the full remaining obligation over the loan life</div></div>
+          <div class="kpi-card"><div class="kpi-value" id="k-duetodate"></div><div class="kpi-label">Demand till date</div><div class="kpi-label" id="k-duetodate-note"></div></div>
+          <div class="kpi-card red"><div class="kpi-value" id="k-overduetodate"></div><div class="kpi-label">Overdue against demand</div><div class="kpi-label" id="k-overdue-note"></div></div>
         </div></div>
         <div class="kpi-group">
-        <div class="kpi-group-title">📈 Repayment health <span>where members stand against their schedule</span></div>
+        <div class="kpi-group-title">📈 Repayment health <span>collection against the demand (amount to be paid up to the reporting month)</span></div>
         <div class="kpi-grid">
-          <div class="kpi-card amber"><div class="kpi-value" id="k-zero"></div><div class="kpi-label">Never made a repayment</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">Zero months with a repayment amount entered (a date with no amount doesn't count) — includes members still inside their moratorium, where nothing is due yet</div></div>
-          <div class="kpi-card" id="k-inmoratorium-card"><div class="kpi-value" id="k-inmoratorium"></div><div class="kpi-label">In moratorium period</div><div class="kpi-label" id="k-inmoratorium-note" style="font-weight:400;font-size:10.5px;margin-top:2px;"></div></div>
-          <div class="kpi-card red"><div class="kpi-value" id="k-moratorium"></div><div class="kpi-label">Missed moratorium period</div><div class="kpi-label" style="font-weight:400;font-size:10.5px;margin-top:2px;">Zero repayments AND the moratorium is over (Livestock 1 month, Fishery 3, Agri-Horti 4 since first disbursement)</div></div>
-          <div class="kpi-card red"><div class="kpi-value" id="k-def"></div><div class="kpi-label">Defaulting members</div><div class="kpi-label">Missed the moratorium, or paid less than the schedule says by today</div></div>
+          <div class="kpi-card green"><div class="kpi-value" id="k-dcr"></div><div class="kpi-label">Demand collection ratio (DCR)</div><div class="kpi-label" id="k-dcr-note"></div><div class="kpi-pct"><div class="kpi-bar"><span id="k-dcr-bar"></span></div><div class="kpi-pct-text" id="k-dcr-pct"></div></div></div>
+          <div class="kpi-card red"><div class="kpi-value" id="k-def"></div><div class="kpi-label">Defaulting members</div><div class="kpi-label" id="k-def-note"></div></div>
+          <div class="kpi-card green"><div class="kpi-value" id="k-excess"></div><div class="kpi-label">Amount collected above demand</div><div class="kpi-label" id="k-excess-note"></div></div>
+          <div class="kpi-card amber"><div class="kpi-value" id="k-zero"></div><div class="kpi-label">Never made a repayment</div><div class="kpi-label">No month has a repayment amount (includes members still in their moratorium)</div></div>
+          <div class="kpi-card" id="k-inmoratorium-card"><div class="kpi-value" id="k-inmoratorium"></div><div class="kpi-label">In moratorium period</div><div class="kpi-label" id="k-inmoratorium-note"></div></div>
+          <div class="kpi-card red"><div class="kpi-value" id="k-moratorium"></div><div class="kpi-label">Missed moratorium period</div><div class="kpi-label">No repayment at all and the moratorium is over (Livestock 1 month, Fishery 3, Agri-Horti 4)</div></div>
           <div class="kpi-card green"><div class="kpi-value" id="k-completed"></div><div class="kpi-label">Loans completed (paid ≥ received)</div><div class="kpi-label">Repaid at least the amount received</div></div>
+        </div>
+        <div class="kpi-group-title sub">🔁 Members paying regularly <span>a repayment entered for every instalment due so far (one month allowed for entry), last repayment within 2 months</span></div>
+        <div class="kpi-grid cols-3">
+          <div class="kpi-card green"><div class="kpi-value" id="k-reg"></div><div class="kpi-label">Paying regularly</div><div class="kpi-label" id="k-reg-note"></div></div>
+          <div class="kpi-card green"><div class="kpi-value" id="k-regfull"></div><div class="kpi-label">Paying regularly — full demand paid</div><div class="kpi-label" id="k-regfull-note"></div></div>
+          <div class="kpi-card amber"><div class="kpi-value" id="k-regless"></div><div class="kpi-label">Paying regularly but less than demand</div><div class="kpi-label" id="k-regless-note"></div></div>
+        </div>
+        <div class="kpi-group-title sub">⏱ Defaulters by overdue period <span>members who paid less than the demand, by how long since they last paid</span></div>
+        <div class="kpi-grid cols-5">
+          <div class="kpi-card amber"><div class="kpi-value" id="k-b1"></div><div class="kpi-label">Overdue up to 3 months</div><div class="kpi-label" id="k-b1-note"></div></div>
+          <div class="kpi-card red"><div class="kpi-value" id="k-b2"></div><div class="kpi-label">Overdue 4–6 months</div><div class="kpi-label" id="k-b2-note"></div></div>
+          <div class="kpi-card red"><div class="kpi-value" id="k-b3"></div><div class="kpi-label">Overdue more than 6 months</div><div class="kpi-label" id="k-b3-note"></div></div>
+          <div class="kpi-card amber"><div class="kpi-value" id="k-b4"></div><div class="kpi-label">Paying regularly but less than demand</div><div class="kpi-label" id="k-b4-note"></div></div>
+          <div class="kpi-card"><div class="kpi-value" id="k-abmissing"></div><div class="kpi-label">Demand not entered</div><div class="kpi-label" id="k-abmissing-note"></div></div>
         </div></div>
 
         <div class="section-title">Loan tenure by activity type</div>
@@ -362,8 +407,8 @@ tbody tr:hover td{background:var(--blue-light);}
             <div class="legend-row" id="donutLegend"></div>
           </div>
           <div class="card">
-            <h3>Top PGs — disbursed vs repaid vs outstanding</h3>
-            <div class="chart-wrap"><canvas id="pgChart" style="box-sizing: border-box; display: block; height: 260px; width: 490px;" width="490" height="260"></canvas></div>
+            <h3>Block-wise demand collection ratio (DCR) — highest first</h3><div class="legend-row" id="dcrChartNote" style="margin:-6px 0 8px;"></div>
+            <div class="chart-wrap" id="pgChartWrap" style="height:460px;"><canvas id="pgChart" style="box-sizing: border-box; display: block; height: 260px; width: 490px;" width="490" height="260"></canvas></div>
           </div>
         </div>
 
@@ -484,7 +529,7 @@ tbody tr:hover td{background:var(--blue-light);}
         </div>
 
         <div class="section-title">Category → Sub-activity summary (Fishery: Nursery / Polyculture · Livestock: PPU / PFU / GPU / GRU)</div>
-        <div class="hint-box">Each member's loan type comes from column Y ("Type of activity and Tenure"). Allowed: Agri-Horti sheet → Agri-Horti; Fishery → Nursery, Polyculture, Polyculture with high value; Livestock → PPU, PFU, GPU, GRU. "Not an allowed loan type" = anything else in column Y, including a loan type of another sheet (e.g. PPU in a Fishery sheet); "Loan type not entered" = column Y is blank. Both are listed row by row under Anomalies.</div>
+        <div class="hint-box">Each member's loan type comes from "Type of activity and Tenure". Allowed: Agri-Horti sheet → Agri-Horti; Fishery → Nursery, Polyculture, Polyculture with high value; Livestock → PPU, PFU, GPU, GRU. "Not an allowed loan type" = anything else in "Type of activity and Tenure", including a loan type of another sheet (e.g. PPU in a Fishery sheet); "Loan type not entered" = it is blank. Both are listed row by row under Anomalies.</div>
         <div class="table-toolbar"><span></span><button class="export-btn" onclick="exportTable('subactivity')">⬇ Export to Excel</button></div>
         <div class="table-wrap">
           <table>
@@ -562,9 +607,16 @@ tbody tr:hover td{background:var(--blue-light);}
 
       <!-- DEFAULTERS PAGE -->
       <div class="page" id="page-defaulters">
-        <div class="hint-box">A member is marked <b>defaulting</b> if either: (a) they made zero repayments even though their <b>moratorium period</b> is over — Livestock repays from the 2nd month (1-month moratorium), Fishery from the 4th (3 months), Agri-Horti from the 5th (4 months) — or (b) the <b>cumulative amount they've paid so far is less than what should have been paid by now</b> (based on the official TRESP repayment schedule for their loan product — Agri, Polyculture, Nursery, PPU, GPU, GRU or PFU — rebuilt from their own disbursement amounts and dates). This is amount-based, not count-based: a member who skips a month but later pays double to catch up is <b>not</b> flagged, since what matters is whether they're caught up on the total, not whether every single month was paid on time. A member is marked <b>Completed</b> instead of defaulting once their total paid reaches or exceeds the amount they received.</div>
+        <div class="hint-box">A member is <b>defaulting</b> when the total they have repaid is <b>less than the demand</b> ("Amount to be paid (Upto reporting Month) › Total amount to be paid"). They are grouped by how long since they last repaid: <b>up to 3 months</b>, <b>4–6 months</b> or <b>more than 6 months</b> (counted from their last dated repayment, or from the end of the moratorium if they have never repaid). Members who are <b>paying regularly</b> (an entry for every instalment due so far, allowing one month for entry, and last repaid within 2 months) but still less than the demand are shown as <b>Paying regularly but less than demand</b>. Members whose demand is blank, or ₹0 although the moratorium is over, are not counted here — they are listed under Anomalies → "Demand not entered". A member is <b>Completed</b> once they have repaid at least the amount received. The dashboard's own schedule-based check is kept on the Data Quality page for reference.</div>
         <div class="table-toolbar">
-          <input class="search-input" id="defSearch" placeholder="Search member or PG...">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <input class="search-input" id="defSearch" placeholder="Search member or PG...">
+            <select id="defBucket" class="search-input" style="min-width:210px;">
+              <option value="">All overdue periods</option>
+              <option>Up to 3 months</option><option>4–6 months</option><option>More than 6 months</option>
+              <option>Paying regularly but less than demand</option><option>Overdue period unknown</option>
+            </select>
+          </div>
           <button class="export-btn" onclick="exportTable('defaulters')">⬇ Export to Excel</button>
         </div>
         <div class="table-wrap">
@@ -573,20 +625,28 @@ tbody tr:hover td{background:var(--blue-light);}
               <th data-key="member">Member</th><th data-key="pg">PG</th>
               <th data-key="district">District / DPMU Zone</th><th data-key="block">Block</th><th data-key="pgCategory">Category</th>
               <th data-key="subCategory">Sub-category</th><th data-key="subActivity">Sub-activity</th><th data-key="activity">Loan type (tenure)</th>
-              <th data-key="sanctioned" style="text-align:right">Received</th>
-              <th data-key="monthsSince" style="text-align:right">Months since loan</th>
-              <th data-key="repaymentsMade" style="text-align:right">Repayments made</th>
-              <th data-key="shortfall" style="text-align:right">Shortfall</th>
+              <th data-key="received" style="text-align:right">Received</th>
+              <th data-key="demand" style="text-align:right">Demand</th>
+              <th data-key="paid" style="text-align:right">Repaid</th>
+              <th data-key="shortfallDemand" style="text-align:right">Short of demand</th>
+              <th data-key="overdueBucket">Overdue period</th>
+              <th data-key="lastPaidDate">Last repayment</th>
               <th data-key="reason">Reason</th>
             </tr></thead>
             <tbody id="defBody"></tbody>
           </table>
         </div>
+
+        <div class="section-title">Paid more than demand <span id="excessTitle"></span></div>
+        <div class="table-toolbar"><input class="search-input" id="excessSearch" placeholder="Search member or PG..."><button class="export-btn" onclick="exportTable('excess')">⬇ Export to Excel</button></div>
+        <div class="table-wrap">
+          <table><thead><tr><th>Sheet tab</th><th>Row</th><th>Member</th><th>PG</th><th>Block</th><th>Category</th><th style="text-align:right">Received</th><th style="text-align:right">Demand</th><th style="text-align:right">Repaid</th><th style="text-align:right">Paid extra</th><th>Last repayment</th></tr></thead><tbody id="excessBody"></tbody></table>
+        </div>
       </div>
 
       <!-- SANCTIONED BUT NOT DISBURSED PAGE -->
       <div class="page" id="page-pending">
-        <div class="hint-box">Members whose <b>Loan Amount Sanctioned</b> is more than the amount actually disbursed (<b>Total amount Received in Kind and Cash</b>). <b>Pending = Sanctioned − Disbursed</b> (disbursed = "Total amount Received in Kind and Cash", column S); it is money still to be released and is <b>not</b> part of what the member has to repay. (The sheet's column U is Sanctioned − Utilized, a different figure, and is not used here.) <b>Not disbursed</b> = nothing released yet (these members are not counted on the other pages); <b>Partly disbursed</b> = some money released, the rest still pending (these are counted on the other pages for the amount released). The filters above (District, Block, Category, Sub-category, CLF, VC, PG) apply; the Member status filter does not.</div>
+        <div class="hint-box">Members whose <b>Loan Amount Sanctioned</b> is more than the amount actually disbursed (<b>Total amount Received in Kind and Cash</b>). <b>Pending = Sanctioned − Disbursed</b> (disbursed = "Total amount Received in Kind and Cash"); it is money still to be released and is <b>not</b> part of what the member has to repay. (The sheet's "Pending Loan amount" is Sanctioned − Utilized, a different figure, and is not used here.) <b>Not disbursed</b> = nothing released yet (these members are not counted on the other pages); <b>Partly disbursed</b> = some money released, the rest still pending (these are counted on the other pages for the amount released). The filters above (District, Block, Category, Sub-category, CLF, VC, PG) apply; the Member status filter does not.</div>
         <div class="kpi-grid">
           <div class="kpi-card amber"><div class="kpi-value" id="p-count"></div><div class="kpi-label">Members with amount pending</div></div>
           <div class="kpi-card amber"><div class="kpi-value" id="p-amt"></div><div class="kpi-label">Total pending (sanctioned − disbursed)</div></div>
@@ -682,13 +742,19 @@ tbody tr:hover td{background:var(--blue-light);}
         <div class="section-title">Repayments made <span id="trkRepTitle"></span></div>
         <div class="table-toolbar"><span></span><button class="export-btn" onclick="exportTable('trackRepay')">⬇ Export to Excel</button></div>
         <div class="table-wrap" style="max-height:420px;margin-bottom:22px;">
-          <table><thead><tr><th>Repayment date</th><th>Member</th><th>PG</th><th>Block</th><th>Category</th><th>Instalment</th><th>Due in</th><th style="text-align:right">Principal</th><th style="text-align:right">Interest</th><th style="text-align:right">Total</th><th>Sheet (tab · row · date column)</th><th>Note</th></tr></thead><tbody id="trkRepBody"></tbody></table>
+          <table><thead><tr><th>Repayment date</th><th>Member</th><th>PG</th><th>Block</th><th>Category</th><th>Instalment</th><th>Due in</th><th style="text-align:right">Principal</th><th style="text-align:right">Interest</th><th style="text-align:right">Total</th><th>Sheet tab</th><th>Row</th><th>Note</th></tr></thead><tbody id="trkRepBody"></tbody></table>
+        </div>
+
+        <div class="section-title">Loans disbursed <span id="trkDisbTitle"></span></div>
+        <div class="table-toolbar"><span></span><button class="export-btn" onclick="exportTable('trackDisb')">⬇ Export to Excel</button></div>
+        <div class="table-wrap" style="max-height:420px;margin-bottom:22px;">
+          <table><thead><tr><th>First disbursement</th><th>Member</th><th>PG</th><th>Block</th><th>Category</th><th style="text-align:right">Loan received</th><th>Sheet tab</th><th>Row</th></tr></thead><tbody id="trkDisbBody"></tbody></table>
         </div>
 
         <div class="section-title">New names added <span id="trkNewTitle"></span></div>
         <div class="table-toolbar"><span></span><button class="export-btn" onclick="exportTable('trackNew')">⬇ Export to Excel</button></div>
         <div class="table-wrap" style="max-height:420px;">
-          <table><thead><tr><th>First seen</th><th>Member</th><th>PG</th><th>Block</th><th>Category</th><th>Sub-category</th><th>Sheet (tab · row)</th><th style="text-align:right">Loan received</th><th>First disbursement</th></tr></thead><tbody id="trkNewBody"></tbody></table>
+          <table><thead><tr><th>First seen</th><th>Member</th><th>PG</th><th>Block</th><th>Category</th><th>Sub-category</th><th>Sheet tab</th><th>Row</th><th style="text-align:right">Loan received</th><th>First disbursement</th></tr></thead><tbody id="trkNewBody"></tbody></table>
         </div>
       </div>
 
@@ -698,24 +764,24 @@ tbody tr:hover td{background:var(--blue-light);}
         <div class="table-toolbar"><span style="font-size:12px;color:var(--text-dim);">One Excel file: a Summary sheet with the count of each anomaly, then a separate sheet for each anomaly type below.</span><button class="export-btn" onclick="exportAllAnomalies()">⬇ Export all anomalies (one file, sheet per type)</button></div>
 
         <div class="section-title">Repayment entered but no loan amount received <span id="cnt-orphan"></span></div>
-        <div class="hint-box">These rows have a repayment entered but the amount received (column S) is ₹0 — often sanctioned is blank too. The repayment still counts in every "repaid" figure on the dashboard (Overview, District, Block, Category, Sub-category and PG-wise), since the money was paid. They are not counted as loan members and have no due amount until the amount received is filled in at the source.</div>
+        <div class="hint-box">These rows have a repayment entered but the amount received is ₹0 — often sanctioned is blank too. The repayment still counts in every "repaid" figure on the dashboard (Overview, District, Block, Category, Sub-category and PG-wise), since the money was paid. They are not counted as loan members and have no due amount until the amount received is filled in at the source.</div>
         <div class="table-toolbar"><button class="export-btn" onclick="exportAnomaly('orphan')">⬇ Export to Excel</button></div>
         <div class="table-wrap" style="margin-bottom:22px;max-height:280px;">
           <table><thead><tr><th>Sheet row</th><th>Member</th><th>PG</th><th>Block</th><th>Category</th><th style="text-align:right">Sanctioned</th><th style="text-align:right">Disbursed</th><th style="text-align:right">Repaid</th></tr></thead><tbody id="an-orphan"></tbody></table>
         </div>
 
         <div class="section-title">Total paid column doesn’t match the monthly repayment entries <span id="cnt-paidmismatch"></span></div>
-        <div class="hint-box">The "Total loan amount paid" cell (column CK in Fishery/Agri tabs, EC in Livestock tabs) should equal the monthly principal + interest entered. In these rows it doesn’t, usually because the total formula is missing or points at the wrong cells. The dashboard uses the total-paid cell, so repaid figures for these members are only as right as that cell.</div>
+        <div class="hint-box">The "Total loan amount paid" cell should equal the monthly principal + interest entered. In these rows it doesn’t, usually because the total formula is missing or points at the wrong cells. The dashboard uses the total-paid cell, so repaid figures for these members are only as right as that cell.</div>
         <div class="table-toolbar"><button class="export-btn" onclick="exportAnomaly('paidMismatch')">⬇ Export to Excel</button></div>
         <div class="table-wrap" style="margin-bottom:22px;max-height:320px;">
           <table><thead><tr><th>Sheet tab</th><th>Row</th><th>Member</th><th>PG</th><th>Block</th><th style="text-align:right">Total paid cell</th><th style="text-align:right">Monthly entries add up to</th><th style="text-align:right">Difference</th></tr></thead><tbody id="an-paidmismatch"></tbody></table>
         </div>
 
-        <div class="section-title">Pending Loan amount (column U) ≠ Sanctioned − Utilized <span id="cnt-pendmismatch"></span></div>
-        <div class="hint-box">The sheet's "Pending Loan amount" (column U) should equal the Loan Amount Sanctioned (L) minus the Total utilized loan amount (T). These rows don't match — usually column U or T was not updated. Column U is not used for any dashboard figure.</div>
+        <div class="section-title">Pending Loan amount ≠ Sanctioned − Utilized <span id="cnt-pendmismatch"></span></div>
+        <div class="hint-box">The sheet's "Pending Loan amount" should equal the Loan Amount Sanctioned minus the Total utilized loan amount. These rows don't match — usually the pending or utilized amount was not updated. The pending amount is not used for any dashboard figure.</div>
         <div class="table-toolbar"><button class="export-btn" onclick="exportAnomaly('pendMismatch')">⬇ Export to Excel</button></div>
         <div class="table-wrap" style="margin-bottom:22px;max-height:320px;">
-          <table><thead><tr><th>Member</th><th>PG</th><th>Block</th><th>Category</th><th style="text-align:right">Sanctioned (L)</th><th style="text-align:right">Utilized (T)</th><th style="text-align:right">Sanctioned − Utilized</th><th style="text-align:right">Column U in sheet</th></tr></thead><tbody id="an-pendmismatch"></tbody></table>
+          <table><thead><tr><th>Member</th><th>PG</th><th>Block</th><th>Category</th><th style="text-align:right">Sanctioned</th><th style="text-align:right">Utilized</th><th style="text-align:right">Sanctioned − Utilized</th><th style="text-align:right">Pending Loan amount in sheet</th></tr></thead><tbody id="an-pendmismatch"></tbody></table>
         </div>
 
         <div class="section-title">Loan taken, no repayment updates ever <span id="cnt-zeroupdate"></span></div>
@@ -739,7 +805,7 @@ tbody tr:hover td{background:var(--blue-light);}
         </div>
 
         <div class="section-title">Loan Amount Sanctioned not recorded, but money disbursed <span id="cnt-nosanctioned"></span></div>
-        <div class="hint-box">"Loan Amount Sanctioned" (column L) is blank/₹0 in the sheet, even though the member has an amount disbursed/received. The sanctioned amount needs to be filled in at the source.</div>
+        <div class="hint-box">"Loan Amount Sanctioned" is blank/₹0 in the sheet, even though the member has an amount disbursed/received. The sanctioned amount needs to be filled in at the source.</div>
         <div class="table-toolbar"><button class="export-btn" onclick="exportAnomaly('noSanctioned')">⬇ Export to Excel</button></div>
         <div class="table-wrap" style="margin-bottom:22px;max-height:280px;">
           <table><thead><tr><th>Member</th><th>PG</th><th>Block</th><th style="text-align:right">Received</th><th style="text-align:right">Paid</th></tr></thead><tbody id="an-nosanctioned"></tbody></table>
@@ -789,7 +855,7 @@ tbody tr:hover td{background:var(--blue-light);}
         <div class="hint-box">These cells show a spreadsheet error instead of a value, usually because a formula points at a deleted column or a cell has text where a number is expected. The dashboard reads them as ₹0. Fix the formula in the listed cells.</div>
         <div class="table-toolbar"><button class="export-btn" onclick="exportAnomaly('formulaErrors')">⬇ Export to Excel</button></div>
         <div class="table-wrap" style="margin-bottom:22px;max-height:320px;">
-          <table><thead><tr><th>Block</th><th>Category</th><th>Sheet row</th><th>Member</th><th>PG</th><th>Error</th><th style="text-align:right">Cells</th><th>Where (column)</th></tr></thead><tbody id="an-formulaerr"></tbody></table>
+          <table><thead><tr><th>Block</th><th>Category</th><th>Sheet row</th><th>Member</th><th>PG</th><th>Error</th><th style="text-align:right">Cells</th><th>Where</th></tr></thead><tbody id="an-formulaerr"></tbody></table>
         </div>
 
         <div class="section-title">Sheet column layout differs from other sheets <span id="cnt-sheetlayout"></span></div>
@@ -813,18 +879,26 @@ tbody tr:hover td{background:var(--blue-light);}
           <table><thead><tr><th>Block</th><th>PG</th><th>Member</th><th>Tenure in sheet</th><th>Used by dashboard</th></tr></thead><tbody id="an-tenurefill"></tbody></table>
         </div>
 
-        <div class="section-title">Loan type (column Y) not allowed or doesn't match the PG type <span id="cnt-subactmismatch"></span></div>
-        <div class="hint-box">Column Y ("Type of activity and Tenure") may only hold these loan types: <b>Agri-Horti sheet</b> → Agri-Horti; <b>Fishery sheet</b> → Nursery, Polyculture or Polyculture with high value; <b>Livestock sheet</b> → GRU, GPU, PFU or PPU (Piggery PGs: PPU or PFU; Goatery PGs: GPU or GRU). Listed here: a loan type from another sheet (e.g. Agri-Horti on a Piggery PG), a pig code on a Goatery PG, or anything else written in column Y. The dashboard picks each member's repayment schedule from this code, so members with a loan are on the wrong schedule (or none) until it is corrected. Members without a loan yet are listed too, so the code can be fixed before money is released. Blank column Y is listed separately below.</div>
+        <div class="section-title">Loan type not allowed or doesn't match the PG type <span id="cnt-subactmismatch"></span></div>
+        <div class="hint-box">"Type of activity and Tenure" may only hold these loan types: <b>Agri-Horti sheet</b> → Agri-Horti; <b>Fishery sheet</b> → Nursery, Polyculture or Polyculture with high value; <b>Livestock sheet</b> → GRU, GPU, PFU or PPU (Piggery PGs: PPU or PFU; Goatery PGs: GPU or GRU). Listed here: a loan type from another sheet (e.g. Agri-Horti on a Piggery PG), a pig code on a Goatery PG, or anything else written there. The dashboard picks each member's repayment schedule from this code, so members with a loan are on the wrong schedule (or none) until it is corrected. Members without a loan yet are listed too, so the code can be fixed before money is released. A blank loan type is listed separately below.</div>
         <div class="table-toolbar"><button class="export-btn" onclick="exportAnomaly('subActMismatch')">⬇ Export to Excel</button></div>
         <div class="table-wrap" style="margin-bottom:10px;max-height:360px;">
-          <table><thead><tr><th>Sheet tab</th><th>Row</th><th>Block</th><th>PG</th><th>Member</th><th>Type of PG (col G)</th><th>Tenure code (col Y)</th><th>What's wrong</th><th>Should be</th><th style="text-align:right">Loan received</th><th>Schedule the dashboard is using</th></tr></thead><tbody id="an-subactmismatch"></tbody></table>
+          <table><thead><tr><th>Sheet tab</th><th>Row</th><th>Block</th><th>PG</th><th>Member</th><th>Type of PG</th><th>Tenure code</th><th>What's wrong</th><th>Should be</th><th style="text-align:right">Loan received</th><th>Schedule the dashboard is using</th></tr></thead><tbody id="an-subactmismatch"></tbody></table>
         </div>
 
-        <div class="section-title">Loan received but loan type (column Y) not entered <span id="cnt-noloantype"></span></div>
-        <div class="hint-box">These members have received money (column S) but column Y ("Type of activity and Tenure") is blank, so the dashboard cannot pick their repayment schedule: they are left out of "Should have been repaid by now" and "Overdue". Enter one of the allowed loan types for the sheet (see the section above).</div>
+        <div class="section-title">Loan received but loan type not entered <span id="cnt-noloantype"></span></div>
+        <div class="hint-box">These members have received money but "Type of activity and Tenure" is blank, so the dashboard cannot pick their repayment schedule: they are left out of "Should have been repaid by now" and "Overdue". Enter one of the allowed loan types for the sheet (see the section above).</div>
         <div class="table-toolbar"><button class="export-btn" onclick="exportAnomaly('noLoanType')">⬇ Export to Excel</button></div>
         <div class="table-wrap" style="margin-bottom:10px;max-height:360px;">
-          <table><thead><tr><th>Sheet tab</th><th>Row</th><th>Block</th><th>PG</th><th>Member</th><th>Type of PG (col G)</th><th style="text-align:right">Loan received</th><th>Should be one of</th></tr></thead><tbody id="an-noloantype"></tbody></table>
+          <table><thead><tr><th>Sheet tab</th><th>Row</th><th>Block</th><th>PG</th><th>Member</th><th>Type of PG</th><th style="text-align:right">Loan received</th><th>Should be one of</th></tr></thead><tbody id="an-noloantype"></tbody></table>
+        </div>
+
+        <div class="section-title">Demand not entered <span id="cnt-abmissing"></span></div>
+        <div class="hint-box">"Amount to be paid (Upto reporting Month) › Total amount to be paid" is the demand the dashboard uses for defaulters and the demand collection ratio. These members received a loan but the demand is blank, shows an error, or is ₹0 even though their moratorium is over (or no disbursement date is entered). They are left out of defaulters and DCR until the demand is filled in.</div>
+        <div id="abm-blocks" style="font-size:12px;margin:0 0 10px;line-height:1.9;"></div>
+        <div class="table-toolbar"><button class="export-btn" onclick="exportAnomaly('abMissing')">⬇ Export to Excel</button></div>
+        <div class="table-wrap" style="margin-bottom:10px;max-height:360px;">
+          <table><thead><tr><th>Sheet tab</th><th>Row</th><th>Block</th><th>PG</th><th>Member</th><th>Category</th><th style="text-align:right">Loan received</th><th style="text-align:right">Repaid</th><th style="text-align:right">Months since loan</th><th>What's wrong</th></tr></thead><tbody id="an-abmissing"></tbody></table>
         </div>
       </div>
 
@@ -853,10 +927,24 @@ tbody tr:hover td{background:var(--blue-light);}
         <div class="hint-box">While mapping the 69 source links from the "Link for PG MPR" index sheet, a few rows appeared to cross-reference the wrong spreadsheet between two adjacent blocks (their Fishery/Livestock/Agri-Horti links point at each other's files). This dashboard fetches exactly what the index sheet links to — verify Hezamara/Lefunga (West) and Raishyabari/Chawmanu (Dhalai) in the index sheet if the numbers for those blocks look off.</div>
 
         <div class="section-title">PG Unique ID matching (from TRESP PG Database.xlsx) <span id="cnt-pgidunmatched"></span></div>
-        <div class="hint-box">PG names in the loan sheets are matched against the PG Database's block-wise sheets (column H, "PG Unique ID") by fuzzy name match, since the two sources spell/space PG names differently. PGs below couldn't be matched with confidence — usually a bigger spelling difference, or the PG genuinely isn't in the PG Database yet. Check these manually.</div>
+        <div class="hint-box">PG names in the loan sheets are matched against the PG Database's block-wise sheets ("PG Unique ID") by fuzzy name match, since the two sources spell/space PG names differently. PGs below couldn't be matched with confidence — usually a bigger spelling difference, or the PG genuinely isn't in the PG Database yet. Check these manually.</div>
         <div class="table-toolbar"><button class="export-btn" onclick="exportTable('pgIdUnmatched')">⬇ Export to Excel</button></div>
         <div class="table-wrap" style="margin-bottom:10px;max-height:320px;">
           <table><thead><tr><th>Block</th><th>PG</th><th style="text-align:right">Members</th></tr></thead><tbody id="dq-pgidunmatched"></tbody></table>
+        </div>
+
+        <div class="section-title">MPR sheets vs TRESP PG Database (Compiled Data), block-wise</div>
+        <div class="hint-box">The Overview's percentages compare the MPR sheets with the PG Database "Compiled Data" sheet: number of PGs, total members and members who took a loan. The "took loan" figure is filled in for only a few blocks, so a blank there means "not entered", not zero loans.</div>
+        <div class="table-toolbar"><button class="export-btn" onclick="exportTable('dqPgDb')">⬇ Export to Excel</button></div>
+        <div class="table-wrap" style="margin-bottom:10px;max-height:420px;">
+          <table><thead><tr><th>District</th><th>Block</th><th style="text-align:right">PGs (PG Database)</th><th style="text-align:right">PGs tracked (MPR)</th><th style="text-align:right">Members (PG Database)</th><th style="text-align:right">Names in MPR</th><th style="text-align:right">% of PG Database</th><th style="text-align:right">Took loan (PG Database)</th><th style="text-align:right">Received loan (MPR)</th><th style="text-align:right">% of PG Database</th></tr></thead><tbody id="dq-pgdb"></tbody></table>
+        </div>
+
+        <div class="section-title">For reference: dashboard's own schedule calculation vs the demand in the MPR sheets, block-wise</div>
+        <div class="hint-box">Before switching to the demand entered in the MPR sheets, the dashboard worked out what each member should have repaid by now from the official repayment schedule (loan type, disbursement amounts and dates). Those figures are kept here for reference next to the demand-based figures that the Overview and Defaulters pages now use. Large differences usually mean the demand has not been updated for that block.</div>
+        <div class="table-toolbar"><button class="export-btn" onclick="exportTable('dqSchedule')">⬇ Export to Excel</button></div>
+        <div class="table-wrap" style="margin-bottom:10px;max-height:420px;">
+          <table><thead><tr><th>District</th><th>Block</th><th style="text-align:right">Loan members</th><th style="text-align:right">Should have repaid (schedule)</th><th style="text-align:right">Demand</th><th style="text-align:right">Repaid</th><th style="text-align:right">Overdue (schedule)</th><th style="text-align:right">Overdue (demand)</th><th style="text-align:right">Defaulting (schedule)</th><th style="text-align:right">Defaulting (demand)</th><th style="text-align:right">Missed moratorium</th><th style="text-align:right">Demand not entered</th></tr></thead><tbody id="dq-sched"></tbody></table>
         </div>
       </div>
 
@@ -920,6 +1008,9 @@ function S(district, block, category, sheetId, gid, zone){ return {district, blo
 // zones) matters because the index sheet points some tabs at another block's file (e.g. it gave Chawmanu Fishery
 // as Jampuijala's fishery tab), which would otherwise be fetched twice under two block names.
 const ACTIVE_BLOCKS = ['Belbari','Mandwi','Hezamara','Lefunga','Jampuijala','Padmabil','Tulashikhar','Mungiakami','Raishyabari','Chawmanu','Dumburnagar','Ganganagar','Karbook','Killa','Silachari','Ompi','Pecharthal','Jampui Hills','Dasda','Laljuri','Manu','Damcherra','Rupaichari'];
+// Reference totals from "TRESP PG Database (10).xlsx", sheet "Compiled Data" (one row per PG): "block|category": [number of PGs,
+// members (column M "No. of PG members"), members who took loan (column AS — filled for only a few blocks)].
+const PG_DB_TOTALS = {"Damcherra|Livestock": [19, 409, 0], "Damcherra|Agri-Horti": [30, 612, 0], "Damcherra|Fishery": [16, 343, 0], "Dasda|Agri-Horti": [91, 1839, 0], "Dasda|Livestock": [48, 962, 0], "Dasda|Fishery": [73, 1476, 0], "Laljuri|Agri-Horti": [33, 668, 0], "Laljuri|Fishery": [25, 506, 0], "Laljuri|Livestock": [48, 976, 0], "Jampui Hills|Livestock": [17, 351, 0], "Jampui Hills|Agri-Horti": [28, 571, 0], "Pecharthal|Fishery": [38, 811, 415], "Pecharthal|Livestock": [50, 1078, 235], "Pecharthal|Agri-Horti": [56, 1171, 591], "Chawmanu|Agri-Horti": [21, 433, 0], "Chawmanu|Fishery": [19, 399, 0], "Chawmanu|Livestock": [49, 1024, 0], "Dumburnagar|Livestock": [30, 600, 0], "Dumburnagar|Agri-Horti": [22, 440, 0], "Dumburnagar|Fishery": [10, 200, 0], "Ganganagar|Agri-Horti": [13, 268, 0], "Ganganagar|Livestock": [14, 293, 0], "Ganganagar|Fishery": [2, 42, 0], "Raishyabari|Agri-Horti": [36, 742, 0], "Raishyabari|Fishery": [5, 102, 0], "Raishyabari|Livestock": [29, 690, 0], "Manu|Agri-Horti": [93, 1869, 0], "Manu|Livestock": [69, 1385, 0], "Manu|Fishery": [35, 703, 0], "Mungiakami|Fishery": [19, 413, 0], "Mungiakami|Livestock": [24, 480, 0], "Mungiakami|Agri-Horti": [24, 527, 0], "Padmabil|Fishery": [46, 942, 0], "Padmabil|Agri-Horti": [61, 1234, 0], "Padmabil|Livestock": [35, 725, 0], "Tulashikhar|Fishery": [47, 972, 0], "Tulashikhar|Agri-Horti": [72, 1469, 0], "Tulashikhar|Livestock": [80, 1657, 0], "Hezamara|Livestock": [44, 921, 10], "Hezamara|Agri-Horti": [47, 945, 0], "Hezamara|Fishery": [3, 60, 0], "Lefunga|Agri-Horti": [56, 1185, 0], "Lefunga|Fishery": [6, 126, 0], "Lefunga|Livestock": [34, 777, 0], "Mandwi|Agri-Horti": [58, 885, 0], "Mandwi|Livestock": [29, 617, 0], "Mandwi|Fishery": [5, 107, 0], "Belbari|Agri-Horti": [29, 588, 0], "Belbari|Fishery": [25, 512, 0], "Belbari|Livestock": [49, 1019, 0], "Jampuijala|Agri-Horti": [70, 1402, 0], "Jampuijala|Fishery": [26, 557, 0], "Jampuijala|Livestock": [85, 1880, 0], "Karbook|Livestock": [74, 1581, 334], "Karbook|Fishery": [27, 586, 381], "Karbook|Agri-Horti": [32, 682, 150], "Killa|Fishery": [20, 415, 0], "Killa|Livestock": [62, 1293, 0], "Killa|Agri-Horti": [43, 878, 0], "Ompi|Fishery": [32, 701, 0], "Ompi|Agri-Horti": [38, 782, 0], "Ompi|Livestock": [40, 850, 0], "Silachari|Fishery": [15, 317, 182], "Silachari|Livestock": [45, 914, 149], "Silachari|Agri-Horti": [17, 340, 87], "Rupaichari|Fishery": [15, 329, 190], "Rupaichari|Livestock": [54, 1217, 337], "Rupaichari|Agri-Horti": [34, 719, 303]};
 const ZONE_ORDER = ['West','Khowai','Dhalai','North','Gomati'];
 // Spreadsheet ID -> "Publish to web" ID. A block is fetched only once its file is listed here.
 const PUB_MAP = {
@@ -1214,7 +1305,7 @@ function loanTypeOf(tenureStr){
 function subActivityFor(category, tenureStr){
   const lt = loanTypeOf(tenureStr);
   if(!lt) return {subActivity:'Loan type not entered', basis:'Not recorded'};
-  if((LOAN_TYPES[category]||[]).includes(lt)) return {subActivity: lt, basis:'Loan type (column Y)'};
+  if((LOAN_TYPES[category]||[]).includes(lt)) return {subActivity: lt, basis:'Loan type'};
   return {subActivity:'Not an allowed loan type', basis:'See Anomalies'};
 }
 function productOf(activity){
@@ -1287,6 +1378,7 @@ const COL = {
   district:0, block:1, vc:2, clf:3, pg:4, dof:5, typePg:6, member:7, desig:8, caste:9, fundRecv:10,
   sanctioned:11, disb1:12, actCash:13, amtCash:14, disb2:15, materials:16, amtKind:17,
   received:18, utilized:19, pending:20, interest:21, status:22, roi:23, tenure:24,
+  demandPrin:25, demandInt:26, demand:27,
   totOutstanding:33, monthStart:43, totalPaid:88, lokos:89, insurance:90, cycles:91
 };
 const EXPECTED_COLS = 92;
@@ -1302,6 +1394,8 @@ const COL_HEADINGS = [
   ['disb2', /2nd tranch[^›]*›\s*date/i], ['materials', /2nd tranch[^›]*›\s*material/i], ['amtKind', /2nd tranch[^›]*›\s*(amount|total cumulative)/i],
   ['received', /total amount received/i], ['utilized', /total utili[sz]ed/i], ['pending', /pending loan|yet to be taken/i],
   ['interest', /interest on total loan/i], ['status', /status of loan/i], ['roi', /rate of interest/i], ['tenure', /tenure/i],
+  // Column AB "Amount to be paid (Upto reporting Month) › Total amount to be paid…" = the demand up to the reporting month.
+  ['demandPrin', /amount to be paid.*total principal/i], ['demandInt', /amount to be paid.*total interest/i], ['demand', /total amount to be paid/i],
   ['totOutstanding', /total outstanding on loan amount.*total outstanding/i],
 ];
 function headerLabels(hdrRows){
@@ -1418,7 +1512,7 @@ function buildMemberRecordsFromSheet(rows, source, rowOffset){
         vc: normPlace(r[COL.vc]), clf: normPlace(r[COL.clf]),
         sanctioned: Math.round(toNum(r[COL.sanctioned])), disbursed: Math.round(toNum(r[COL.received])), paid: Math.round(p),
         schedule: monthCols.map(mc=>{ const d = parseDMonYYYY(r[mc.dateIdx]), prin = toNum(r[mc.prinIdx]), int = toNum(r[mc.intIdx]);
-          return {month: mc.n, dateCol: colLetter(mc.dateIdx), paidAmount: Math.round((prin+int)*100)/100, paidDate: d?isoDate(d):null, prin: Math.round(prin*100)/100, int: Math.round(int*100)/100}; })
+          return {month: mc.n, dateCol: colLetter(mc.dateIdx), prinCol: colLetter(mc.prinIdx), intCol: colLetter(mc.intIdx), paidAmount: Math.round((prin+int)*100)/100, paidDate: d?isoDate(d):null, prin: Math.round(prin*100)/100, int: Math.round(int*100)/100}; })
           .filter(c=>c.paidAmount>0)
       });
     }
@@ -1451,7 +1545,7 @@ function buildMemberRecordsFromSheet(rows, source, rowOffset){
       pgCategory: source.category, subCategory: (r[COL.typePg]||'').replace(/\s+/g,' ').trim() || 'Not recorded', subActivity: subActOf(r).subActivity, subActivityBasis: subActOf(r).basis,
       vc: normPlace(r[COL.vc]), clf: normPlace(r[COL.clf]),
       errorTypes: [...new Set(errs.map(e=>e.value))].join(', '),
-      cells: errs.map(e=>`${e.col} (${e.label})`).join('; '),
+      cells: errs.map(e=>e.label).join('; '),
       count: errs.length
     });
   });
@@ -1460,7 +1554,7 @@ function buildMemberRecordsFromSheet(rows, source, rowOffset){
     cols: hasOwnHeading.lastIndexOf(true) + 1,
     months: monthCols.length,
     trailing: lokosFound ? colLabels.slice(lokosIdx+1).filter((l,k)=>l && hasOwnHeading[lokosIdx+1+k]) : [],
-    moved: located.moved.map(k=>`${k} → ${colLetter(COL[k])}`)
+    moved: located.moved.map(k=>colLabels[COL[k]] || k)
   };
   const today = new Date();
   dataRows.forEach(r=>{
@@ -1527,7 +1621,7 @@ function buildMemberRecordsFromSheet(rows, source, rowOffset){
       if(d && (!lastRepaymentDate || d>lastRepaymentDate)) lastRepaymentDate=d;
       const dm = dueByMonth(mc.n);
       const due = dm==null ? null : Math.round(dm*100)/100;
-      return { month: mc.n, dateCol: colLetter(mc.dateIdx), dueAmount: due, paidAmount: Math.round(paidAmt*100)/100, paidDate: d?isoDate(d):null,
+      return { month: mc.n, dateCol: colLetter(mc.dateIdx), prinCol: colLetter(mc.prinIdx), intCol: colLetter(mc.intIdx), dueAmount: due, paidAmount: Math.round(paidAmt*100)/100, paidDate: d?isoDate(d):null,
         prin: Math.round(prin*100)/100, int: Math.round(interest*100)/100 };
     });
     const startedRepayment = repaymentsMade > 0;
@@ -1548,10 +1642,43 @@ function buildMemberRecordsFromSheet(rows, source, rowOffset){
       shortfall = Math.max(cumulativeExpected - paid, 0);
     }
     const isCompleted = received>0 && paid>=received;
-    const isDefaulter = !isCompleted && (missedMoratorium || (shortfall!==null && shortfall>1));
+    // The dashboard's own schedule-based check (kept for reference on the Data Quality page).
+    const isDefaulterSched = !isCompleted && (missedMoratorium || (shortfall!==null && shortfall>1));
+    // Demand = column AB "Amount to be paid (Upto reporting Month)". A member is defaulting when they have paid less
+    // than AB. AB blank, an error, or ₹0 although the moratorium is over (or with no disbursement date) counts as
+    // "demand not entered": listed under Anomalies, and not counted as defaulting or in the DCR.
+    const demandRaw = (r[COL.demand]||'').toString().trim();
+    const demandVal = (demandRaw==='' || /^#/.test(demandRaw)) ? null : toNum(demandRaw);
+    const demandCol = colLetter(COL.demand);
+    let demandIssue = null;
+    if(demandVal===null) demandIssue = demandRaw ? `Demand shows ${demandRaw}` : 'Demand is blank';
+    else if(demandVal===0 && monthsSince===null) demandIssue = `Demand is ₹0 and there is no disbursement date`;
+    else if(demandVal===0 && monthsSince>=moratorium) demandIssue = `Demand is ₹0 although the ${moratorium}-month moratorium is over`;
+    const demandKnown = !demandIssue;
+    const demand = demandKnown ? Math.round(demandVal) : null;
+    const shortfallDemand = demandKnown ? Math.max(demand - Math.round(paid), 0) : null;
+    const excessDemand = demandKnown && demand>0 ? Math.max(Math.round(paid) - demand, 0) : 0;
+    const isDefaulter = !isCompleted && demandKnown && demand>0 && paid < demand - 1;
+    // Paying regularly: has repaid, has a repayment entry for every instalment due so far (one month's grace for
+    // entry), and the last dated repayment is no more than 2 months old. Completed loans are not counted.
+    const lastPaidIso = schedule.filter(c=>c.paidAmount>0 && c.paidDate).map(c=>c.paidDate).sort().pop() || null;
+    const sinceLastPaid = lastPaidIso ? Math.max(0, Math.round(((today - new Date(+lastPaidIso.slice(0,4), +lastPaidIso.slice(5,7)-1, +lastPaidIso.slice(8,10)))/86400000/30.44)*10)/10) : null;
+    const instalmentsDue = monthsSince===null ? null : Math.max(0, Math.min(Math.floor(monthsSince - moratorium), tenureMonths || 99));
+    const isRegular = !isCompleted && repaymentsMade>0 && (instalmentsDue!==null || sinceLastPaid!==null)
+      && (instalmentsDue===null || repaymentsMade >= instalmentsDue - 1) && (sinceLastPaid===null || sinceLastPaid <= 2);
+    // How long a defaulter has gone without paying: since their last dated repayment, or (never paid) since the
+    // moratorium ended. A defaulter who is paying regularly is "Paying regularly but less than demand".
+    let monthsNoPay = null, overdueBucket = null;
+    if(isDefaulter){
+      if(lastPaidIso) monthsNoPay = sinceLastPaid;
+      else if(paid<=0 && monthsSince!==null) monthsNoPay = Math.max(0, Math.round((monthsSince - moratorium)*10)/10);
+      if(isRegular) overdueBucket = 'Paying regularly but less than demand';
+      else if(monthsNoPay===null) overdueBucket = 'Overdue period unknown';
+      else overdueBucket = monthsNoPay <= 3 ? 'Up to 3 months' : monthsNoPay <= 6 ? '4–6 months' : 'More than 6 months';
+    }
     const lokosId = (r[lokosIdx]||'').toString().trim();
     result.members.push({
-      sheetRow: rowNumOf.get(r), tab, paidCol: colLetter(totalPaidIdx), lokosCol: colLetter(lokosIdx),
+      sheetRow: rowNumOf.get(r), tab, paidCol: colLetter(totalPaidIdx), lokosCol: colLetter(lokosIdx), demandCol, receivedCol: colLetter(COL.received), disbDateCol: firstDisb ? colLetter(firstDisb===d1 ? COL.disb1 : COL.disb2) : '',
       member: r[COL.member], pg: (r[COL.pg]||'').trim(),
       district: source.district,
       block: (r[COL.block]||'').trim() || source.block,
@@ -1564,7 +1691,9 @@ function buildMemberRecordsFromSheet(rows, source, rowOffset){
       totalToRepay: Math.round(totalToRepay), emi: emi?Math.round(emi):null,
       product: product || null, scheduleBasis: plan ? 'Official schedule' : (emi ? 'Even instalments (tenure code)' : 'No tenure recorded'),
       monthsSince, repaymentsMade, lastRepaymentDate: lastRepaymentDate?isoDate(lastRepaymentDate):null, disbDate: firstDisb?isoDate(firstDisb):null,
-      cumulativeExpected, shortfall,
+      cumulativeExpected, shortfall, isDefaulterSched,
+      demand, demandKnown, demandIssue, shortfallDemand, excessDemand, monthsNoPay, overdueBucket, lastPaidDate: lastPaidIso,
+      isRegular, instalmentsDue, sinceLastPaid,
       startedRepayment, zeroRepayments, missedMoratorium, isCompleted, isDefaulter, lokosId,
       status: r[COL.status]||'Not started',
       schedule, sourceKey: source.key,
@@ -1912,7 +2041,7 @@ const PAGE_DESC = {
   geography: 'Totals split by district, block, category and sub-activity',
   pgwise: 'Every PG with its disbursement, repayment and defaulters',
   members: 'Every member with a loan, with their schedule and what they have paid',
-  defaulters: 'Members who missed the moratorium or are behind schedule',
+  defaulters: 'Members who repaid less than the demand, by overdue period',
   pending: 'Loan amount sanctioned but not yet released',
   tracking: 'What was added or repaid, day by day and block by block',
   anomalies: 'Problems found in the sheets, with tab, row and column to fix',
@@ -1998,10 +2127,9 @@ function memberStatus(m){
   return 'On track';
 }
 function defaultReason(m){
-  const reasons = [];
-  if(m.missedMoratorium) reasons.push(`Missed moratorium (${m.moratoriumMonths}mo, zero repayments)`);
-  if(m.shortfall>1 && !m.missedMoratorium) reasons.push(`Behind by ${fmtRs(m.shortfall)} vs. amount due to date`);
-  return reasons.join('; ') || '-';
+  if(!m.isDefaulter) return m.demandIssue ? `Not assessed: ${m.demandIssue}` : '-';
+  const since = m.lastPaidDate ? `last repaid ${fmtD(m.lastPaidDate)}` : 'never repaid';
+  return `Repaid ${fmtRs(m.paid)} of ${fmtRs(m.demand)} demand — ${since}`;
 }
 function statusPill(st){
   const cls = st==='Completed'?'pill-blue':st==='Defaulting'?'pill-red':st==='Not started yet'?'pill-amber':'pill-green';
@@ -2132,14 +2260,30 @@ function render(){
   const loanMembers = filtered.length + repayingNoLoan.length;
 
   const totalMembers = rosterInView(filtered).length;
-  document.getElementById('k-memtotal').textContent = totalMembers;
-  document.getElementById('k-mem').textContent = loanMembers;
+  // Reference totals from the PG Database for the district / block / category in view.
+  const db = pgDbTotalsInView();
+  const n = v => v.toLocaleString('en-IN');
+  const pctCard = (id, part, whole, label) => {
+    const p = whole > 0 ? part / whole * 100 : null;
+    document.getElementById(id+'-bar').style.width = p==null ? '0' : Math.min(100, p).toFixed(1) + '%';
+    document.getElementById(id+'-pct').textContent = p==null ? '—' : p.toFixed(1) + '%';
+    document.getElementById(id+'-pctof').textContent = p==null ? `${label}: not available` : `${n(part)} of ${n(whole)} ${label}`;
+  };
+  const memStarted = started + repayingNoLoan.length;
+  document.getElementById('k-memtotal').textContent = n(totalMembers);
+  document.getElementById('k-mem').textContent = n(loanMembers);
   document.getElementById('k-mem-note').textContent = document.getElementById('fStatus').value ? 'Member status filter applied' :
-    `${Math.max(totalMembers - loanMembers, 0)} named member(s) haven't received any money yet` +
-    (repayingNoLoan.length ? ` · includes ${repayingNoLoan.length} member(s) who are repaying but have no amount received entered (see Anomalies)` : '');
-  document.getElementById('k-pg').textContent = pgSet.size;
-  document.getElementById('k-pgstarted').textContent = pgStartedInView.size + ' / ' + pgsInView.size;
-  document.getElementById('k-memstarted').textContent = (started + repayingNoLoan.length) + ' / ' + loanMembers;
+    `PG Database: ${n(db.tookLoan)} took loan` + (db.tookLoan && db.tookLoan < loanMembers ? ' (filled in for only a few blocks)' : '') +
+    (repayingNoLoan.length ? ` · includes ${repayingNoLoan.length} repaying with no amount received entered` : '');
+  document.getElementById('k-pg').textContent = n(pgSet.size);
+  document.getElementById('k-pgstarted').textContent = n(pgStartedInView.size);
+  document.getElementById('k-memstarted').textContent = n(memStarted);
+  pctCard('k-memtotal', totalMembers, db.members, 'members in PG Database');
+  pctCard('k-mem', loanMembers, db.members, 'members in PG Database');
+  pctCard('k-pg', pgSet.size, db.pgs, 'PGs in PG Database');
+  pctCard('k-pgstarted', pgStartedInView.size, db.pgs, 'PGs in PG Database');
+  pctCard('k-memstarted', memStarted, loanMembers, 'members who received a loan');
+  document.getElementById('k-memtotal-note').textContent = db.partial ? 'Named in the MPR sheets · PG Database totals aren\'t split by CLF / VC / PG / sub-category' : 'Named in the MPR sheets';
   document.getElementById('k-recv').textContent = fmtRs(received);
   const orphanPaid = orphanRows.reduce((s,m)=>s+m.paid,0);
   document.getElementById('k-paid').textContent = fmtRs(paid + orphanPaid);
@@ -2147,9 +2291,50 @@ function render(){
     ? `Includes ${fmtRs(orphanPaid)} repaid on ${orphanRows.length} row(s) where no loan amount is received yet (listed under Anomalies)` : '';
   document.getElementById('k-torepay').textContent = fmtRs(totalToRepay);
   document.getElementById('k-gap').textContent = fmtRs(repaymentGap);
-  document.getElementById('k-duetodate').textContent = fmtRs(dueToDate);
-  document.getElementById('k-duetodate-note').textContent = `As of today, incl. interest, per the official repayment schedule for each loan product, across ${dueToDateMembers.length} member(s) (excludes ${filtered.length-dueToDateMembers.length} with no disbursement date or tenure recorded)`;
-  document.getElementById('k-overduetodate').textContent = fmtRs(overdueToDate);
+  // Demand = column AB "Amount to be paid (Upto reporting Month)". Members whose AB is missing are left out of every
+  // demand-based figure and listed under Anomalies ("Demand not entered").
+  const dk = filtered.filter(m=>m.demandKnown && m.demand>0);
+  const abMissing = filtered.filter(m=>m.demandIssue);
+  const demandTotal = dk.reduce((s,m)=>s+m.demand,0);
+  const collected = dk.reduce((s,m)=>s+Math.min(m.paid, m.demand),0);
+  const overdueAB = dk.reduce((s,m)=>s+m.shortfallDemand,0);
+  const excessRows = dk.filter(m=>m.excessDemand>0);
+  const dcr = demandTotal > 0 ? collected / demandTotal * 100 : null;
+  document.getElementById('k-duetodate').textContent = fmtRs(demandTotal);
+  document.getElementById('k-duetodate-note').textContent = `Sum of "Amount to be paid (up to reporting month)" for ${n(dk.length)} member(s) with a demand · ${n(abMissing.length)} with the demand not entered are left out (see Anomalies)`;
+  document.getElementById('k-overduetodate').textContent = fmtRs(overdueAB);
+  document.getElementById('k-overdue-note').textContent = `Demand minus repaid, for the ${n(filtered.filter(m=>m.isDefaulter).length)} member(s) who paid less than the demand`;
+  document.getElementById('k-dcr').textContent = dcr==null ? '—' : dcr.toFixed(1) + '%';
+  document.getElementById('k-dcr-note').textContent = `Collected against demand ÷ demand. Advance payments above the demand are not counted.`;
+  document.getElementById('k-dcr-bar').style.width = dcr==null ? '0' : Math.min(100, dcr).toFixed(1) + '%';
+  const aboveDemand = excessRows.reduce((s,m)=>s+m.excessDemand,0);
+  document.getElementById('k-dcr-pct').innerHTML = dcr==null ? 'No demand entered' : `<b>${fmtRs(collected)}</b> collected of ${fmtRs(demandTotal)} demand` + (aboveDemand ? ` · plus <b>${fmtRs(aboveDemand)}</b> collected above demand` : '');
+  document.getElementById('k-excess').textContent = fmtRs(aboveDemand);
+  document.getElementById('k-excess-note').textContent = `Paid by ${n(excessRows.length)} member(s) who repaid more than their demand (advance payments) · list on the Defaulters page`;
+  const defs = filtered.filter(m=>m.isDefaulter);
+  const bucket = b => defs.filter(m=>m.overdueBucket===b);
+  [['k-b1','Up to 3 months'],['k-b2','4–6 months'],['k-b3','More than 6 months'],['k-b4','Paying regularly but less than demand']].forEach(([id,b])=>{
+    const rows = bucket(b);
+    document.getElementById(id).textContent = n(rows.length);
+    document.getElementById(id+'-note').textContent = `${fmtRs(rows.reduce((s,m)=>s+m.shortfallDemand,0))} short of demand` + (b==='Paying regularly but less than demand' ? ' · repaying every month, but the amounts fall short' : ' · since the last repayment');
+  });
+  // Regular payers (see isRegular in the parser): all of them, those who have paid the full demand, and those short of it.
+  const regular = filtered.filter(m=>m.isRegular);
+  const regFull = regular.filter(m=>m.demandKnown && !m.isDefaulter);
+  const regLess = regular.filter(m=>m.isDefaulter);
+  const regNoAB = regular.filter(m=>m.demandIssue);
+  const ofLoan = v => loanMembers ? ` (${(v/loanMembers*100).toFixed(1)}% of members who received a loan)` : '';
+  document.getElementById('k-reg').textContent = n(regular.length);
+  document.getElementById('k-reg-note').textContent = `Repayment entered for every instalment due so far, last one within 2 months${ofLoan(regular.length)}` + (regNoAB.length ? ` · ${n(regNoAB.length)} of them have the demand not entered` : '');
+  document.getElementById('k-regfull').textContent = n(regFull.length);
+  document.getElementById('k-regfull-note').textContent = `Paying regularly and repaid at least the demand${ofLoan(regFull.length)}`;
+  document.getElementById('k-regless').textContent = n(regLess.length);
+  document.getElementById('k-regless-note').textContent = `Paying regularly, but repaid ${fmtRs(regLess.reduce((s,m)=>s+m.shortfallDemand,0))} less than the demand in total${ofLoan(regLess.length)}`;
+  window._regRows = regular;
+  const unknownAge = bucket('Overdue period unknown').length;
+  document.getElementById('k-def-note').textContent = `Paid less than the demand` + (unknownAge ? ` · ${n(unknownAge)} with no repayment dates to age them` : '');
+  document.getElementById('k-abmissing').textContent = n(abMissing.length);
+  document.getElementById('k-abmissing-note').textContent = `Loans where the demand is blank, or ₹0 though the moratorium is over — not counted as defaulting (see Anomalies)`;
   document.getElementById('k-zero').textContent = zeroRepay;
   document.getElementById('k-inmoratorium').textContent = inMoratorium;
   document.getElementById('k-inmoratorium-note').textContent = `Still inside their moratorium (Livestock 1 month, Fishery 3, Agri-Horti 4), so nothing is due yet —${inMoratoriumUnpaid} haven't paid, ${inMoratorium-inMoratoriumUnpaid} already paid early. (${noDisbDate} more have no disbursement date recorded, so can't be placed here.)`;
@@ -2172,7 +2357,7 @@ function render(){
     <td style="text-align:right">${t.tenure} months</td><td style="text-align:right">${t.total} months</td><td style="text-align:right">${t.members}</td></tr>`).join('');
   const unknownHint = document.getElementById('tenureUnknownHint');
   const hintParts = [];
-  if(DATA.totals.activityUnknownCount>0) hintParts.push(`${DATA.totals.activityUnknownCount} loaned members have no loan type in column Y`);
+  if(DATA.totals.activityUnknownCount>0) hintParts.push(`${DATA.totals.activityUnknownCount} loaned members have no loan type entered`);
   if(notAllowed>0) hintParts.push(`${notAllowed} have a loan type that isn't allowed for their sheet`);
   if(hintParts.length){
     unknownHint.style.display='block';
@@ -2220,17 +2405,23 @@ function render(){
   window._memberByKey = {};
   filtered.forEach(m=>{ window._memberByKey[m.member+'||'+m.pg+'||'+m.district+'||'+m.block+'||'+m.vc] = m; });
 
-  const top = [...window._pgRows].sort((a,b)=>b.received-a.received).slice(0,10);
+  // Block-wise demand collection ratio (collected against column AB ÷ column AB), highest first.
+  const dcrBy = {};
+  filtered.filter(m=>m.demandKnown && m.demand>0).forEach(m=>{ const b = dcrBy[m.block] || (dcrBy[m.block] = {demand:0, collected:0, members:0, excess:0}); b.demand += m.demand; b.collected += Math.min(m.paid, m.demand); b.excess += m.excessDemand; b.members++; });
+  const dcrRows = Object.entries(dcrBy).map(([block,v])=>({block, ...v, dcr: v.collected / v.demand * 100})).sort((a,b)=>b.dcr-a.dcr);
+  const blocksInView = [...new Set(filtered.map(m=>m.block))];
+  const noDemandBlocks = blocksInView.filter(b=>!dcrBy[b]).sort();
+  window._dcrRows = dcrRows;
+  document.getElementById('pgChartWrap').style.height = Math.max(180, 26 * dcrRows.length + 50) + 'px';
+  document.getElementById('dcrChartNote').textContent = noDemandBlocks.length
+    ? `No demand entered, so not shown: ${noDemandBlocks.join(', ')}` : 'All blocks in view have demand entered';
   charts.pg = new Chart(document.getElementById('pgChart'), {
     type:'bar',
-    data:{ labels:top.map(p=>p.pg+' ('+p.block+')'), datasets:[
-      {label:'Disbursed',data:top.map(p=>p.received),backgroundColor:'#1a5f9e'},
-      {label:'Repaid',data:top.map(p=>p.paid),backgroundColor:'#1e7d3c'},
-      {label:'Total to repay',data:top.map(p=>p.totalToRepay),backgroundColor:'#b3261e'}
-    ]},
-    options:{ responsive:true, maintainAspectRatio:false,
-      scales:{x:{ticks:{autoSkip:false,maxRotation:45}},y:{beginAtZero:true}},
-      plugins:{legend:{display:true,position:'top'}} }
+    data:{ labels: dcrRows.map(r=>r.block), datasets:[{ label:'DCR %', data: dcrRows.map(r=>Math.round(r.dcr*10)/10),
+      backgroundColor: dcrRows.map(r=>r.dcr>=80 ? '#15803d' : r.dcr>=50 ? '#f59e0b' : '#b91c1c'), borderRadius:4 }]},
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      scales:{ x:{beginAtZero:true, max:100, ticks:{callback:v=>v+'%'}}, y:{ticks:{autoSkip:false}} },
+      plugins:{ legend:{display:false}, tooltip:{callbacks:{ label: c => { const r = dcrRows[c.dataIndex]; return ` DCR ${r.dcr.toFixed(1)}% — ${fmtRs(r.collected)} collected of ${fmtRs(r.demand)} demand (${r.members} members)` + (r.excess ? `, plus ${fmtRs(r.excess)} above demand` : ''); } }} } }
   });
 
   renderPgTable();
@@ -2243,7 +2434,50 @@ function render(){
   renderActivitySummary(filtered);
   renderSubActivitySummary(filtered);
   renderTracking();
+  renderDqReference(filtered);
   fitKpis();
+}
+// Data Quality page: block-wise MPR vs PG Database, and the schedule-based figures next to the column AB ones.
+function renderDqReference(filtered){
+  const n = v => v.toLocaleString('en-IN');
+  const pct = (a,b) => b>0 ? (a/b*100).toFixed(1)+'%' : '—';
+  const category = document.getElementById('fCategory').value;
+  const roster = rosterInView(filtered);
+  const by = {};
+  const row = (district, block) => by[block] || (by[block] = {district, block, pgs:new Set(), names:0, loan:0, sched:0, schedMembers:0, demand:0, paid:0,
+    overdueSched:0, overdueAB:0, defSched:0, defAB:0, missed:0, abMissing:0, dbPgs:0, dbMembers:0, dbLoan:0});
+  roster.forEach(r=>{ row(r.district, r.block).names++; });
+  filtered.forEach(m=>{
+    const b = row(m.district, m.block);
+    b.loan++; b.paid += m.paid; b.pgs.add(m.pg+'||'+m.vc);
+    if(m.cumulativeExpected!=null){ b.sched += m.cumulativeExpected; b.overdueSched += Math.max(m.cumulativeExpected - m.paid, 0); }
+    if(m.demandKnown){ b.demand += m.demand; b.overdueAB += m.shortfallDemand; }
+    if(m.isDefaulterSched) b.defSched++;
+    if(m.isDefaulter) b.defAB++;
+    if(m.missedMoratorium) b.missed++;
+    if(m.demandIssue) b.abMissing++;
+  });
+  Object.entries(PG_DB_TOTALS).forEach(([k,[pgs, members, took]])=>{
+    const [blk, c] = k.split('|');
+    if(!by[blk] || (category && c!==category)) return;
+    by[blk].dbPgs += pgs; by[blk].dbMembers += members; by[blk].dbLoan += took;
+  });
+  const rows = Object.values(by).sort((a,b)=>a.district.localeCompare(b.district) || a.block.localeCompare(b.block));
+  document.getElementById('dq-pgdb').innerHTML = rows.map(r=>`<tr><td>${r.district}</td><td>${r.block}</td>
+    <td style="text-align:right">${n(r.dbPgs)}</td><td style="text-align:right">${n(r.pgs.size)}</td>
+    <td style="text-align:right">${n(r.dbMembers)}</td><td style="text-align:right">${n(r.names)}</td><td style="text-align:right">${pct(r.names, r.dbMembers)}</td>
+    <td style="text-align:right">${r.dbLoan ? n(r.dbLoan) : '<span style="color:var(--text-dim)">not entered</span>'}</td><td style="text-align:right">${n(r.loan)}</td><td style="text-align:right">${pct(r.loan, r.dbMembers)}</td></tr>`).join('');
+  document.getElementById('dq-sched').innerHTML = rows.map(r=>`<tr><td>${r.district}</td><td>${r.block}</td><td style="text-align:right">${n(r.loan)}</td>
+    <td style="text-align:right">${fmtRs(r.sched)}</td><td style="text-align:right">${fmtRs(r.demand)}</td><td style="text-align:right">${fmtRs(r.paid)}</td>
+    <td style="text-align:right">${fmtRs(r.overdueSched)}</td><td style="text-align:right">${fmtRs(r.overdueAB)}</td>
+    <td style="text-align:right">${n(r.defSched)}</td><td style="text-align:right">${n(r.defAB)}</td><td style="text-align:right">${n(r.missed)}</td>
+    <td style="text-align:right;${r.abMissing?'color:var(--red);font-weight:600;':''}">${n(r.abMissing)}</td></tr>`).join('');
+  window._dqPgDbRows = rows.map(r=>({District:r.district, Block:r.block, 'PGs (PG Database)':r.dbPgs, 'PGs Tracked (MPR)':r.pgs.size, 'Members (PG Database)':r.dbMembers,
+    'Names In MPR':r.names, 'Names % Of PG Database':r.dbMembers?+(r.names/r.dbMembers*100).toFixed(1):'', 'Took Loan (PG Database)':r.dbLoan||'', 'Received Loan (MPR)':r.loan,
+    'Received % Of PG Database':r.dbMembers?+(r.loan/r.dbMembers*100).toFixed(1):''}));
+  window._dqSchedRows = rows.map(r=>({District:r.district, Block:r.block, 'Loan Members':r.loan, 'Should Have Repaid (schedule)':Math.round(r.sched), 'Demand':r.demand,
+    Repaid:Math.round(r.paid), 'Overdue (schedule)':Math.round(r.overdueSched), 'Overdue (demand)':r.overdueAB, 'Defaulting (schedule)':r.defSched, 'Defaulting (demand)':r.defAB,
+    'Missed Moratorium':r.missed, 'Demand Not Entered':r.abMissing}));
 }
 document.getElementById('fCategory').addEventListener('change', ()=>{ populateActivityOptions(); populateSubActOptions(); render(); });
 
@@ -2289,6 +2523,21 @@ document.querySelectorAll('#pendTable th').forEach(th=>th.addEventListener('clic
   st.dir = (st.key===k) ? -st.dir : 1; st.key = k; renderPending();
 }));
 
+// PG Database (Compiled Data) totals for the District / Block / Category filters. The database has no CLF / VC / PG /
+// sub-category split matching the MPR, so with those filters on, the block/category total is used (partial = true).
+function pgDbTotalsInView(){
+  const g = id => document.getElementById(id).value;
+  const district = g('fDistrict'), block = g('fBlock'), category = g('fCategory');
+  const blocks = block ? new Set([block]) : district ? (DISTRICT_BLOCKS[district] || new Set()) : null;
+  const out = {pgs:0, members:0, tookLoan:0, partial: !!(g('fClf') || g('fVc') || g('fPg') || g('fActivity') || g('fSubAct') || g('fStatus'))};
+  Object.entries(PG_DB_TOTALS).forEach(([k,[pgs, members, took]])=>{
+    const [b, c] = k.split('|');
+    if(blocks && !blocks.has(b)) return;
+    if(category && c!==category) return;
+    out.pgs += pgs; out.members += members; out.tookLoan += took;
+  });
+  return out;
+}
 // All named members matching the filters. The member-status filter only applies to members who received a
 // loan, so with it on (or with an older snapshot that has no roster) this falls back to the loan members.
 function rosterInView(filtered){
@@ -2528,20 +2777,38 @@ function changePage(delta){ memPage += delta; renderMemberTable(); }
 function renderDefTable(){
   let rows = window._defRows;
   const q = (document.getElementById('defSearch').value||'').toLowerCase();
+  const bucket = document.getElementById('defBucket').value;
   if(q) rows = rows.filter(r=>r.member.toLowerCase().includes(q)||r.pg.toLowerCase().includes(q));
+  if(bucket) rows = rows.filter(r=>r.overdueBucket===bucket);
+  window._defRowsShown = rows;
   const st = sortState.defaulters;
   if(st.key) rows = sortRows(rows, st.key, st.dir);
-  else rows = [...rows].sort((a,b)=>(b.shortfall||0)-(a.shortfall||0));
+  else rows = [...rows].sort((a,b)=>(b.shortfallDemand||0)-(a.shortfallDemand||0));
+  const bucketPill = b => `<span class="pill ${b==='More than 6 months'||b==='4–6 months'?'pill-red':b==='Paying regularly but less than demand'?'pill-blue':'pill-amber'}">${b||'—'}</span>`;
   const body = document.getElementById('defBody');
   body.innerHTML = rows.map(m=>`<tr>
     <td><span class="member-link" onclick="openScheduleModal('${m.member.replace(/'/g,"\\'")}','${m.pg.replace(/'/g,"\\'")}','${m.district.replace(/'/g,"\\'")}','${m.block.replace(/'/g,"\\'")}','${(m.vc||'').replace(/'/g,"\\'")}')">${m.member}</span></td>
     <td>${m.pg}</td><td>${m.district}</td><td>${m.block}</td><td>${m.pgCategory}</td><td>${m.subCategory}</td><td>${m.subActivity||'—'}</td><td>${m.activity}</td>
     <td style="text-align:right">${fmtRs(m.received)}</td>
-    <td style="text-align:right">${m.monthsSince!=null?Math.round(m.monthsSince):'-'}</td>
-    <td style="text-align:right">${m.repaymentsMade}</td>
-    <td style="text-align:right;color:var(--red);font-weight:600;">${fmtRs(m.shortfall||0)}</td>
+    <td style="text-align:right">${fmtRs(m.demand||0)}</td>
+    <td style="text-align:right">${fmtRs(m.paid)}</td>
+    <td style="text-align:right;color:var(--red);font-weight:600;">${fmtRs(m.shortfallDemand||0)}</td>
+    <td>${bucketPill(m.overdueBucket)}</td>
+    <td>${m.lastPaidDate?fmtD(m.lastPaidDate):'Never'}</td>
     <td>${m.reason}</td>
   </tr>`).join('');
+  // Members who repaid more than the demand.
+  const eq = (document.getElementById('excessSearch').value||'').toLowerCase();
+  let ex = (window._memberRows||[]).filter(m=>m.excessDemand>0);
+  if(eq) ex = ex.filter(r=>r.member.toLowerCase().includes(eq)||r.pg.toLowerCase().includes(eq));
+  ex = ex.sort((a,b)=>b.excessDemand-a.excessDemand);
+  window._excessRows = ex;
+  document.getElementById('excessTitle').textContent = `(${ex.length.toLocaleString('en-IN')} members, ${fmtRs(ex.reduce((s,m)=>s+m.excessDemand,0))} paid above demand)`;
+  document.getElementById('excessBody').innerHTML = ex.slice(0,500).map(m=>`<tr><td>${m.tab}</td><td>Row ${m.sheetRow}</td><td>${m.member}</td><td>${m.pg}</td><td>${m.block}</td><td>${m.pgCategory}</td>
+    <td style="text-align:right">${fmtRs(m.received)}</td><td style="text-align:right">${fmtRs(m.demand)}</td><td style="text-align:right">${fmtRs(m.paid)}</td>
+    <td style="text-align:right;color:var(--green);font-weight:600;">${fmtRs(m.excessDemand)}</td><td>${m.lastPaidDate?fmtD(m.lastPaidDate):'—'}</td></tr>`).join('')
+    + (ex.length>500 ? `<tr><td colspan="11" style="text-align:center;color:var(--text-dim)">Showing 500 of ${ex.length} — export to Excel for all</td></tr>` : '')
+    || '<tr><td colspan="11" style="text-align:center;color:var(--text-dim)">No member has paid more than the demand</td></tr>';
 }
 
 // ===== Payment history modal =====
@@ -2602,6 +2869,8 @@ function closeScheduleModal(){ document.getElementById('scheduleModal').classLis
 document.getElementById('pgSearch').addEventListener('input', renderPgTable);
 document.getElementById('memberSearch').addEventListener('input', ()=>{memPage=0; renderMemberTable();});
 document.getElementById('defSearch').addEventListener('input', renderDefTable);
+document.getElementById('defBucket').addEventListener('change', renderDefTable);
+document.getElementById('excessSearch').addEventListener('input', renderDefTable);
 ['fBlock','fCategory','fActivity','fSubAct','fClf','fVc','fPg','fStatus'].forEach(id=>document.getElementById(id).addEventListener('change', render));
 
 function clearFilters(){
@@ -2675,6 +2944,9 @@ function computeAnomalies(){
       .filter(Boolean).sort((a,b)=>a.block.localeCompare(b.block) || (a.tab||'').localeCompare(b.tab||'') || (a.sheetRow||0)-(b.sheetRow||0)),
     noLoanType: members.filter(m=>!loanTypeOf(m.activity)).map(m=>({tab:m.tab, sheetRow:m.sheetRow, member:m.member, pg:m.pg, district:m.district, block:m.block,
         category:m.pgCategory, subCategory:m.subCategory, received:m.received, expected:(/pig/i.test(m.subCategory) ? ['PPU','PFU'] : /goat/i.test(m.subCategory) ? ['GPU','GRU'] : (LOAN_TYPES[m.pgCategory]||[])).join(' or ')}))
+      .sort((a,b)=>a.block.localeCompare(b.block) || (a.tab||'').localeCompare(b.tab||'') || (a.sheetRow||0)-(b.sheetRow||0)),
+    abMissing: members.filter(m=>m.demandIssue).map(m=>({tab:m.tab, sheetRow:m.sheetRow, member:m.member, pg:m.pg, district:m.district, block:m.block,
+        category:m.pgCategory, received:m.received, paid:m.paid, monthsSince:m.monthsSince, issue:m.demandIssue, cell:(m.demandCol||'AB')+(m.sheetRow||'')}))
       .sort((a,b)=>a.block.localeCompare(b.block) || (a.tab||'').localeCompare(b.tab||'') || (a.sheetRow||0)-(b.sheetRow||0)),
     pgNameMismatch: (()=>{
       const seen = {};
@@ -2753,6 +3025,15 @@ function renderAnomalies(){
   const nlt = an.noLoanType||[];
   document.getElementById('cnt-noloantype').textContent = `(${nlt.length.toLocaleString('en-IN')} member${nlt.length===1?'':'s'}, ${fmtRs(nlt.reduce((s,r)=>s+r.received,0))} received)`;
   set('an-noloantype', nlt, r=>`<tr><td>${r.tab||''}</td><td>Row ${r.sheetRow||''}</td><td>${r.block}</td><td>${r.pg}</td><td>${r.member}</td><td>${r.subCategory}</td><td style="text-align:right">${fmtRs(r.received)}</td><td>${r.expected}</td></tr>`);
+
+  const abm = an.abMissing||[];
+  document.getElementById('cnt-abmissing').textContent = `(${abm.length.toLocaleString('en-IN')} member${abm.length===1?'':'s'}, ${fmtRs(abm.reduce((s,r)=>s+r.received,0))} received)`;
+  const abmBy = {};
+  abm.forEach(r=>{ const k = r.tab||r.block; abmBy[k] = (abmBy[k]||0) + 1; });
+  document.getElementById('abm-blocks').innerHTML = abm.length ? '<b>Where, by sheet tab:</b> ' + Object.entries(abmBy).sort((a,b)=>b[1]-a[1])
+    .map(([k,v])=>`<span class="pill pill-red" style="margin-right:4px;">${k}: ${v.toLocaleString('en-IN')}</span>`).join('') : '';
+  set('an-abmissing', abm.slice(0,1000), r=>`<tr><td>${r.tab||''}</td><td>Row ${r.sheetRow||''}</td><td>${r.block}</td><td>${r.pg}</td><td>${r.member}</td><td>${r.category}</td><td style="text-align:right">${fmtRs(r.received)}</td><td style="text-align:right">${fmtRs(r.paid)}</td><td style="text-align:right">${r.monthsSince!=null?Math.round(r.monthsSince):'—'}</td><td style="color:var(--red);">${r.issue}</td></tr>`);
+  if(abm.length>1000) document.getElementById('an-abmissing').insertAdjacentHTML('beforeend', `<tr><td colspan="10" style="text-align:center;color:var(--text-dim)">Showing 1,000 of ${abm.length.toLocaleString('en-IN')} — export to Excel for all</td></tr>`);
 }
 
 function exportAnomaly(which){
@@ -2762,12 +3043,13 @@ function exportAnomaly(which){
 }
 // Order of the sheets in "Export all anomalies" (same order as on the page), with short tab names (Excel: max 31).
 const ANOMALY_SHEETS = [
-  ['orphan','Repaid, no loan received'], ['paidMismatch','Total paid ≠ monthly'], ['pendMismatch','Column U mismatch'],
+  ['orphan','Repaid, no loan received'], ['paidMismatch','Total paid ≠ monthly'], ['pendMismatch','Pending amount mismatch'],
   ['zeroUpdate','No repayment updates'], ['dateNoAmount','Date but no amount'], ['receivedOverSanctioned','Received > sanctioned'],
   ['noSanctioned','Sanctioned not recorded'], ['dupLokos','Duplicate LokOS ID'], ['overpaid','Repaid > total due'],
   ['overMonths','Beyond loan tenure'], ['earlyRepayment','Completed early'], ['dataNoName','Data but no name'],
   ['noLokosId','No LokOS ID'], ['formulaErrors','Formula errors'], ['sheetLayouts','Sheet layout differs'],
   ['pgNameMismatch','PG name differs'], ['tenureFill','Tenure code counts up'], ['subActMismatch','Loan type not allowed'], ['noLoanType','Loan type not entered'],
+  ['abMissing','Demand not entered'],
 ];
 function exportAllAnomalies(){
   if(!window.XLSX){ alert('Excel export library failed to load.'); return; }
@@ -2784,7 +3066,7 @@ function anomalyExportRows(which){
   let rows, filename;
   if(which==='paidMismatch'){ rows=(an.paidMismatch||[]).map(r=>({'Sheet Tab':r.tab,'Sheet Row':r.sheetRow,Member:r.member,PG:r.pg,District:r.district,Block:r.block,'Total Paid Cell':r.paid,'Monthly Entries Total':r.monthly,Difference:r.diff})); filename='Anomaly_TotalPaidVsMonthly'; }
   else if(which==='orphan'){ rows=(an.orphan||[]).map(r=>({'Sheet Tab':r.tab,'Sheet Row':r.sheetRow,Member:r.member,PG:r.pg,District:r.district,Block:r.block,Category:r.pgCategory,Sanctioned:r.sanctioned,Disbursed:r.disbursed,Repaid:r.paid})); filename='Anomaly_RepaymentWithoutDisbursement'; }
-  else if(which==='pendMismatch'){ rows=(an.pendMismatch||[]).map(r=>({Member:r.member,PG:r.pg,District:r.district,Block:r.block,Category:r.category,'Sanctioned (L)':r.sanctioned,'Utilized (T)':r.utilized,'Sanctioned - Utilized':r.expected,'Column U in sheet':r.sheetU})); filename='Anomaly_PendingColumnU_Mismatch'; }
+  else if(which==='pendMismatch'){ rows=(an.pendMismatch||[]).map(r=>({Member:r.member,PG:r.pg,District:r.district,Block:r.block,Category:r.category,'Sanctioned':r.sanctioned,'Utilized':r.utilized,'Sanctioned - Utilized':r.expected,'Pending Loan amount in sheet':r.sheetU})); filename='Anomaly_PendingColumnU_Mismatch'; }
   else if(which==='zeroUpdate'){ rows=(an.zeroUpdate||[]).map(r=>({Member:r.member,PG:r.pg,District:r.district,Block:r.block,Category:r.category})); filename='Anomaly_ZeroRepaymentUpdates'; }
   else if(which==='dateNoAmount'){ rows=(an.dateNoAmount||[]).map(r=>({Member:r.member,PG:r.pg,Month:r.month,'Date Entered':r.date})); filename='Anomaly_DateWithoutAmount'; }
   else if(which==='receivedOverSanctioned'){ rows=(an.receivedOverSanctioned||[]).map(r=>({Member:r.member,PG:r.pg,Sanctioned:r.sanctioned,Received:r.received,Excess:r.received-r.sanctioned})); filename='Anomaly_ReceivedOverSanctioned'; }
@@ -2795,12 +3077,13 @@ function anomalyExportRows(which){
   else if(which==='earlyRepayment'){ rows=(an.earlyRepayment||[]).map(r=>({Member:r.member,PG:r.pg,'Months Since Loan':r.monthsSince,'Total Loan Period':r.totalPeriod})); filename='Anomaly_EarlyRepayment'; }
   else if(which==='dataNoName'){ rows=(an.dataNoName||[]).map(r=>({Source:r.source,'Sheet Row':r.rowNum,PG:r.pg})); filename='Anomaly_DataNoName'; }
   else if(which==='noLokosId'){ rows=(an.noLokosId||[]).map(r=>({Member:r.member,PG:r.pg})); filename='Anomaly_NoLokosId'; }
-  else if(which==='formulaErrors'){ rows=(an.formulaErrors||[]).map(r=>({District:r.district,Block:r.block,Category:r.pgCategory,'Sheet Row':r.sheetRow,Member:r.member,PG:r.pg,Error:r.errorTypes,'Cells With Error':r.count,'Where (column)':r.cells})); filename='Anomaly_FormulaErrors'; }
+  else if(which==='formulaErrors'){ rows=(an.formulaErrors||[]).map(r=>({District:r.district,Block:r.block,Category:r.pgCategory,'Sheet Row':r.sheetRow,Member:r.member,PG:r.pg,Error:r.errorTypes,'Cells With Error':r.count,'Where':r.cells})); filename='Anomaly_FormulaErrors'; }
   else if(which==='sheetLayouts'){ rows=(an.sheetLayouts||[]).map(r=>({District:r.district,Block:r.block,Category:r.pgCategory,Columns:r.cols,'Usual Columns':r.usualCols,Difference:r.diff,"What's Different":r.note})); filename='Anomaly_SheetLayout'; }
   else if(which==='pgNameMismatch'){ rows=(an.pgNameMismatch||[]).map(r=>({Block:r.block,'PG Name In Loan Sheet':r.pg,'PG Name In PG Database':r.dbName,'PG ID':r.pgId,'How Matched':r.how,Members:r.members})); filename='Anomaly_PGNameMismatch'; }
   else if(which==='tenureFill'){ rows=(an.tenureFill||[]).map(r=>({Block:r.block,PG:r.pg,Member:r.member,'Tenure In Sheet':r.inSheet,'Used By Dashboard':r.used})); filename='Anomaly_TenureAutoFill'; }
-  else if(which==='subActMismatch'){ rows=(an.subActMismatch||[]).map(r=>({'Sheet Tab':r.tab,'Sheet Row':r.sheetRow,District:r.district,Block:r.block,PG:r.pg,Member:r.member,Category:r.category,'Type of PG (col G)':r.subCategory,'Tenure Code (col Y)':r.tenure,"What's Wrong":r.problem,'Should Be':r.expected,'Loan Received':r.received,'Schedule Dashboard Is Using':r.received?r.scheduleUsed:''})); filename='Anomaly_LoanTypeNotAllowed'; }
-  else if(which==='noLoanType'){ rows=(an.noLoanType||[]).map(r=>({'Sheet Tab':r.tab,'Sheet Row':r.sheetRow,District:r.district,Block:r.block,PG:r.pg,Member:r.member,Category:r.category,'Type of PG (col G)':r.subCategory,'Loan Received':r.received,'Column Y Should Be One Of':r.expected})); filename='Anomaly_LoanTypeNotEntered'; }
+  else if(which==='subActMismatch'){ rows=(an.subActMismatch||[]).map(r=>({'Sheet Tab':r.tab,'Sheet Row':r.sheetRow,District:r.district,Block:r.block,PG:r.pg,Member:r.member,Category:r.category,'Type of PG':r.subCategory,'Tenure Code':r.tenure,"What's Wrong":r.problem,'Should Be':r.expected,'Loan Received':r.received,'Schedule Dashboard Is Using':r.received?r.scheduleUsed:''})); filename='Anomaly_LoanTypeNotAllowed'; }
+  else if(which==='noLoanType'){ rows=(an.noLoanType||[]).map(r=>({'Sheet Tab':r.tab,'Sheet Row':r.sheetRow,District:r.district,Block:r.block,PG:r.pg,Member:r.member,Category:r.category,'Type of PG':r.subCategory,'Loan Received':r.received,'Loan Type Should Be One Of':r.expected})); filename='Anomaly_LoanTypeNotEntered'; }
+  else if(which==='abMissing'){ rows=(an.abMissing||[]).map(r=>({'Sheet Tab':r.tab,'Sheet Row':r.sheetRow,District:r.district,Block:r.block,PG:r.pg,Member:r.member,Category:r.category,'Loan Received':r.received,Repaid:r.paid,'Months Since Loan':r.monthsSince!=null?Math.round(r.monthsSince):'',"What's Wrong":r.issue})); filename='Anomaly_DemandColumnAB_NotEntered'; }
   return {rows, filename};
 }
 
@@ -2809,7 +3092,7 @@ const EXPORT_TITLES = {
   allAnomalies: 'All anomalies: summary',
   orphan: 'Anomaly: Repayment entered but no loan amount received',
   paidMismatch: "Anomaly: Total paid column doesn't match the monthly repayment entries",
-  pendMismatch: 'Anomaly: Pending Loan amount (column U) ≠ Sanctioned − Utilized',
+  pendMismatch: 'Anomaly: Pending Loan amount ≠ Sanctioned − Utilized',
   zeroUpdate: 'Anomaly: Loan taken, no repayment updates ever',
   dateNoAmount: 'Anomaly: Repayment date entered, but amount is blank',
   receivedOverSanctioned: 'Anomaly: Amount received exceeds amount sanctioned',
@@ -2824,11 +3107,15 @@ const EXPORT_TITLES = {
   sheetLayouts: 'Anomaly: Sheet column layout differs from other sheets',
   pgNameMismatch: 'Anomaly: PG name differs from the PG Database',
   tenureFill: 'Anomaly: Tenure code counts up row by row (treated as Agri/Horti-12)',
-  subActMismatch: "Anomaly: Loan type (column Y) not allowed or doesn't match the PG type",
-  noLoanType: 'Anomaly: Loan received but loan type (column Y) not entered',
+  subActMismatch: "Anomaly: Loan type not allowed or doesn't match the PG type",
+  noLoanType: 'Anomaly: Loan received but loan type not entered',
+  abMissing: 'Anomaly: Loan received but demand not entered',
   pg: 'PG-wise summary',
   members: 'Member-wise loan and repayment details',
-  defaulters: 'Defaulting members',
+  defaulters: 'Defaulting members (repaid less than the demand)',
+  excess: 'Members who repaid more than the demand',
+  dqSchedule: "For reference: dashboard's own schedule-based figures vs the demand in the MPR sheets, block-wise",
+  dqPgDb: 'MPR sheets vs TRESP PG Database (Compiled Data), block-wise',
   activity: 'Category → Sub-category (type of PG) summary',
   subactivity: 'Category → Sub-activity summary',
   pending: 'Sanctioned but not (fully) disbursed',
@@ -2840,6 +3127,9 @@ const EXPORT_TITLES = {
   trackBlock: 'Data tracking: block-wise summary',
   trackPivot: 'Data tracking: block-wise day by day',
   trackRepay: 'Data tracking: repayments made',
+  trackDisb: 'Data tracking: loans disbursed',
+  ovDistrict: 'Overview figures: district-wise',
+  ovBlock: 'Overview figures: block-wise',
   trackNew: 'Data tracking: new names added to the sheets',
 };
 function activeFilterText(){
@@ -2849,6 +3139,61 @@ function activeFilterText(){
     if(sel && sel.value) parts.push(`${label ? label.textContent.trim() : sel.id}: ${sel.options[sel.selectedIndex].text.replace(/\s*\(\d+\)$/,'')}`);
   });
   return parts.length ? parts.join(' · ') : 'None (all districts, blocks and categories)';
+}
+// Overview figures grouped by district or block (same rules as the Overview cards), with an "All" total row.
+function overviewGroupRows(level){
+  const filtered = getFiltered(), roster = rosterInView(filtered), orphans = orphanInView();
+  const category = document.getElementById('fCategory').value;
+  const G = {};
+  const get = r => { const k = level==='block' ? r.district+'||'+r.block : level==='district' ? r.district : 'all';
+    return G[k] || (G[k] = {district: level==='all' ? 'All in view' : r.district, block: level==='block' ? r.block : (level==='all' ? '' : 'All blocks'), blocks:new Set(), names:0, loan:[], orphans:[]}); };
+  roster.forEach(r=>{ const g = get(r); g.names++; g.blocks.add(r.block); });
+  filtered.forEach(m=>{ const g = get(m); g.loan.push(m); g.blocks.add(m.block); });
+  orphans.forEach(o=>{ const g = get(o); g.orphans.push(o); g.blocks.add(o.block); });
+  const pct = (a,b) => b>0 ? +(a/b*100).toFixed(1) : '';
+  const sum = (list, f) => list.reduce((s,x)=>s+f(x),0);
+  const pgKeyOf = m => m.pg+'||'+m.district+'||'+m.block+'||'+m.vc;
+  const rows = Object.values(G).map(g=>{
+    const L = g.loan, repNoLoan = g.orphans.filter(o=>o.member && o.member!=='(no name)');
+    const db = {pgs:0, members:0, took:0};
+    Object.entries(PG_DB_TOTALS).forEach(([k,[p,mm,t]])=>{ const [b,c] = k.split('|'); if(g.blocks.has(b) && (!category || c===category)){ db.pgs+=p; db.members+=mm; db.took+=t; } });
+    const pgs = new Set(L.map(pgKeyOf).concat(g.orphans.filter(o=>o.pg).map(pgKeyOf)));
+    const pgStarted = new Set(L.filter(m=>m.startedRepayment).map(pgKeyOf).concat(g.orphans.filter(o=>o.pg).map(pgKeyOf)));
+    const loanMembers = L.length + repNoLoan.length, memStarted = L.filter(m=>m.startedRepayment).length + repNoLoan.length;
+    const dk = L.filter(m=>m.demandKnown && m.demand>0);
+    const demand = sum(dk, m=>m.demand), collected = sum(dk, m=>Math.min(m.paid, m.demand));
+    const defs = L.filter(m=>m.isDefaulter), bucket = b => defs.filter(m=>m.overdueBucket===b).length;
+    const excess = dk.filter(m=>m.excessDemand>0), regular = L.filter(m=>m.isRegular);
+    return {
+      District: g.district, ...(level==='block' ? {Block: g.block} : {}),
+      'Total Members (MPR)': g.names, 'Members In PG Database': db.members, 'Total Members %': pct(g.names, db.members),
+      'Members Who Received A Loan': loanMembers, 'Received Loan % (of PG Database)': pct(loanMembers, db.members), 'Took Loan (PG Database)': db.took || '',
+      'PGs In PG Database': db.pgs, 'PGs Tracked': pgs.size, 'PGs Tracked %': pct(pgs.size, db.pgs),
+      'PGs Where Repayment Started': pgStarted.size, 'PGs Started % (of PG Database)': pct(pgStarted.size, db.pgs),
+      'Members Who Started Repaying': memStarted, 'Members Started %': pct(memStarted, loanMembers),
+      'Total Disbursed': Math.round(sum(L, m=>m.received)), 'Total Repaid': Math.round(sum(L, m=>m.paid) + sum(g.orphans, o=>o.paid)),
+      'Total To Repay': Math.round(sum(L, m=>m.totalToRepay)), 'Repayment Gap': Math.round(sum(L, m=>Math.max(m.totalToRepay-m.paid,0))),
+      'Demand Till Date': demand, 'Collected Against Demand': Math.round(collected), 'Overdue Against Demand': sum(dk, m=>m.shortfallDemand), 'DCR %': pct(collected, demand),
+      'Defaulting Members': defs.length, 'Overdue Up To 3 Months': bucket('Up to 3 months'), 'Overdue 4–6 Months': bucket('4–6 months'), 'Overdue More Than 6 Months': bucket('More than 6 months'),
+      'Paying Regularly But Less Than Demand': bucket('Paying regularly but less than demand'), 'Overdue Period Unknown': bucket('Overdue period unknown'),
+      'Demand Not Entered': L.filter(m=>m.demandIssue).length,
+      'Amount Collected Above Demand': sum(excess, m=>m.excessDemand), 'Members Who Paid Above Demand': excess.length,
+      'Paying Regularly': regular.length, 'Paying Regularly — Full Demand Paid': regular.filter(m=>m.demandKnown && !m.isDefaulter).length,
+      'Never Made A Repayment': L.filter(m=>m.zeroRepayments).length, 'In Moratorium Period': L.filter(m=>m.monthsSince!=null && m.monthsSince<m.moratoriumMonths).length,
+      'Missed Moratorium': L.filter(m=>m.missedMoratorium).length, 'Loans Completed': L.filter(m=>m.isCompleted).length,
+    };
+  });
+  return rows.sort((a,b)=>a.District.localeCompare(b.District) || (a.Block||'').localeCompare(b.Block||''));
+}
+function exportOverview(){
+  if(!window.XLSX){ alert('Excel export library failed to load.'); return; }
+  if(!DATA.members || !DATA.members.length){ alert('Nothing to export yet — sync the data first.'); return; }
+  const total = overviewGroupRows('all')[0];
+  const withTotal = (rows, level) => { if(!total) return rows; const t = {...total}; if(level==='block'){ const {District, ...rest} = t; return rows.concat([{District, Block:'', ...rest}]); } return rows.concat([t]); };
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, buildExportSheet(withTotal(overviewGroupRows('district'),'district'), 'ovDistrict', 'Last row = all districts in view. Percentages are compared with the TRESP PG Database (Compiled Data).'), 'District-wise');
+  XLSX.utils.book_append_sheet(wb, buildExportSheet(withTotal(overviewGroupRows('block'),'block'), 'ovBlock', 'Last row = all blocks in view. Percentages are compared with the TRESP PG Database (Compiled Data).'), 'Block-wise');
+  XLSX.writeFile(wb, `TRESP_Overview_District_Block_${isoDate(new Date())}.xlsx`);
 }
 function writeExport(rows, filename, key){
   if(!window.XLSX){ alert('Excel export library failed to load.'); return; }
@@ -3030,7 +3375,7 @@ function renderTracking(){
     if(!c.paidDate) notes.push(c.seenDate ? `No date in sheet · first seen ${fmtD(c.seenDate)}` : `No date in sheet · already there on ${fmtD(repSeenStart)}`);
     reps.push({date:c.paidDate, seen:c.seenDate||null, member:(m.member||'').trim(), pg:m.pg, district:m.district, block:m.block, category:m.pgCategory,
       month:c.month, dueIn: dueMonthLabel(m.disbDate, c.month), prin: c.prin!=null?c.prin:null, int: c.int!=null?c.int:null, amt:c.paidAmount,
-      tab:m.tab, row:m.sheetRow, col:c.dateCol, note:notes.join('; ')});
+      tab:m.tab, row:m.sheetRow, col:c.dateCol, amtCols: c.prinCol ? `${c.prinCol}${m.sheetRow}, ${c.intCol}${m.sheetRow}` : '', note:notes.join('; ')});
   });
   filtered.forEach(m=>addReps(m,false));
   orphanInView().forEach(o=>addReps(o,true));
@@ -3141,12 +3486,18 @@ function renderTracking(){
   document.getElementById('trkRepTitle').textContent = `(${repList.length.toLocaleString('en-IN')} entries, ${fmtRs(repList.reduce((s,r)=>s+r.amt,0))})`;
   document.getElementById('trkRepBody').innerHTML = repList.slice(0,LIMIT).map(r=>`<tr><td>${fmtD(r.date)}</td><td>${r.member}</td><td>${r.pg}</td><td>${r.block}</td><td>${r.category}</td>
     <td>Month ${r.month}</td><td>${r.dueIn}</td><td style="text-align:right">${amt(r.prin)}</td><td style="text-align:right">${amt(r.int)}</td><td style="text-align:right;font-weight:600">${fmtRs(r.amt)}</td>
-    <td>${r.tab||''} · row ${r.row||''} · ${r.col||''}</td><td>${r.note?`<span class="pill pill-amber">${r.note}</span>`:''}</td></tr>`).join('') + more(repList.length, 12)
-    || '<tr><td colspan="12" style="text-align:center;color:var(--text-dim)">No repayments</td></tr>';
+    <td>${r.tab||''}</td><td style="font-weight:600">Row ${r.row||'—'}</td><td>${r.note?`<span class="pill pill-amber">${r.note}</span>`:''}</td></tr>`).join('') + more(repList.length, 13)
+    || '<tr><td colspan="13" style="text-align:center;color:var(--text-dim)">No repayments</td></tr>';
+  document.getElementById('trkDisbTitle').textContent = `(${disbList.length.toLocaleString('en-IN')} members, ${fmtRs(disbList.reduce((s,m)=>s+m.received,0))})`;
+  const disbSorted = [...disbList].sort((a,b)=>b.disbDate.localeCompare(a.disbDate) || a.block.localeCompare(b.block) || (a.tab||'').localeCompare(b.tab||'') || (a.sheetRow||0)-(b.sheetRow||0));
+  window._trk.disb = disbSorted;
+  document.getElementById('trkDisbBody').innerHTML = disbSorted.slice(0,LIMIT).map(m=>`<tr><td>${fmtD(m.disbDate)}</td><td>${m.member}</td><td>${m.pg}</td><td>${m.block}</td><td>${m.pgCategory}</td>
+    <td style="text-align:right">${fmtRs(m.received)}</td><td>${m.tab||''}</td><td style="font-weight:600">Row ${m.sheetRow||'—'}</td></tr>`).join('') + more(disbSorted.length, 8)
+    || '<tr><td colspan="8" style="text-align:center;color:var(--text-dim)">No loans disbursed in this period</td></tr>';
   document.getElementById('trkNewTitle').textContent = started ? `(${newList.length.toLocaleString('en-IN')})` : '';
   document.getElementById('trkNewBody').innerHTML = newList.slice(0,LIMIT).map(r=>`<tr><td>${fmtD(r.firstSeen)}</td><td>${r.member}</td><td>${r.pg}</td><td>${r.block}</td><td>${r.pgCategory}</td><td>${r.subCategory}</td>
-    <td>${r.tab||''} · row ${r.sheetRow||''}</td><td style="text-align:right">${r.received?fmtRs(r.received):'–'}</td><td>${fmtD(r.disbDate)}</td></tr>`).join('') + more(newList.length, 9)
-    || `<tr><td colspan="9" style="text-align:center;color:var(--text-dim)">${started ? 'No new names in this period' : 'Tracking starts with the first complete sync'}</td></tr>`;
+    <td>${r.tab||''}</td><td style="font-weight:600">Row ${r.sheetRow||'—'}</td><td style="text-align:right">${r.received?fmtRs(r.received):'–'}</td><td>${fmtD(r.disbDate)}</td></tr>`).join('') + more(newList.length, 10)
+    || `<tr><td colspan="10" style="text-align:center;color:var(--text-dim)">${started ? 'No new names in this period' : 'Tracking starts with the first complete sync'}</td></tr>`;
   fitKpis();
 }
 document.querySelectorAll('.trk-btn').forEach(b=>b.addEventListener('click', ()=>setTrackRange(b.dataset.range)));
@@ -3165,11 +3516,17 @@ function exportTable(which){
     rows = window._pgRows.map(p=>({PG:p.pg,'PG ID':p.pgId||'',District:p.district,Block:p.block,Category:p.category,'Sub-category':p.subCategory,VC:p.vc,CLF:p.clf,Members:p.members,'Repayment Started':p.pgStartedRepayment?'Yes':'No',Disbursed:p.received,Repaid:p.paid,'Total To Repay':p.totalToRepay,'Repayment Gap':p.repaymentGap,'Never Repaid':p.zeroCount,'Missed Moratorium':p.missedMoratoriumCount,Defaulting:p.defaulters,Completed:p.completedCount}));
     filename = 'TRESP_PG_Summary';
   } else if(which==='members'){
-    rows = window._memberRows.map(m=>({Member:m.member,PG:m.pg,'PG ID':m.pgId||'',District:m.district,Block:m.block,Category:m.pgCategory,'Sub-category':m.subCategory,'Sub-activity':m.subActivity,'Sub-activity Identified From':m.subActivityBasis,'Loan Type (Tenure)':m.activity,'Repay Window (months)':m.tenureMonths,'Total Loan Period (months)':m.totalLoanPeriod,Received:m.received,Paid:m.paid,'Total To Repay':m.totalToRepay,'Schedule Used':m.product?`${m.product} (${m.scheduleBasis})`:m.scheduleBasis,'Amount Due To Date (incl. interest)':m.cumulativeExpected,'Paid vs Due':m.dueVsPaid,Shortfall:m.shortfall,'Months Since Loan':m.monthsSince,'Repayments Made':m.repaymentsMade,'Started Repayment':m.startedRepayment?'Yes':'No','Missed Moratorium':m.missedMoratorium?'Yes':'No',Completed:m.isCompleted?'Yes':'No',Status:m.statusLabel}));
+    rows = window._memberRows.map(m=>({Member:m.member,PG:m.pg,'PG ID':m.pgId||'',District:m.district,Block:m.block,Category:m.pgCategory,'Sub-category':m.subCategory,'Sub-activity':m.subActivity,'Sub-activity Identified From':m.subActivityBasis,'Loan Type (Tenure)':m.activity,'Repay Window (months)':m.tenureMonths,'Total Loan Period (months)':m.totalLoanPeriod,Received:m.received,Paid:m.paid,'Total To Repay':m.totalToRepay,'Schedule Used':m.product?`${m.product} (${m.scheduleBasis})`:m.scheduleBasis,'Amount Due To Date (incl. interest)':m.cumulativeExpected,'Paid vs Due':m.dueVsPaid,Shortfall:m.shortfall,'Months Since Loan':m.monthsSince,'Repayments Made':m.repaymentsMade,'Started Repayment':m.startedRepayment?'Yes':'No','Missed Moratorium':m.missedMoratorium?'Yes':'No','Demand':m.demandKnown?m.demand:(m.demandIssue||''),'Short Of Demand':m.shortfallDemand,'Paid Above Demand':m.excessDemand||'','Overdue Period':m.overdueBucket||'','Paying Regularly':m.isRegular?'Yes':'No',Completed:m.isCompleted?'Yes':'No',Status:m.statusLabel}));
     filename = 'TRESP_Members';
   } else if(which==='defaulters'){
-    rows = window._defRows.map(m=>({Member:m.member,PG:m.pg,District:m.district,Block:m.block,Category:m.pgCategory,'Sub-category':m.subCategory,'Sub-activity':m.subActivity,'Sub-activity Identified From':m.subActivityBasis,'Loan Type (Tenure)':m.activity,Received:m.received,'Months Since Loan':m.monthsSince,'Repayments Made':m.repaymentsMade,Shortfall:m.shortfall,Reason:m.reason}));
+    rows = (window._defRowsShown||window._defRows).map(m=>({'Sheet Tab':m.tab,'Sheet Row':m.sheetRow,Member:m.member,PG:m.pg,District:m.district,Block:m.block,Category:m.pgCategory,'Sub-category':m.subCategory,'Sub-activity':m.subActivity,'Loan Type (Tenure)':m.activity,Received:m.received,'Demand':m.demand,Repaid:m.paid,'Short Of Demand':m.shortfallDemand,'Overdue Period':m.overdueBucket,'Months Since Last Repayment':m.monthsNoPay!=null?Math.round(m.monthsNoPay):'','Last Repayment':m.lastPaidDate?fmtD(m.lastPaidDate):'Never','Months Since Loan':m.monthsSince!=null?Math.round(m.monthsSince):'','Repayments Made':m.repaymentsMade,Reason:m.reason}));
     filename = 'TRESP_Defaulters';
+  } else if(which==='excess'){
+    rows = (window._excessRows||[]).map(m=>({'Sheet Tab':m.tab,'Sheet Row':m.sheetRow,Member:m.member,PG:m.pg,District:m.district,Block:m.block,Category:m.pgCategory,'Loan Type (Tenure)':m.activity,Received:m.received,'Demand':m.demand,Repaid:m.paid,'Paid Extra':m.excessDemand,'Last Repayment':m.lastPaidDate?fmtD(m.lastPaidDate):''}));
+    filename = 'TRESP_Paid_More_Than_Demand';
+  } else if(which==='dqSchedule' || which==='dqPgDb'){
+    rows = (which==='dqSchedule' ? window._dqSchedRows : window._dqPgDbRows) || [];
+    filename = which==='dqSchedule' ? 'TRESP_Schedule_vs_ColumnAB' : 'TRESP_MPR_vs_PG_Database';
   } else if(which==='activity'){
     rows = (window._activityRows||[]).map(r=>({Category:r.category,'Sub-category':r.total?'All sub-categories':r.activity,Members:r.members,PGs:r.pgs,Disbursed:r.received,Repaid:r.paid,Defaulting:r.defaulters,Completed:r.completedCount}));
     filename = 'TRESP_Category_Activity_Summary';
@@ -3203,8 +3560,11 @@ function exportTable(which){
     rows = ((window._trk||{}).blocks||[]).map(x=>({District:x.district,Block:x.block,'New Names Added':x.newNames,'Loans Disbursed':x.disbursed,'Repayment Entries':x.repEntries,'Members Who Repaid':x.repMembers.size,Principal:Math.round(x.prin),Interest:Math.round(x.int),'Total Repaid':Math.round(x.amt),'Last Repayment Date':x.lastDate?fmtD(x.lastDate):'','Repayments With No Date (entries)':x.ndEntries,'No-Date Amount':Math.round(x.ndAmt)}));
     filename = 'TRESP_Tracking_Blockwise';
   } else if(which==='trackRepay'){
-    rows = ((window._trk||{}).reps||[]).map(r=>({'Repayment Date':fmtD(r.date),Member:r.member,PG:r.pg,District:r.district,Block:r.block,Category:r.category,'Instalment Month':r.month,'Due In':r.dueIn,Principal:r.prin,Interest:r.int,Total:r.amt,'Sheet Tab':r.tab,'Sheet Row':r.row,'Date Column':r.col,Note:r.note}));
+    rows = ((window._trk||{}).reps||[]).map(r=>({'Repayment Date':fmtD(r.date),Member:r.member,PG:r.pg,District:r.district,Block:r.block,Category:r.category,'Instalment Month':r.month,'Due In':r.dueIn,Principal:r.prin,Interest:r.int,Total:r.amt,'Sheet Tab':r.tab,'Sheet Row':r.row,Note:r.note}));
     filename = 'TRESP_Tracking_Repayments';
+  } else if(which==='trackDisb'){
+    rows = ((window._trk||{}).disb||[]).map(m=>({'First Disbursement':fmtD(m.disbDate),Member:m.member,PG:m.pg,District:m.district,Block:m.block,Category:m.pgCategory,'Loan Received':m.received,'Sheet Tab':m.tab,'Sheet Row':m.sheetRow}));
+    filename = 'TRESP_Tracking_Loans_Disbursed';
   } else if(which==='trackNew'){
     rows = ((window._trk||{}).news||[]).map(r=>({'First Seen':fmtD(r.firstSeen),Member:r.member,PG:r.pg,District:r.district,Block:r.block,Category:r.pgCategory,'Sub-category':r.subCategory,'Sheet Tab':r.tab,'Sheet Row':r.sheetRow,'Loan Received':r.received,'First Disbursement':fmtD(r.disbDate)}));
     filename = 'TRESP_Tracking_New_Names';
