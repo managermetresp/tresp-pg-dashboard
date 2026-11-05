@@ -838,6 +838,13 @@ tbody tr:hover td{background:var(--blue-light);}
           <table><thead><tr><th>Member</th><th>PG</th><th style="text-align:right">Months since loan</th><th style="text-align:right">Total loan period</th></tr></thead><tbody id="an-early"></tbody></table>
         </div>
 
+        <div class="section-title">Loan amount received but no member name <span id="cnt-recnoname"></span></div>
+        <div class="hint-box">These rows show a loan amount <b>received</b> (disbursed in cash or kind) but the member name is blank, so they are left out of every member count and amount on this dashboard. The amount, sanctioned figure and any repayment are listed row by row so the name can be filled in at the source. Total at the foot of the table.</div>
+        <div class="table-toolbar"><button class="export-btn" onclick="exportAnomaly('receivedNoName')">⬇ Export to Excel</button></div>
+        <div class="table-wrap" style="margin-bottom:22px;">
+          <table><thead><tr><th>Sheet tab</th><th>Row</th><th>District / DPMU Zone</th><th>Block</th><th>Category</th><th>PG</th><th>VC</th><th>CLF</th><th style="text-align:right">Sanctioned</th><th style="text-align:right">Received</th><th style="text-align:right">Repaid</th></tr></thead><tbody id="an-recnoname"></tbody></table>
+        </div>
+
         <div class="section-title">Loan data entered but member name is blank <span id="cnt-noname"></span></div>
         <div class="hint-box">These rows have financial data filled in (sanctioned/received amounts) but no member name — they're silently excluded from every other page of this dashboard since there's no name to key them on. They need the name filled in at the source.</div>
         <div class="table-toolbar"><button class="export-btn" onclick="exportAnomaly('dataNoName')">⬇ Export to Excel</button></div>
@@ -1469,7 +1476,7 @@ function buildMemberRecordsFromSheet(rows, source, rowOffset){
   allDataRows.forEach((r,i)=>{
     const nameBlank = !r[COL.member] || !r[COL.member].trim();
     const hasData = toNum(r[COL.sanctioned])>0 || toNum(r[COL.received])>0;
-    if(nameBlank && hasData) result.dataNoName.push({rowNum:i+rowOffset+1, tab, pg:(r[COL.pg]||'').trim(), district:source.district, block:source.block, category:source.category, source: source.district+' / '+source.block+' / '+source.category});
+    if(nameBlank && hasData) result.dataNoName.push({idx:i, rowNum:i+rowOffset+1, tab, sanctioned:Math.round(toNum(r[COL.sanctioned])), received:Math.round(toNum(r[COL.received])), paid:0, vc:normPlace(r[COL.vc]), clf:normPlace(r[COL.clf]), pg:(r[COL.pg]||'').trim(), district:source.district, block:source.block, category:source.category, source: source.district+' / '+source.block+' / '+source.category});
   });
   // Column positions after the fixed block differ between sheets (e.g. Livestock sheets have 29 monthly
   // repayment groups, others 15), so find them from the header text.
@@ -1500,6 +1507,8 @@ function buildMemberRecordsFromSheet(rows, source, rowOffset){
   if(!monthCols.length){
     for(let n=1;n<=15;n++){ const base = COL.monthStart + (n-1)*3; monthCols.push({n, dateIdx: base, prinIdx: base+1, intIdx: base+2}); }
   }
+  // Repaid amount for the rows above that have data but no member name.
+  result.dataNoName.forEach(x=>{ const rr = allDataRows[x.idx]; x.paid = rr ? Math.round(toNum(rr[totalPaidIdx])) : 0; });
   // Repayments recorded against rows that have no disbursed amount (so they are not counted as members).
   allDataRows.forEach((r,i)=>{
     const p = toNum(r[totalPaidIdx]);
@@ -2931,6 +2940,7 @@ function computeAnomalies(){
     overMonths: members.filter(m=>m.tenureMonths!=null && m.repaymentsMade > m.tenureMonths).map(m=>({member:m.member, pg:m.pg, block:m.block, repaymentsMade:m.repaymentsMade, tenureMonths:m.tenureMonths})),
     earlyRepayment: members.filter(m=>m.isCompleted && m.totalLoanPeriod!=null && m.monthsSince!=null && m.monthsSince < m.totalLoanPeriod).map(m=>({member:m.member, pg:m.pg, monthsSince:m.monthsSince, totalPeriod:m.totalLoanPeriod})),
     dataNoName: ((DATA.anomalies||{}).dataNoName||[]).filter(r=>(!district||r.district===district)&&(!block||r.block===block)&&(!category||r.category===category)&&(!pg||r.pg===pg)),
+    receivedNoName: ((DATA.anomalies||{}).dataNoName||[]).filter(r=>(r.received||0)>0&&(!district||r.district===district)&&(!block||r.block===block)&&(!category||r.category===category)&&(!pg||r.pg===pg)),
     noLokosId: members.filter(m=>!m.lokosId).map(m=>({member:m.member, pg:m.pg})),
     orphan: orphanInView(),
     paidMismatch: members.map(m=>{ const monthly = Math.round((m.schedule||[]).reduce((s,c)=>s+c.paidAmount,0)); return {tab:m.tab, sheetRow:m.sheetRow, member:m.member, pg:m.pg, block:m.block, district:m.district, paid:m.paid, monthly, diff:m.paid-monthly}; })
@@ -2999,6 +3009,9 @@ function renderAnomalies(){
   document.getElementById('cnt-early').textContent = `(${(an.earlyRepayment||[]).length})`;
   set('an-early', an.earlyRepayment, r=>`<tr><td>${r.member}</td><td>${r.pg}</td><td style="text-align:right">${Math.round(r.monthsSince)}</td><td style="text-align:right">${r.totalPeriod}</td></tr>`);
 
+  document.getElementById('cnt-recnoname').textContent = `(${(an.receivedNoName||[]).length})`;
+  set('an-recnoname', an.receivedNoName, r=>`<tr><td>${r.tab||''}</td><td>Row ${r.rowNum}</td><td>${r.district}</td><td>${r.block}</td><td>${r.category}</td><td>${r.pg}</td><td>${r.vc||''}</td><td>${r.clf||''}</td><td style="text-align:right">₹${(r.sanctioned||0).toLocaleString('en-IN')}</td><td style="text-align:right">₹${(r.received||0).toLocaleString('en-IN')}</td><td style="text-align:right">₹${(r.paid||0).toLocaleString('en-IN')}</td></tr>`);
+  if((an.receivedNoName||[]).length){ const tr=an.receivedNoName.reduce((a,r)=>a+(r.received||0),0), ts=an.receivedNoName.reduce((a,r)=>a+(r.sanctioned||0),0), tp=an.receivedNoName.reduce((a,r)=>a+(r.paid||0),0); document.getElementById('an-recnoname').insertAdjacentHTML('beforeend', `<tr style="font-weight:700;background:var(--blue-light)"><td colspan="8">Total (${an.receivedNoName.length} rows)</td><td style="text-align:right">₹${ts.toLocaleString('en-IN')}</td><td style="text-align:right">₹${tr.toLocaleString('en-IN')}</td><td style="text-align:right">₹${tp.toLocaleString('en-IN')}</td></tr>`); }
   document.getElementById('cnt-noname').textContent = `(${(an.dataNoName||[]).length})`;
   set('an-noname', an.dataNoName, r=>`<tr><td>${r.source}</td><td>Row ${r.rowNum}</td><td>${r.pg}</td></tr>`);
 
@@ -3046,7 +3059,7 @@ const ANOMALY_SHEETS = [
   ['orphan','Repaid, no loan received'], ['paidMismatch','Total paid ≠ monthly'], ['pendMismatch','Pending amount mismatch'],
   ['zeroUpdate','No repayment updates'], ['dateNoAmount','Date but no amount'], ['receivedOverSanctioned','Received > sanctioned'],
   ['noSanctioned','Sanctioned not recorded'], ['dupLokos','Duplicate LokOS ID'], ['overpaid','Repaid > total due'],
-  ['overMonths','Beyond loan tenure'], ['earlyRepayment','Completed early'], ['dataNoName','Data but no name'],
+  ['overMonths','Beyond loan tenure'], ['earlyRepayment','Completed early'], ['receivedNoName','Received, no name'], ['dataNoName','Data but no name'],
   ['noLokosId','No LokOS ID'], ['formulaErrors','Formula errors'], ['sheetLayouts','Sheet layout differs'],
   ['pgNameMismatch','PG name differs'], ['tenureFill','Tenure code counts up'], ['subActMismatch','Loan type not allowed'], ['noLoanType','Loan type not entered'],
   ['abMissing','Demand not entered'],
@@ -3075,6 +3088,7 @@ function anomalyExportRows(which){
   else if(which==='overpaid'){ rows=(an.overpaid||[]).map(r=>({Member:r.member,PG:r.pg,Block:r.block,Paid:r.paid,'Total To Repay':r.totalToRepay,Excess:r.excess})); filename='Anomaly_RepaidOverTotal'; }
   else if(which==='overMonths'){ rows=(an.overMonths||[]).map(r=>({Member:r.member,PG:r.pg,Block:r.block,'Repayments Made':r.repaymentsMade,'Tenure Months':r.tenureMonths})); filename='Anomaly_RepaymentsBeyondTenure'; }
   else if(which==='earlyRepayment'){ rows=(an.earlyRepayment||[]).map(r=>({Member:r.member,PG:r.pg,'Months Since Loan':r.monthsSince,'Total Loan Period':r.totalPeriod})); filename='Anomaly_EarlyRepayment'; }
+  else if(which==='receivedNoName'){ rows=(an.receivedNoName||[]).map(r=>({'Sheet Tab':r.tab,'Sheet Row':r.rowNum,District:r.district,Block:r.block,Category:r.category,PG:r.pg,VC:r.vc||'',CLF:r.clf||'',Sanctioned:r.sanctioned||0,Received:r.received||0,Repaid:r.paid||0})); filename='Anomaly_ReceivedNoName'; }
   else if(which==='dataNoName'){ rows=(an.dataNoName||[]).map(r=>({Source:r.source,'Sheet Row':r.rowNum,PG:r.pg})); filename='Anomaly_DataNoName'; }
   else if(which==='noLokosId'){ rows=(an.noLokosId||[]).map(r=>({Member:r.member,PG:r.pg})); filename='Anomaly_NoLokosId'; }
   else if(which==='formulaErrors'){ rows=(an.formulaErrors||[]).map(r=>({District:r.district,Block:r.block,Category:r.pgCategory,'Sheet Row':r.sheetRow,Member:r.member,PG:r.pg,Error:r.errorTypes,'Cells With Error':r.count,'Where':r.cells})); filename='Anomaly_FormulaErrors'; }
@@ -3101,6 +3115,7 @@ const EXPORT_TITLES = {
   overpaid: 'Anomaly: Repaid more than the total amount due',
   overMonths: 'Anomaly: Repayments made beyond the loan tenure',
   earlyRepayment: 'Anomaly: Members who completed repayment early',
+  receivedNoName: 'Anomaly: Loan amount received but no member name',
   dataNoName: 'Anomaly: Loan data entered but member name is blank',
   noLokosId: 'Anomaly: Loaned members with no LokOS ID entered',
   formulaErrors: 'Anomaly: Formula errors in the sheet (#REF!, #VALUE!, #N/A…)',
