@@ -2283,7 +2283,9 @@ function render(){
   const pgStartedInView = new Set(filtered.filter(m=>m.startedRepayment).map(pgKeyOf).concat(orphanRows.filter(o=>o.pg).map(pgKeyOf)));
   const loanMembers = filtered.length + repayingNoLoan.length;
 
-  const totalMembers = rosterInView(filtered).length;
+  const rosterV = rosterInView(filtered);
+  const totalMembers = rosterV.length;
+  const totalMemPgs = new Set(rosterV.map(r=>r.pg+'||'+r.district+'||'+r.block+'||'+r.vc)).size;  // PGs behind the "Total members" number
   // Reference totals from the PG Database for the district / block / category in view.
   const db = pgDbTotalsInView();
   const n = v => v.toLocaleString('en-IN');
@@ -2307,7 +2309,7 @@ function render(){
   pctCard('k-pg', pgSet.size, db.pgs, 'PGs in PG Database');
   pctCard('k-pgstarted', pgStartedInView.size, db.pgs, 'PGs in PG Database');
   pctCard('k-memstarted', memStarted, loanMembers, 'members who received a loan');
-  document.getElementById('k-memtotal-note').textContent = db.partial ? 'Named in the MPR sheets · PG Database totals aren\'t split by CLF / VC / PG / sub-category' : 'Named in the MPR sheets';
+  document.getElementById('k-memtotal-note').textContent = `Named in the MPR sheets, from ${n(totalMemPgs)} PGs` + (db.partial ? ' \u2014 PG Database totals aren\'t split by CLF / VC / PG / sub-category' : '');
   document.getElementById('k-recv').textContent = fmtRs(received);
   const orphanPaid = orphanRows.reduce((s,m)=>s+m.paid,0);
   document.getElementById('k-paid').textContent = fmtRs(paid + orphanPaid);
