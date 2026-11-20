@@ -27,7 +27,7 @@ a{color:var(--teal);text-decoration:none;font-weight:600}a:hover{text-decoration
 <header><h1>TRESP Producer Group Profile Dashboard</h1><p id="sub"></p></header>
 <div class="wrap">
 <div class="filters">
-<label>District<select id="fD"></select></label><label>Block<select id="fB"></select></label><label>Gram Panchayat / VC<select id="fV"></select></label><label>Commodity<select id="fC"><option value="">All</option><option>Agri-Horti</option><option>Fishery</option><option>Livestock</option></select></label>
+<label>District<select id="fD"></select></label><label>Block<select id="fB"></select></label><label>CLF<select id="fL"></select></label><label>Gram Panchayat / VC<select id="fV"></select></label><label>Commodity<select id="fC"><option value="">All</option><option>Agri-Horti</option><option>Fishery</option><option>Livestock</option></select></label>
 <label>PG<select id="fP"></select></label><label>Search PG, SHG, CLF or GP/VC<input id="fS" placeholder="type to search"></label><label>&nbsp;<button class="ghost" onclick="resetF()">Clear filters</button></label><label>Member verification forms<span id="fbar"></span></label></div>
 <h2>Member details</h2><p class="note">Every member in the filtered PGs, PG by PG (sorted by block, Gram Panchayat / VC, PG, then Sl.; PG details are in the last four columns, and shown above the table when one PG is selected). Click a column heading to sort by it.</p>
 <p id="mpg" class="note"></p><div id="mform" class="note"></div><div class="pager"><button class="ghost" onclick="mp(-1)">Previous</button><span id="mi"></span><button class="ghost" onclick="mp(1)">Next</button><button onclick="dl('mem')">Download member details (CSV)</button></div>
@@ -58,21 +58,23 @@ let F=[],FS=new Set(),mPage=0,mSortK=null,mSortD=1,pgSel=null,page=0,sPage=0,sSo
 const opts=(el,list,all)=>{el.innerHTML=`<option value="">${all}</option>`+list.map(x=>`<option>${x}</option>`).join('')};
 opts($('fD'),[...new Set(P.map(p=>p.dist))].sort(),'All districts');
 const cmp=(a,b)=>String(a).localeCompare(String(b),undefined,{sensitivity:'base',numeric:true});
-function blocks(){const d=$('fD').value;opts($('fB'),[...new Set(P.filter(p=>!d||p.dist===d).map(p=>p.block))].sort(cmp),'All blocks');vcs()}
-function pgs(){const d=$('fD').value,b=$('fB').value,v=$('fV').value,c=$('fC').value,keep=$('fP').value;
-const a=P.filter(p=>(!d||p.dist===d)&&(!b||p.block===b)&&(!v||p.vc.trim().toUpperCase()===v)&&(!c||p.cat===c)).sort((x,y)=>cmp(x.name.trim(),y.name.trim())||x.i-y.i);
+function blocks(){const d=$('fD').value;opts($('fB'),[...new Set(P.filter(p=>!d||p.dist===d).map(p=>p.block))].sort(cmp),'All blocks');clfs()}
+const CL=p=>(p.clf&&p.clf!=='--')?p.clf.trim():'(CLF not recorded)';
+function clfs(){const d=$('fD').value,b=$('fB').value;opts($('fL'),[...new Set(P.filter(p=>(!d||p.dist===d)&&(!b||p.block===b)).map(CL))].sort(cmp),'All CLFs');vcs()}
+function pgs(){const d=$('fD').value,b=$('fB').value,l=$('fL').value,v=$('fV').value,c=$('fC').value,keep=$('fP').value;
+const a=P.filter(p=>(!d||p.dist===d)&&(!b||p.block===b)&&(!l||CL(p)===l)&&(!v||p.vc.trim().toUpperCase()===v)&&(!c||p.cat===c)).sort((x,y)=>cmp(x.name.trim(),y.name.trim())||x.i-y.i);
 $('fP').innerHTML='<option value="">All PGs ('+n(a.length)+')</option>'+a.map(p=>`<option value="${p.i}">${p.name.trim()} (${b?'':p.block+', '}${v?'':p.vc.trim()+', '}${p.cat})</option>`.replace(/, \)/,')')).join('');
 if(keep&&a.some(p=>String(p.i)===keep))$('fP').value=keep}
-function vcs(){const d=$('fD').value,b=$('fB').value;opts($('fV'),[...new Set(P.filter(p=>(!d||p.dist===d)&&(!b||p.block===b)).map(p=>p.vc.trim().toUpperCase()))].sort(cmp),'All GPs / VCs');pgs()}
+function vcs(){const d=$('fD').value,b=$('fB').value,l=$('fL').value;opts($('fV'),[...new Set(P.filter(p=>(!d||p.dist===d)&&(!b||p.block===b)&&(!l||CL(p)===l)).map(p=>p.vc.trim().toUpperCase()))].sort(cmp),'All GPs / VCs');pgs()}
 blocks();
-function resetF(){['fC','fP','fS','fD','fB','fV'].forEach(i=>$(i).value='');blocks();gapSel=null;run()}
-$('fD').onchange=()=>{blocks();gapSel=null;run()};$('fB').onchange=()=>{vcs();gapSel=null;run()};['fV','fC'].forEach(i=>$(i).onchange=()=>{pgs();gapSel=null;run()});$('fP').onchange=()=>{gapSel=null;run()};$('fS').oninput=()=>{gapSel=null;run()};
-function filt(){const d=$('fD').value,b=$('fB').value,v=$('fV').value,pp=$('fP').value,c=$('fC').value,s=$('fS').value.trim().toLowerCase();return P.filter(p=>(!d||p.dist===d)&&(!b||p.block===b)&&(!v||p.vc.trim().toUpperCase()===v)&&(!c||p.cat===c)&&(!pp||String(p.i)===pp)&&(!s||(p.name+' '+p.clf+' '+p.vc+' '+p.sh).toLowerCase().includes(s)))}
+function resetF(){['fC','fP','fS','fD','fB','fL','fV'].forEach(i=>$(i).value='');blocks();gapSel=null;run()}
+$('fD').onchange=()=>{blocks();gapSel=null;run()};$('fB').onchange=()=>{clfs();gapSel=null;run()};$('fL').onchange=()=>{vcs();gapSel=null;run()};['fV','fC'].forEach(i=>$(i).onchange=()=>{pgs();gapSel=null;run()});$('fP').onchange=()=>{gapSel=null;run()};$('fS').oninput=()=>{gapSel=null;run()};
+function filt(){const d=$('fD').value,b=$('fB').value,l=$('fL').value,v=$('fV').value,pp=$('fP').value,c=$('fC').value,s=$('fS').value.trim().toLowerCase();return P.filter(p=>(!d||p.dist===d)&&(!b||p.block===b)&&(!l||CL(p)===l)&&(!v||p.vc.trim().toUpperCase()===v)&&(!c||p.cat===c)&&(!pp||String(p.i)===pp)&&(!s||(p.name+' '+p.clf+' '+p.vc+' '+p.sh).toLowerCase().includes(s)))}
 const sum=(a,k)=>a.reduce((s,p)=>s+p[k],0);
 function kpis(){FS=new Set(F.map(p=>p.i));let nl=0,ns=0;M.forEach(m=>{if(FS.has(m[0])){if(!m[7])nl++;if(!m[6])ns++}});const t=sum(F,'mem'),isf=F.filter(p=>p.isf>0),wc=F.filter(p=>p.wc>0);
 const k=[['PGs',n(F.length),F.length?`${new Set(F.map(p=>p.block)).size} blocks`:''],['Members mapped',n(t),`${n(sum(F,'shg'))} SHG-in-PG links`],['Members without LokOS ID',n(nl),pc(nl,t)+' of members mapped · '+n(ns)+' have no SHG code'],['SHGs',n(new Set(SH.filter(h=>FS.has(h.pi)).map(h=>h.code||h.name+h.pi)).size),'distinct SHGs (by SHG code)'],['ST members',pc(sum(F,'st'),t),n(sum(F,'st'))+' members'],['SC members',pc(sum(F,'sc'),t),n(sum(F,'sc'))+' members'],['OBC members',pc(sum(F,'obc'),t),n(sum(F,'obc'))+' members'],
 ['Business plan prepared',pc(F.filter(p=>p.bpP===1).length,F.length),n(F.filter(p=>p.bpP===1).length)+' PGs'],['NRLM fund received',pc(F.filter(p=>p.fund===1).length,F.length),n(F.filter(p=>p.fund===1).length)+' PGs'],['Infrastructure fund',n(isf.length)+' PGs','₹'+n(sum(isf,'isf')/1e5)+' lakh'],['Working capital',n(wc.length)+' PGs','₹'+n(sum(wc,'wc')/1e5)+' lakh'],['Activity started',n(F.filter(p=>p.act===1).length)+' PGs','of '+n(F.length)]];
-$('kpis').innerHTML=k.map(x=>`<div class="kpi"><span>${x[0]}</span><b>${x[1]}</b><small>${x[2]}</small></div>`).join('');$('sub').textContent=`${n(F.length)} producer groups, ${n(t)} mapped members · profiles generated 06-Nov-2026 · dashboard version 19-Nov-2026 v3 (verification forms + print fix)`}
+$('kpis').innerHTML=k.map(x=>`<div class="kpi"><span>${x[0]}</span><b>${x[1]}</b><small>${x[2]}</small></div>`).join('');$('sub').textContent=`${n(F.length)} producer groups, ${n(t)} mapped members · profiles generated 06-Nov-2026 · dashboard version 20-Nov-2026 v4 (verification forms + print fix)`}
 function ch(id,type,data,opt){if(charts[id])charts[id].destroy();charts[id]=new Chart($(id),{type,data,options:Object.assign({responsive:true,plugins:{legend:{labels:{boxWidth:12}}}},opt||{})})}
 const COL=['#12355b','#0f8b8d','#d98e04','#c0392b','#7a5ea8','#6b7c93'];
 function charts_(){const bl=[...new Set(F.map(p=>p.block))].sort(),cats=['Agri-Horti','Fishery','Livestock'];
