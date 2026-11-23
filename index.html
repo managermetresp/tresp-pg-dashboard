@@ -793,7 +793,7 @@ tbody tr:hover td{background:var(--blue-light);}
         <div class="hint-box">Likely a data-entry gap — the repayment date was logged but the corresponding principal/interest amount was never filled in.</div>
         <div class="table-toolbar"><button class="export-btn" onclick="exportAnomaly('dateNoAmount')">⬇ Export to Excel</button></div>
         <div class="table-wrap" style="margin-bottom:22px;">
-          <table><thead><tr><th>Member</th><th>PG</th><th style="text-align:right">Month</th><th>Date entered</th></tr></thead><tbody id="an-datenoamount"></tbody></table>
+          <table><thead><tr><th>Member</th><th>PG</th><th>District / DPMU Zone</th><th>Block</th><th>Category</th><th>VC</th><th>CLF</th><th style="text-align:right">Month</th><th>Date entered</th></tr></thead><tbody id="an-datenoamount"></tbody></table>
         </div>
 
         <div class="section-title">Amount received exceeds amount sanctioned <span id="cnt-oversanctioned"></span></div>
@@ -1763,7 +1763,7 @@ function aggregate(members, dataNoName, pending, uMismatch, orphan){
   const tenureRef = Object.values(tenureRefMap).sort((a,b)=> a.category===b.category ? a.activity.localeCompare(b.activity) : a.category.localeCompare(b.category));
   const anomalies = {
     zeroUpdate: members.filter(m=>m.repaymentsMade===0).map(m=>({member:m.member, pg:m.pg, district:m.district, block:m.block, category:m.pgCategory})),
-    dateNoAmount: [].concat(...members.map(m=>(m.schedule||[]).filter(s=>s.paidDate && s.paidAmount===0).map(s=>({member:m.member, pg:m.pg, month:s.month, date:s.paidDate})))),
+    dateNoAmount: [].concat(...members.map(m=>(m.schedule||[]).filter(s=>s.paidDate && s.paidAmount===0).map(s=>({member:m.member, pg:m.pg, district:m.district, block:m.block, category:m.pgCategory, vc:m.vc, clf:m.clf, month:s.month, date:s.paidDate})))),
     receivedOverSanctioned: members.filter(m=>m.received > m.sanctioned+1).map(m=>({member:m.member, pg:m.pg, sanctioned:m.sanctioned, received:m.received})),
     earlyRepayment: members.filter(m=>m.isCompleted && m.totalLoanPeriod!=null && m.monthsSince!=null && m.monthsSince < m.totalLoanPeriod).map(m=>({member:m.member, pg:m.pg, monthsSince:m.monthsSince, totalPeriod:m.totalLoanPeriod})),
     dataNoName: dataNoName,
@@ -2916,7 +2916,7 @@ function computeAnomalies(){
   const district=g('fDistrict'), block=g('fBlock'), category=g('fCategory'), pg=g('fPg');
   return {
     zeroUpdate: members.filter(m=>m.repaymentsMade===0).map(m=>({member:m.member, pg:m.pg, district:m.district, block:m.block, category:m.pgCategory})),
-    dateNoAmount: [].concat(...members.map(m=>(m.schedule||[]).filter(s=>s.paidDate && s.paidAmount===0).map(s=>({member:m.member, pg:m.pg, month:s.month, date:s.paidDate})))),
+    dateNoAmount: [].concat(...members.map(m=>(m.schedule||[]).filter(s=>s.paidDate && s.paidAmount===0).map(s=>({member:m.member, pg:m.pg, district:m.district, block:m.block, category:m.pgCategory, vc:m.vc, clf:m.clf, month:s.month, date:s.paidDate})))),
     receivedOverSanctioned: members.filter(m=>m.sanctioned>0 && m.received > m.sanctioned+1).map(m=>({member:m.member, pg:m.pg, sanctioned:m.sanctioned, received:m.received})),
     noSanctioned: members.filter(m=>m.sanctioned<=0 && (m.received>0 || m.paid>0)).map(m=>({member:m.member, pg:m.pg, block:m.block, received:m.received, paid:m.paid})),
     dupLokos: (()=>{
@@ -2980,7 +2980,7 @@ function renderAnomalies(){
   set('an-zeroupdate', an.zeroUpdate, r=>`<tr><td>${r.member}</td><td>${r.pg}</td><td>${r.district}</td><td>${r.block}</td><td>${r.category}</td></tr>`);
 
   document.getElementById('cnt-datenoamount').textContent = `(${(an.dateNoAmount||[]).length})`;
-  set('an-datenoamount', an.dateNoAmount, r=>`<tr><td>${r.member}</td><td>${r.pg}</td><td style="text-align:right">${r.month}</td><td>${r.date}</td></tr>`);
+  set('an-datenoamount', an.dateNoAmount, r=>`<tr><td>${r.member}</td><td>${r.pg}</td><td>${r.district||''}</td><td>${r.block||''}</td><td>${r.category||''}</td><td>${r.vc||''}</td><td>${r.clf||''}</td><td style="text-align:right">${r.month}</td><td>${r.date}</td></tr>`);
 
   document.getElementById('cnt-oversanctioned').textContent = `(${(an.receivedOverSanctioned||[]).length})`;
   set('an-oversanctioned', an.receivedOverSanctioned, r=>`<tr><td>${r.member}</td><td>${r.pg}</td><td style="text-align:right">${fmtRs(r.sanctioned)}</td><td style="text-align:right">${fmtRs(r.received)}</td><td style="text-align:right;color:var(--red);font-weight:600;">${fmtRs(r.received-r.sanctioned)}</td></tr>`);
@@ -3178,7 +3178,7 @@ function anomalyExportRows(which){
   else if(which==='orphan'){ rows=(an.orphan||[]).map(r=>({'Sheet Tab':r.tab,'Sheet Row':r.sheetRow,Member:r.member,PG:r.pg,District:r.district,Block:r.block,Category:r.pgCategory,Sanctioned:r.sanctioned,Disbursed:r.disbursed,Repaid:r.paid})); filename='Anomaly_RepaymentWithoutDisbursement'; }
   else if(which==='pendMismatch'){ rows=(an.pendMismatch||[]).map(r=>({Member:r.member,PG:r.pg,District:r.district,Block:r.block,Category:r.category,'Sanctioned':r.sanctioned,'Utilized':r.utilized,'Sanctioned - Utilized':r.expected,'Pending Loan amount in sheet':r.sheetU})); filename='Anomaly_PendingColumnU_Mismatch'; }
   else if(which==='zeroUpdate'){ rows=(an.zeroUpdate||[]).map(r=>({Member:r.member,PG:r.pg,District:r.district,Block:r.block,Category:r.category})); filename='Anomaly_ZeroRepaymentUpdates'; }
-  else if(which==='dateNoAmount'){ rows=(an.dateNoAmount||[]).map(r=>({Member:r.member,PG:r.pg,Month:r.month,'Date Entered':r.date})); filename='Anomaly_DateWithoutAmount'; }
+  else if(which==='dateNoAmount'){ rows=(an.dateNoAmount||[]).map(r=>({District:r.district||'',Block:r.block||'',Category:r.category||'',Member:r.member,PG:r.pg,VC:r.vc||'',CLF:r.clf||'',Month:r.month,'Date Entered':r.date})); filename='Anomaly_DateWithoutAmount'; }
   else if(which==='receivedOverSanctioned'){ rows=(an.receivedOverSanctioned||[]).map(r=>({Member:r.member,PG:r.pg,Sanctioned:r.sanctioned,Received:r.received,Excess:r.received-r.sanctioned})); filename='Anomaly_ReceivedOverSanctioned'; }
   else if(which==='noSanctioned'){ rows=(an.noSanctioned||[]).map(r=>({Member:r.member,PG:r.pg,Block:r.block,Received:r.received,Paid:r.paid})); filename='Anomaly_SanctionedNotRecorded'; }
   else if(which==='dupLokos'){ rows=(an.dupLokos||[]).map(r=>({'LokOS ID':r.lokosId,Member:r.member,PG:r.pg,Block:r.block,Received:r.received})); filename='Anomaly_DuplicateLokosId'; }
