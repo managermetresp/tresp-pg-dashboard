@@ -3332,7 +3332,9 @@ function buildExportSheet(rows, key, note, filename){
     return {lines, rows:[], cols:[], widths:[90]};
   }
   const colSet = new Set(); rows.forEach(r=>Object.keys(r).forEach(k=>colSet.add(k)));
-  const cols = [...colSet];   // one filter button on every column of the table
+  // Column order: District, Block, Category, Member first, then the rest in their usual order.
+  const lead = ['District','Block','Category','Member'].filter(k=>colSet.has(k));
+  const cols = [...lead, ...[...colSet].filter(k=>!lead.includes(k))];   // one filter button on every column of the table
   const widths = cols.map(c=>Math.min(Math.max(c.length, ...rows.slice(0,200).map(r=>String(r[c]==null?'':r[c]).length)) + 2, 50));
   return {lines, rows, cols, widths};
 }
