@@ -6,7 +6,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="dashboard_snapshot.js" onerror="void 0"></script>
 <style>
@@ -3038,6 +3037,115 @@ function renderAnomalies(){
   if(abm.length>1000) document.getElementById('an-abmissing').insertAdjacentHTML('beforeend', `<tr><td colspan="10" style="text-align:center;color:var(--text-dim)">Showing 1,000 of ${abm.length.toLocaleString('en-IN')} — export to Excel for all</td></tr>`);
 }
 
+// ===== Excel writer: own minimal .xlsx builder (Times New Roman, centred, bold headings, filter on every table) =====
+const XLX = (function(){
+  const enc = new TextEncoder();
+  const crcT = (()=>{ const t = new Uint32Array(256); for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c = c&1 ? 0xEDB88320^(c>>>1) : c>>>1; t[n]=c>>>0; } return t; })();
+  const crc32 = b => { let c = 0xFFFFFFFF; for(let i=0;i<b.length;i++) c = crcT[(c^b[i])&255]^(c>>>8); return (c^0xFFFFFFFF)>>>0; };
+  const clean = s => String(s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g,'');
+  const esc = s => clean(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const escA = s => esc(s).replace(/"/g,'&quot;');
+  const colName = i => { let s=''; i++; while(i>0){ const m=(i-1)%26; s=String.fromCharCode(65+m)+s; i=Math.floor((i-1)/26); } return s; };
+  // style ids: 0 default | 1 table cell | 2 table heading (bold) | 3 note line | 4 title (bold)
+  const STYLES = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+    + '<fonts count="3"><font><sz val="11"/><name val="Times New Roman"/><family val="1"/></font><font><b/><sz val="11"/><name val="Times New Roman"/><family val="1"/></font><font><b/><sz val="13"/><name val="Times New Roman"/><family val="1"/></font></fonts>'
+    + '<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFD9E2F3"/><bgColor indexed="64"/></patternFill></fill></fills>'
+    + '<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color auto="1"/></left><right style="thin"><color auto="1"/></right><top style="thin"><color auto="1"/></top><bottom style="thin"><color auto="1"/></bottom><diagonal/></border></borders>'
+    + '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+    + '<cellXfs count="5">'
+    + '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyFont="1"/>'
+    + '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>'
+    + '<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>'
+    + '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>'
+    + '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>'
+    + '</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+  function cell(ref, v, s){
+    if(v===null || v===undefined || v==='') return '<c r="'+ref+'" s="'+s+'"/>';
+    if(typeof v==='number' && isFinite(v)) return '<c r="'+ref+'" s="'+s+'"><v>'+v+'</v></c>';
+    if(v instanceof Date) v = v.toISOString().slice(0,10);
+    return '<c r="'+ref+'" s="'+s+'" t="inlineStr"><is><t xml:space="preserve">'+esc(v)+'</t></is></c>';
+  }
+  function sheetXml(ws){
+    const lines = ws.lines || [], cols = ws.cols || [], rows = ws.rows || [], widths = ws.widths || [];
+    const nCols = Math.max(cols.length, 1), totalW = widths.reduce((a,b)=>a+b,0) || 90;
+    const out = [];
+    lines.forEach((ln,i)=>{
+      const txt = ln && ln.length ? String(ln[0]) : '';
+      const r = i+1, need = Math.max(1, Math.ceil(txt.length*1.15/totalW)), big = i===0;
+      out.push('<row r="'+r+'"'+(txt && need>1 ? ' ht="'+(need*(big?19:15.5))+'" customHeight="1"' : '')+'>'+(txt ? cell('A'+r, txt, big?4:3) : '')+'</row>');
+    });
+    const H = lines.length+1;
+    if(cols.length){
+      out.push('<row r="'+H+'">'+cols.map((c,j)=>cell(colName(j)+H, c, 2)).join('')+'</row>');
+      for(let i=0;i<rows.length;i++){
+        const r = H+1+i, row = rows[i];
+        let x = '<row r="'+r+'">';
+        for(let j=0;j<cols.length;j++) x += cell(colName(j)+r, row[cols[j]], 1);
+        out.push(x+'</row>');
+      }
+    }
+    let xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"/></sheetViews><sheetFormatPr defaultRowHeight="15"/>';
+    xml += '<cols>'+Array.from({length:nCols},(_,j)=>'<col min="'+(j+1)+'" max="'+(j+1)+'" width="'+(widths[j]||12)+'" customWidth="1"/>').join('')+'</cols>';
+    xml += '<sheetData>'+out.join('')+'</sheetData>';
+    if(cols.length) xml += '<autoFilter ref="A'+H+':'+colName(cols.length-1)+(H+rows.length)+'"/>';
+    const m = [];
+    if(nCols>1) lines.slice(0,-1).forEach((ln,i)=>{ if(ln && ln.length) m.push('<mergeCell ref="A'+(i+1)+':'+colName(nCols-1)+(i+1)+'"/>'); });
+    if(m.length) xml += '<mergeCells count="'+m.length+'">'+m.join('')+'</mergeCells>';
+    return xml+'<pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/></worksheet>';
+  }
+  async function deflate(u8){
+    if(typeof CompressionStream==='undefined') return null;
+    const cs = new CompressionStream('deflate-raw'), w = cs.writable.getWriter(); w.write(u8); w.close();
+    return new Uint8Array(await new Response(cs.readable).arrayBuffer());
+  }
+  async function zip(files){
+    const parts = [], cd = []; let off = 0;
+    for(const f of files){
+      const nameB = enc.encode(f.name), crc = crc32(f.data); let comp = await deflate(f.data), method = 8;
+      if(!comp || comp.length >= f.data.length){ comp = f.data; method = 0; }
+      const lh = new DataView(new ArrayBuffer(30));
+      lh.setUint32(0,0x04034b50,true); lh.setUint16(4,20,true); lh.setUint16(6,0x0800,true); lh.setUint16(8,method,true); lh.setUint16(10,0,true); lh.setUint16(12,0x21,true);
+      lh.setUint32(14,crc,true); lh.setUint32(18,comp.length,true); lh.setUint32(22,f.data.length,true); lh.setUint16(26,nameB.length,true); lh.setUint16(28,0,true);
+      parts.push(new Uint8Array(lh.buffer), nameB, comp);
+      const ch = new DataView(new ArrayBuffer(46));
+      ch.setUint32(0,0x02014b50,true); ch.setUint16(4,20,true); ch.setUint16(6,20,true); ch.setUint16(8,0x0800,true); ch.setUint16(10,method,true); ch.setUint16(12,0,true); ch.setUint16(14,0x21,true);
+      ch.setUint32(16,crc,true); ch.setUint32(20,comp.length,true); ch.setUint32(24,f.data.length,true); ch.setUint16(28,nameB.length,true); ch.setUint32(42,off,true);
+      cd.push(new Uint8Array(ch.buffer), nameB);
+      off += 30 + nameB.length + comp.length;
+    }
+    let cdLen = 0; cd.forEach(x=>cdLen+=x.length);
+    const end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0,0x06054b50,true); end.setUint16(8,files.length,true); end.setUint16(10,files.length,true); end.setUint32(12,cdLen,true); end.setUint32(16,off,true);
+    return new Blob([...parts, ...cd, new Uint8Array(end.buffer)], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  }
+  async function build(wb){
+    const used = new Set();
+    const sheets = wb.sheets.map((s,i)=>{ let n = String(s.name||('Sheet'+(i+1))).replace(/[\[\]\*\?\/\\:]/g,'').slice(0,31) || ('Sheet'+(i+1)); let k = 2, b = n; while(used.has(n.toLowerCase())) n = b.slice(0,28)+' '+(k++); used.add(n.toLowerCase()); return {name:n, ws:s.ws}; });
+    const files = [
+      {name:'[Content_Types].xml', text:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'+sheets.map((_,i)=>'<Override PartName="/xl/worksheets/sheet'+(i+1)+'.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>').join('')+'</Types>'},
+      {name:'_rels/.rels', text:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'},
+      {name:'xl/workbook.xml', text:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView/></bookViews><sheets>'+sheets.map((s,i)=>'<sheet name="'+escA(s.name)+'" sheetId="'+(i+1)+'" r:id="rId'+(i+1)+'"/>').join('')+'</sheets></workbook>'},
+      {name:'xl/_rels/workbook.xml.rels', text:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+sheets.map((_,i)=>'<Relationship Id="rId'+(i+1)+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet'+(i+1)+'.xml"/>').join('')+'<Relationship Id="rId'+(sheets.length+1)+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'},
+      {name:'xl/styles.xml', text:STYLES}
+    ];
+    sheets.forEach((s,i)=>files.push({name:'xl/worksheets/sheet'+(i+1)+'.xml', text:sheetXml(s.ws)}));
+    files.forEach(f=>{ f.data = enc.encode(f.text); delete f.text; });
+    return zip(files);
+  }
+  return {
+    utils: { book_new: ()=>({sheets:[]}), book_append_sheet: (wb, ws, name)=>{ wb.sheets.push({ws, name}); } },
+    build,
+    writeFile: async function(wb, filename){
+      try{
+        const blob = await build(wb), a = document.createElement('a');
+        a.href = URL.createObjectURL(blob); a.download = filename; document.body.appendChild(a); a.click();
+        setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+      }catch(e){ alert('Excel export failed: ' + e.message); }
+    }
+  };
+})();
+window.XLX = XLX;
+
 function exportAnomaly(which){
   const {rows, filename} = anomalyExportRows(which);
   if(!rows || !rows.length){ alert('No rows to export for this check.'); return; }
@@ -3054,14 +3162,14 @@ const ANOMALY_SHEETS = [
   ['abMissing','Demand not entered'],
 ];
 function exportAllAnomalies(){
-  if(!window.XLSX){ alert('Excel export library failed to load.'); return; }
+  if(!window.XLX){ alert('Excel export library failed to load.'); return; }
   if(!DATA.members || !DATA.members.length){ alert('Nothing to export yet — sync the data first.'); return; }
-  const wb = XLSX.utils.book_new();
+  const wb = XLX.utils.book_new();
   const parts = ANOMALY_SHEETS.map(([key, tab])=>({key, tab, rows: anomalyExportRows(key).rows || []}));
   const summary = parts.map((p,i)=>({'Sl':i+1, 'Anomaly':EXPORT_TITLES[p.key].replace(/^Anomaly: /,''), 'Rows':p.rows.length, 'Sheet':p.tab}));
-  XLSX.utils.book_append_sheet(wb, buildExportSheet(summary, 'allAnomalies', 'Each anomaly type is on its own sheet (tabs at the bottom); rows = issues found'), 'Summary');
-  parts.forEach(p=>XLSX.utils.book_append_sheet(wb, buildExportSheet(p.rows, p.key), p.tab));
-  XLSX.writeFile(wb, `TRESP_All_Anomalies_${isoDate(new Date())}.xlsx`);
+  XLX.utils.book_append_sheet(wb, buildExportSheet(summary, 'allAnomalies', 'Each anomaly type is on its own sheet (tabs at the bottom); rows = issues found'), 'Summary');
+  parts.forEach(p=>XLX.utils.book_append_sheet(wb, buildExportSheet(p.rows, p.key), p.tab));
+  XLX.writeFile(wb, `TRESP_All_Anomalies_${isoDate(new Date())}.xlsx`);
 }
 function anomalyExportRows(which){
   const an = window._anomalies || computeAnomalies();
@@ -3188,20 +3296,20 @@ function overviewGroupRows(level){
   return rows.sort((a,b)=>a.District.localeCompare(b.District) || (a.Block||'').localeCompare(b.Block||''));
 }
 function exportOverview(){
-  if(!window.XLSX){ alert('Excel export library failed to load.'); return; }
+  if(!window.XLX){ alert('Excel export library failed to load.'); return; }
   if(!DATA.members || !DATA.members.length){ alert('Nothing to export yet — sync the data first.'); return; }
   const total = overviewGroupRows('all')[0];
   const withTotal = (rows, level) => { if(!total) return rows; const t = {...total}; if(level==='block'){ const {District, ...rest} = t; return rows.concat([{District, Block:'', ...rest}]); } return rows.concat([t]); };
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, buildExportSheet(withTotal(overviewGroupRows('district'),'district'), 'ovDistrict', 'Last row = all districts in view. Percentages are compared with the TRESP PG Database (Compiled Data).'), 'District-wise');
-  XLSX.utils.book_append_sheet(wb, buildExportSheet(withTotal(overviewGroupRows('block'),'block'), 'ovBlock', 'Last row = all blocks in view. Percentages are compared with the TRESP PG Database (Compiled Data).'), 'Block-wise');
-  XLSX.writeFile(wb, `TRESP_Overview_District_Block_${isoDate(new Date())}.xlsx`);
+  const wb = XLX.utils.book_new();
+  XLX.utils.book_append_sheet(wb, buildExportSheet(withTotal(overviewGroupRows('district'),'district'), 'ovDistrict', 'Last row = all districts in view. Percentages are compared with the TRESP PG Database (Compiled Data).'), 'District-wise');
+  XLX.utils.book_append_sheet(wb, buildExportSheet(withTotal(overviewGroupRows('block'),'block'), 'ovBlock', 'Last row = all blocks in view. Percentages are compared with the TRESP PG Database (Compiled Data).'), 'Block-wise');
+  XLX.writeFile(wb, `TRESP_Overview_District_Block_${isoDate(new Date())}.xlsx`);
 }
 function writeExport(rows, filename, key){
-  if(!window.XLSX){ alert('Excel export library failed to load.'); return; }
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, buildExportSheet(rows, key, null, filename), (EXPORT_TITLES[key]||'Data').replace(/^Anomaly: /,'').replace(/[\[\]\*\?\/\\:]/g,'').slice(0,31));
-  XLSX.writeFile(wb, `${filename}_${isoDate(new Date())}.xlsx`);
+  if(!window.XLX){ alert('Excel export library failed to load.'); return; }
+  const wb = XLX.utils.book_new();
+  XLX.utils.book_append_sheet(wb, buildExportSheet(rows, key, null, filename), (EXPORT_TITLES[key]||'Data').replace(/^Anomaly: /,'').replace(/[\[\]\*\?\/\\:]/g,'').slice(0,31));
+  XLX.writeFile(wb, `${filename}_${isoDate(new Date())}.xlsx`);
 }
 // One worksheet: heading block (title, filters, period for tracking, data date) then the table. An empty list
 // still gets its heading plus a "none found" line, so every anomaly type appears in the all-in-one export.
@@ -3221,16 +3329,12 @@ function buildExportSheet(rows, key, note, filename){
   lines.push([]);
   if(!rows.length){
     lines.push(['No issues of this type found for the filters applied.']);
-    const ws = XLSX.utils.aoa_to_sheet(lines);
-    ws['!cols'] = [{wch: 90}];
-    return ws;
+    return {lines, rows:[], cols:[], widths:[90]};
   }
-  const ws = XLSX.utils.aoa_to_sheet(lines);
-  XLSX.utils.sheet_add_json(ws, rows, {origin: 'A' + (lines.length + 1)});
-  const cols = Object.keys(rows[0]);
-  ws['!merges'] = lines.slice(0,-1).map((_,i)=>({s:{r:i,c:0}, e:{r:i,c:Math.max(cols.length-1,0)}}));
-  ws['!cols'] = cols.map(c=>({wch: Math.min(Math.max(c.length, ...rows.slice(0,200).map(r=>String(r[c]==null?'':r[c]).length)) + 2, 50)}));
-  return ws;
+  const colSet = new Set(); rows.forEach(r=>Object.keys(r).forEach(k=>colSet.add(k)));
+  const cols = [...colSet];   // one filter button on every column of the table
+  const widths = cols.map(c=>Math.min(Math.max(c.length, ...rows.slice(0,200).map(r=>String(r[c]==null?'':r[c]).length)) + 2, 50));
+  return {lines, rows, cols, widths};
 }
 
 // ===== Data tracking =====
