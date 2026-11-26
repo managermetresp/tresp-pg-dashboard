@@ -780,61 +780,61 @@ tbody tr:hover td{background:var(--blue-light);}
         <div class="hint-box">The sheet's "Pending Loan amount" should equal the Loan Amount Sanctioned minus the Total utilized loan amount. These rows don't match — usually the pending or utilized amount was not updated. The pending amount is not used for any dashboard figure.</div>
         <div class="table-toolbar"><button class="export-btn" onclick="exportAnomaly('pendMismatch')">⬇ Export to Excel</button></div>
         <div class="table-wrap" style="margin-bottom:22px;max-height:320px;">
-          <table><thead><tr><th>Member</th><th>PG</th><th>Block</th><th>Category</th><th style="text-align:right">Sanctioned</th><th style="text-align:right">Utilized</th><th style="text-align:right">Sanctioned − Utilized</th><th style="text-align:right">Pending Loan amount in sheet</th></tr></thead><tbody id="an-pendmismatch"></tbody></table>
+          <table><thead><tr><th>Sheet tab</th><th>Row</th><th>Member</th><th>PG</th><th>Block</th><th>Category</th><th style="text-align:right">Sanctioned</th><th style="text-align:right">Utilized</th><th style="text-align:right">Sanctioned − Utilized</th><th style="text-align:right">Pending Loan amount in sheet</th></tr></thead><tbody id="an-pendmismatch"></tbody></table>
         </div>
 
         <div class="section-title">Loan taken, no repayment updates ever <span id="cnt-zeroupdate"></span></div>
         <div class="table-toolbar"><button class="export-btn" onclick="exportAnomaly('zeroUpdate')">⬇ Export to Excel</button></div>
         <div class="table-wrap" style="margin-bottom:22px;max-height:280px;">
-          <table><thead><tr><th>Member</th><th>PG</th><th>District / DPMU Zone</th><th>Block</th><th>Category</th></tr></thead><tbody id="an-zeroupdate"></tbody></table>
+          <table><thead><tr><th>Sheet tab</th><th>Row</th><th>Member</th><th>PG</th><th>District / DPMU Zone</th><th>Block</th><th>Category</th></tr></thead><tbody id="an-zeroupdate"></tbody></table>
         </div>
 
         <div class="section-title">Repayment date entered, but amount is blank <span id="cnt-datenoamount"></span></div>
         <div class="hint-box">Likely a data-entry gap — the repayment date was logged but the corresponding principal/interest amount was never filled in.</div>
         <div class="table-toolbar"><button class="export-btn" onclick="exportAnomaly('dateNoAmount')">⬇ Export to Excel</button></div>
         <div class="table-wrap" style="margin-bottom:22px;">
-          <table><thead><tr><th>Member</th><th>PG</th><th>District / DPMU Zone</th><th>Block</th><th>Category</th><th>VC</th><th>CLF</th><th style="text-align:right">Month</th><th>Date entered</th></tr></thead><tbody id="an-datenoamount"></tbody></table>
+          <table><thead><tr><th>Sheet tab</th><th>Row</th><th>Member</th><th>PG</th><th>District / DPMU Zone</th><th>Block</th><th>Category</th><th>VC</th><th>CLF</th><th style="text-align:right">Month</th><th>Date entered</th></tr></thead><tbody id="an-datenoamount"></tbody></table>
         </div>
 
         <div class="section-title">Amount received exceeds amount sanctioned <span id="cnt-oversanctioned"></span></div>
         <div class="hint-box">Sanctioned amount is filled in but the amount actually disbursed is higher than it — a genuine over-disbursement against what was approved. (Cases where Sanctioned is blank/₹0 are tracked separately below, since those are a missing-data problem rather than an over-disbursement.)</div>
         <div class="table-toolbar"><button class="export-btn" onclick="exportAnomaly('receivedOverSanctioned')">⬇ Export to Excel</button></div>
         <div class="table-wrap" style="margin-bottom:22px;">
-          <table><thead><tr><th>Member</th><th>PG</th><th style="text-align:right">Sanctioned</th><th style="text-align:right">Received</th><th style="text-align:right">Excess</th></tr></thead><tbody id="an-oversanctioned"></tbody></table>
+          <table><thead><tr><th>Sheet tab</th><th>Row</th><th>Member</th><th>PG</th><th style="text-align:right">Sanctioned</th><th style="text-align:right">Received</th><th style="text-align:right">Excess</th></tr></thead><tbody id="an-oversanctioned"></tbody></table>
         </div>
 
         <div class="section-title">Loan Amount Sanctioned not recorded, but money disbursed <span id="cnt-nosanctioned"></span></div>
         <div class="hint-box">"Loan Amount Sanctioned" is blank/₹0 in the sheet, even though the member has an amount disbursed/received. The sanctioned amount needs to be filled in at the source.</div>
         <div class="table-toolbar"><button class="export-btn" onclick="exportAnomaly('noSanctioned')">⬇ Export to Excel</button></div>
         <div class="table-wrap" style="margin-bottom:22px;max-height:280px;">
-          <table><thead><tr><th>Member</th><th>PG</th><th>Block</th><th style="text-align:right">Received</th><th style="text-align:right">Paid</th></tr></thead><tbody id="an-nosanctioned"></tbody></table>
+          <table><thead><tr><th>Sheet tab</th><th>Row</th><th>Member</th><th>PG</th><th>Block</th><th style="text-align:right">Received</th><th style="text-align:right">Paid</th></tr></thead><tbody id="an-nosanctioned"></tbody></table>
         </div>
 
         <div class="section-title">Same LokOS ID used by different members <span id="cnt-duplokos"></span></div>
         <div class="hint-box">The same LokOS ID appears on more than one distinct member/PG combination — one of them is likely a copy-paste error in the sheet and needs correcting at the source.</div>
         <div class="table-toolbar"><button class="export-btn" onclick="exportAnomaly('dupLokos')">⬇ Export to Excel</button></div>
         <div class="table-wrap" style="margin-bottom:22px;max-height:280px;">
-          <table><thead><tr><th>LokOS ID</th><th>Member</th><th>PG</th><th>Block</th><th style="text-align:right">Received</th></tr></thead><tbody id="an-duplokos"></tbody></table>
+          <table><thead><tr><th>Sheet tab</th><th>Row</th><th>LokOS ID</th><th>Member</th><th>PG</th><th>Block</th><th style="text-align:right">Received</th></tr></thead><tbody id="an-duplokos"></tbody></table>
         </div>
 
         <div class="section-title">Repaid more than the total amount due <span id="cnt-overpaid"></span></div>
         <div class="hint-box">Amount paid so far is higher than "total to repay" (principal + interest). Usually a small rounding/final-installment excess, but worth a quick check for larger amounts.</div>
         <div class="table-toolbar"><button class="export-btn" onclick="exportAnomaly('overpaid')">⬇ Export to Excel</button></div>
         <div class="table-wrap" style="margin-bottom:22px;max-height:280px;">
-          <table><thead><tr><th>Member</th><th>PG</th><th>Block</th><th style="text-align:right">Paid</th><th style="text-align:right">Total to repay</th><th style="text-align:right">Excess</th></tr></thead><tbody id="an-overpaid"></tbody></table>
+          <table><thead><tr><th>Sheet tab</th><th>Row</th><th>Member</th><th>PG</th><th>Block</th><th style="text-align:right">Paid</th><th style="text-align:right">Total to repay</th><th style="text-align:right">Excess</th></tr></thead><tbody id="an-overpaid"></tbody></table>
         </div>
 
         <div class="section-title">Repayments made beyond the loan tenure <span id="cnt-overmonths"></span></div>
         <div class="hint-box">Number of monthly repayments recorded is more than the repayment tenure computed from the member's Tenure code — either they're still paying past their term, or the Tenure code was entered wrong.</div>
         <div class="table-toolbar"><button class="export-btn" onclick="exportAnomaly('overMonths')">⬇ Export to Excel</button></div>
         <div class="table-wrap" style="margin-bottom:22px;max-height:280px;">
-          <table><thead><tr><th>Member</th><th>PG</th><th>Block</th><th style="text-align:right">Repayments made</th><th style="text-align:right">Tenure (months)</th></tr></thead><tbody id="an-overmonths"></tbody></table>
+          <table><thead><tr><th>Sheet tab</th><th>Row</th><th>Member</th><th>PG</th><th>Block</th><th style="text-align:right">Repayments made</th><th style="text-align:right">Tenure (months)</th></tr></thead><tbody id="an-overmonths"></tbody></table>
         </div>
 
         <div class="section-title">Members who completed repayment early <span id="cnt-early"></span></div>
         <div class="table-toolbar"><button class="export-btn" onclick="exportAnomaly('earlyRepayment')">⬇ Export to Excel</button></div>
         <div class="table-wrap" style="margin-bottom:22px;">
-          <table><thead><tr><th>Member</th><th>PG</th><th style="text-align:right">Months since loan</th><th style="text-align:right">Total loan period</th></tr></thead><tbody id="an-early"></tbody></table>
+          <table><thead><tr><th>Sheet tab</th><th>Row</th><th>Member</th><th>PG</th><th style="text-align:right">Months since loan</th><th style="text-align:right">Total loan period</th></tr></thead><tbody id="an-early"></tbody></table>
         </div>
 
         <div class="section-title">Loan data entered but member name is blank <span id="cnt-noname"></span></div>
@@ -847,7 +847,7 @@ tbody tr:hover td{background:var(--blue-light);}
         <div class="section-title">Loaned members with no LokOS ID entered <span id="cnt-nolokos"></span></div>
         <div class="table-toolbar"><button class="export-btn" onclick="exportAnomaly('noLokosId')">⬇ Export to Excel</button></div>
         <div class="table-wrap" style="margin-bottom:10px;">
-          <table><thead><tr><th>Member</th><th>PG</th></tr></thead><tbody id="an-nolokos"></tbody></table>
+          <table><thead><tr><th>Sheet tab</th><th>Row</th><th>Member</th><th>PG</th></tr></thead><tbody id="an-nolokos"></tbody></table>
         </div>
 
         <div class="section-title">Formula errors in the sheet (#REF!, #VALUE!, #N/A…) <span id="cnt-formulaerr"></span></div>
@@ -875,7 +875,7 @@ tbody tr:hover td{background:var(--blue-light);}
         <div class="hint-box">Agri/Horti loans are 12 months, but these members have codes like "Agri/Horti-13", "-14", "-15"… increasing down the sheet — what Google Sheets does when a cell is dragged down. The dashboard uses 12 months for them. Set the "Tenure (in Months)" column back to "Agri/Horti-12" in the sheet.</div>
         <div class="table-toolbar"><button class="export-btn" onclick="exportAnomaly('tenureFill')">⬇ Export to Excel</button></div>
         <div class="table-wrap" style="margin-bottom:10px;max-height:320px;">
-          <table><thead><tr><th>Block</th><th>PG</th><th>Member</th><th>Tenure in sheet</th><th>Used by dashboard</th></tr></thead><tbody id="an-tenurefill"></tbody></table>
+          <table><thead><tr><th>Sheet tab</th><th>Row</th><th>Block</th><th>PG</th><th>Member</th><th>Tenure in sheet</th><th>Used by dashboard</th></tr></thead><tbody id="an-tenurefill"></tbody></table>
         </div>
 
         <div class="section-title">Loan type not allowed or doesn't match the PG type <span id="cnt-subactmismatch"></span></div>
@@ -1762,12 +1762,12 @@ function aggregate(members, dataNoName, pending, uMismatch, orphan){
   });
   const tenureRef = Object.values(tenureRefMap).sort((a,b)=> a.category===b.category ? a.activity.localeCompare(b.activity) : a.category.localeCompare(b.category));
   const anomalies = {
-    zeroUpdate: members.filter(m=>m.repaymentsMade===0).map(m=>({member:m.member, pg:m.pg, district:m.district, block:m.block, category:m.pgCategory})),
-    dateNoAmount: [].concat(...members.map(m=>(m.schedule||[]).filter(s=>s.paidDate && s.paidAmount===0).map(s=>({member:m.member, pg:m.pg, district:m.district, block:m.block, category:m.pgCategory, vc:m.vc, clf:m.clf, month:s.month, date:s.paidDate})))),
-    receivedOverSanctioned: members.filter(m=>m.received > m.sanctioned+1).map(m=>({member:m.member, pg:m.pg, sanctioned:m.sanctioned, received:m.received})),
-    earlyRepayment: members.filter(m=>m.isCompleted && m.totalLoanPeriod!=null && m.monthsSince!=null && m.monthsSince < m.totalLoanPeriod).map(m=>({member:m.member, pg:m.pg, monthsSince:m.monthsSince, totalPeriod:m.totalLoanPeriod})),
+    zeroUpdate: members.filter(m=>m.repaymentsMade===0).map(m=>({tab:m.tab, sheetRow:m.sheetRow, member:m.member, pg:m.pg, district:m.district, block:m.block, category:m.pgCategory})),
+    dateNoAmount: [].concat(...members.map(m=>(m.schedule||[]).filter(s=>s.paidDate && s.paidAmount===0).map(s=>({tab:m.tab, sheetRow:m.sheetRow, member:m.member, pg:m.pg, district:m.district, block:m.block, category:m.pgCategory, vc:m.vc, clf:m.clf, month:s.month, date:s.paidDate})))),
+    receivedOverSanctioned: members.filter(m=>m.received > m.sanctioned+1).map(m=>({tab:m.tab, sheetRow:m.sheetRow, member:m.member, pg:m.pg, sanctioned:m.sanctioned, received:m.received})),
+    earlyRepayment: members.filter(m=>m.isCompleted && m.totalLoanPeriod!=null && m.monthsSince!=null && m.monthsSince < m.totalLoanPeriod).map(m=>({tab:m.tab, sheetRow:m.sheetRow, member:m.member, pg:m.pg, monthsSince:m.monthsSince, totalPeriod:m.totalLoanPeriod})),
     dataNoName: dataNoName,
-    noLokosId: members.filter(m=>!m.lokosId).map(m=>({member:m.member, pg:m.pg})),
+    noLokosId: members.filter(m=>!m.lokosId).map(m=>({tab:m.tab, sheetRow:m.sheetRow, member:m.member, pg:m.pg})),
   };
   return { generatedAt: now.toISOString().slice(0,16).replace('T',' '), totals, pgs, members, pending: pending||[], uMismatch: uMismatch||[], orphanRepay: orphan||[], tenureRef, anomalies, districts, blocks, categories };
 }
@@ -2915,10 +2915,10 @@ function computeAnomalies(){
   const g = id => document.getElementById(id).value;
   const district=g('fDistrict'), block=g('fBlock'), category=g('fCategory'), pg=g('fPg');
   return {
-    zeroUpdate: members.filter(m=>m.repaymentsMade===0).map(m=>({member:m.member, pg:m.pg, district:m.district, block:m.block, category:m.pgCategory})),
-    dateNoAmount: [].concat(...members.map(m=>(m.schedule||[]).filter(s=>s.paidDate && s.paidAmount===0).map(s=>({member:m.member, pg:m.pg, district:m.district, block:m.block, category:m.pgCategory, vc:m.vc, clf:m.clf, month:s.month, date:s.paidDate})))),
-    receivedOverSanctioned: members.filter(m=>m.sanctioned>0 && m.received > m.sanctioned+1).map(m=>({member:m.member, pg:m.pg, sanctioned:m.sanctioned, received:m.received})),
-    noSanctioned: members.filter(m=>m.sanctioned<=0 && (m.received>0 || m.paid>0)).map(m=>({member:m.member, pg:m.pg, block:m.block, received:m.received, paid:m.paid})),
+    zeroUpdate: members.filter(m=>m.repaymentsMade===0).map(m=>({tab:m.tab, sheetRow:m.sheetRow, member:m.member, pg:m.pg, district:m.district, block:m.block, category:m.pgCategory})),
+    dateNoAmount: [].concat(...members.map(m=>(m.schedule||[]).filter(s=>s.paidDate && s.paidAmount===0).map(s=>({tab:m.tab, sheetRow:m.sheetRow, member:m.member, pg:m.pg, district:m.district, block:m.block, category:m.pgCategory, vc:m.vc, clf:m.clf, month:s.month, date:s.paidDate})))),
+    receivedOverSanctioned: members.filter(m=>m.sanctioned>0 && m.received > m.sanctioned+1).map(m=>({tab:m.tab, sheetRow:m.sheetRow, member:m.member, pg:m.pg, sanctioned:m.sanctioned, received:m.received})),
+    noSanctioned: members.filter(m=>m.sanctioned<=0 && (m.received>0 || m.paid>0)).map(m=>({tab:m.tab, sheetRow:m.sheetRow, member:m.member, pg:m.pg, block:m.block, received:m.received, paid:m.paid})),
     dupLokos: (()=>{
       const map = {};
       members.forEach(m=>{
@@ -2926,20 +2926,20 @@ function computeAnomalies(){
         if(id && !/^₹?0(\.00)?$/.test(id)) (map[id]=map[id]||[]).push(m);
       });
       return Object.entries(map).filter(([k,v])=>new Set(v.map(x=>x.member+'|'+x.pg)).size>1)
-        .flatMap(([id,v])=>v.map(x=>({lokosId:id, member:x.member, pg:x.pg, block:x.block, received:x.received})));
+        .flatMap(([id,v])=>v.map(x=>({lokosId:id, tab:x.tab, sheetRow:x.sheetRow, member:x.member, pg:x.pg, block:x.block, received:x.received})));
     })(),
-    overpaid: members.filter(m=>m.paid > m.totalToRepay+1).map(m=>({member:m.member, pg:m.pg, block:m.block, paid:m.paid, totalToRepay:m.totalToRepay, excess:Math.round(m.paid-m.totalToRepay)})),
-    overMonths: members.filter(m=>m.tenureMonths!=null && m.repaymentsMade > m.tenureMonths).map(m=>({member:m.member, pg:m.pg, block:m.block, repaymentsMade:m.repaymentsMade, tenureMonths:m.tenureMonths})),
-    earlyRepayment: members.filter(m=>m.isCompleted && m.totalLoanPeriod!=null && m.monthsSince!=null && m.monthsSince < m.totalLoanPeriod).map(m=>({member:m.member, pg:m.pg, monthsSince:m.monthsSince, totalPeriod:m.totalLoanPeriod})),
+    overpaid: members.filter(m=>m.paid > m.totalToRepay+1).map(m=>({tab:m.tab, sheetRow:m.sheetRow, member:m.member, pg:m.pg, block:m.block, paid:m.paid, totalToRepay:m.totalToRepay, excess:Math.round(m.paid-m.totalToRepay)})),
+    overMonths: members.filter(m=>m.tenureMonths!=null && m.repaymentsMade > m.tenureMonths).map(m=>({tab:m.tab, sheetRow:m.sheetRow, member:m.member, pg:m.pg, block:m.block, repaymentsMade:m.repaymentsMade, tenureMonths:m.tenureMonths})),
+    earlyRepayment: members.filter(m=>m.isCompleted && m.totalLoanPeriod!=null && m.monthsSince!=null && m.monthsSince < m.totalLoanPeriod).map(m=>({tab:m.tab, sheetRow:m.sheetRow, member:m.member, pg:m.pg, monthsSince:m.monthsSince, totalPeriod:m.totalLoanPeriod})),
     dataNoName: ((DATA.anomalies||{}).dataNoName||[]).filter(r=>(!district||r.district===district)&&(!block||r.block===block)&&(!category||r.category===category)&&(!pg||r.pg===pg)),
-    noLokosId: members.filter(m=>!m.lokosId).map(m=>({member:m.member, pg:m.pg})),
+    noLokosId: members.filter(m=>!m.lokosId).map(m=>({tab:m.tab, sheetRow:m.sheetRow, member:m.member, pg:m.pg})),
     orphan: orphanInView(),
     paidMismatch: members.map(m=>{ const monthly = Math.round((m.schedule||[]).reduce((s,c)=>s+c.paidAmount,0)); return {tab:m.tab, sheetRow:m.sheetRow, member:m.member, pg:m.pg, block:m.block, district:m.district, paid:m.paid, monthly, diff:m.paid-monthly}; })
       .filter(r=>Math.abs(r.diff)>1).sort((a,b)=>Math.abs(b.diff)-Math.abs(a.diff)),
-    pendMismatch: getPendingFiltered(DATA.uMismatch).map(m=>({member:m.member, pg:m.pg, district:m.district, block:m.block, category:m.pgCategory, sanctioned:m.sanctioned, utilized:m.utilized, expected:m.expectedU, sheetU:m.sheetU})),
+    pendMismatch: getPendingFiltered(DATA.uMismatch).map(m=>({tab:m.tab, sheetRow:m.sheetRow, member:m.member, pg:m.pg, district:m.district, block:m.block, category:m.pgCategory, sanctioned:m.sanctioned, utilized:m.utilized, expected:m.expectedU, sheetU:m.sheetU})),
     formulaErrors: getPendingFiltered(DATA.formulaErrors||[]),
     sheetLayouts: (DATA.sheetLayouts||[]).filter(r=>(!district||r.district===district)&&(!block||r.block===block)&&(!category||r.pgCategory===category)),
-    tenureFill: members.filter(m=>m.tenureCodeInSheet).map(m=>({block:m.block, pg:m.pg, member:m.member, inSheet:m.tenureCodeInSheet, used:`${m.activity}-${m.totalLoanPeriod}`})),
+    tenureFill: members.filter(m=>m.tenureCodeInSheet).map(m=>({tab:m.tab, sheetRow:m.sheetRow, block:m.block, pg:m.pg, member:m.member, inSheet:m.tenureCodeInSheet, used:`${m.activity}-${m.totalLoanPeriod}`})),
     subActMismatch: rosterInView(members).map(r=>{ const x = subActivityMismatch(r); return x && {tab:r.tab, sheetRow:r.sheetRow, member:r.member, pg:r.pg, district:r.district, block:r.block,
         category:r.pgCategory, subCategory:r.subCategory, tenure: r.tenureRaw!==undefined ? r.tenureRaw : (r.activity||''), received: r.received||0, ...x}; })
       .filter(Boolean).sort((a,b)=>a.block.localeCompare(b.block) || (a.tab||'').localeCompare(b.tab||'') || (a.sheetRow||0)-(b.sheetRow||0)),
@@ -2974,37 +2974,37 @@ function renderAnomalies(){
   document.getElementById('an-paidmismatch').innerHTML = an.paidMismatch.map(r=>`<tr><td>${r.tab||''}</td><td>Row ${r.sheetRow||''}</td><td>${r.member}</td><td>${r.pg}</td><td>${r.block}</td><td style="text-align:right">${fmtRs(r.paid)}</td><td style="text-align:right">${fmtRs(r.monthly)}</td><td style="text-align:right;color:var(--red);font-weight:600;">${r.diff>0?'+':''}${fmtRs(r.diff)}</td></tr>`).join('');
   document.getElementById('an-orphan').innerHTML = an.orphan.map(r=>`<tr><td>${r.tab||''} · Row ${r.sheetRow}</td><td>${r.member}</td><td>${r.pg}</td><td>${r.block}</td><td>${r.pgCategory}</td><td style="text-align:right">${fmtRs(r.sanctioned)}</td><td style="text-align:right">${fmtRs(r.disbursed)}</td><td style="text-align:right;font-weight:600;">${fmtRs(r.paid)}</td></tr>`).join('');
   document.getElementById('cnt-pendmismatch').textContent = `(${an.pendMismatch.length})`;
-  document.getElementById('an-pendmismatch').innerHTML = an.pendMismatch.map(r=>`<tr><td>${r.member}</td><td>${r.pg}</td><td>${r.block}</td><td>${r.category}</td><td style="text-align:right">${fmtRs(r.sanctioned)}</td><td style="text-align:right">${fmtRs(r.utilized)}</td><td style="text-align:right">${fmtRs(r.expected)}</td><td style="text-align:right;color:var(--red);font-weight:600;">${fmtRs(r.sheetU)}</td></tr>`).join('');
+  document.getElementById('an-pendmismatch').innerHTML = an.pendMismatch.map(r=>`<tr><td>${r.tab||''}</td><td>${r.sheetRow?'Row '+r.sheetRow:''}</td><td>${r.member}</td><td>${r.pg}</td><td>${r.block}</td><td>${r.category}</td><td style="text-align:right">${fmtRs(r.sanctioned)}</td><td style="text-align:right">${fmtRs(r.utilized)}</td><td style="text-align:right">${fmtRs(r.expected)}</td><td style="text-align:right;color:var(--red);font-weight:600;">${fmtRs(r.sheetU)}</td></tr>`).join('');
   const set = (id, rows, rowFn) => { document.getElementById(id).innerHTML = (rows||[]).map(rowFn).join(''); };
   document.getElementById('cnt-zeroupdate').textContent = `(${(an.zeroUpdate||[]).length})`;
-  set('an-zeroupdate', an.zeroUpdate, r=>`<tr><td>${r.member}</td><td>${r.pg}</td><td>${r.district}</td><td>${r.block}</td><td>${r.category}</td></tr>`);
+  set('an-zeroupdate', an.zeroUpdate, r=>`<tr><td>${r.tab||''}</td><td>${r.sheetRow?'Row '+r.sheetRow:''}</td><td>${r.member}</td><td>${r.pg}</td><td>${r.district}</td><td>${r.block}</td><td>${r.category}</td></tr>`);
 
   document.getElementById('cnt-datenoamount').textContent = `(${(an.dateNoAmount||[]).length})`;
-  set('an-datenoamount', an.dateNoAmount, r=>`<tr><td>${r.member}</td><td>${r.pg}</td><td>${r.district||''}</td><td>${r.block||''}</td><td>${r.category||''}</td><td>${r.vc||''}</td><td>${r.clf||''}</td><td style="text-align:right">${r.month}</td><td>${r.date}</td></tr>`);
+  set('an-datenoamount', an.dateNoAmount, r=>`<tr><td>${r.tab||''}</td><td>${r.sheetRow?'Row '+r.sheetRow:''}</td><td>${r.member}</td><td>${r.pg}</td><td>${r.district||''}</td><td>${r.block||''}</td><td>${r.category||''}</td><td>${r.vc||''}</td><td>${r.clf||''}</td><td style="text-align:right">${r.month}</td><td>${r.date}</td></tr>`);
 
   document.getElementById('cnt-oversanctioned').textContent = `(${(an.receivedOverSanctioned||[]).length})`;
-  set('an-oversanctioned', an.receivedOverSanctioned, r=>`<tr><td>${r.member}</td><td>${r.pg}</td><td style="text-align:right">${fmtRs(r.sanctioned)}</td><td style="text-align:right">${fmtRs(r.received)}</td><td style="text-align:right;color:var(--red);font-weight:600;">${fmtRs(r.received-r.sanctioned)}</td></tr>`);
+  set('an-oversanctioned', an.receivedOverSanctioned, r=>`<tr><td>${r.tab||''}</td><td>${r.sheetRow?'Row '+r.sheetRow:''}</td><td>${r.member}</td><td>${r.pg}</td><td style="text-align:right">${fmtRs(r.sanctioned)}</td><td style="text-align:right">${fmtRs(r.received)}</td><td style="text-align:right;color:var(--red);font-weight:600;">${fmtRs(r.received-r.sanctioned)}</td></tr>`);
 
   document.getElementById('cnt-nosanctioned').textContent = `(${(an.noSanctioned||[]).length})`;
-  set('an-nosanctioned', an.noSanctioned, r=>`<tr><td>${r.member}</td><td>${r.pg}</td><td>${r.block}</td><td style="text-align:right">${fmtRs(r.received)}</td><td style="text-align:right">${fmtRs(r.paid)}</td></tr>`);
+  set('an-nosanctioned', an.noSanctioned, r=>`<tr><td>${r.tab||''}</td><td>${r.sheetRow?'Row '+r.sheetRow:''}</td><td>${r.member}</td><td>${r.pg}</td><td>${r.block}</td><td style="text-align:right">${fmtRs(r.received)}</td><td style="text-align:right">${fmtRs(r.paid)}</td></tr>`);
 
   document.getElementById('cnt-duplokos').textContent = `(${(an.dupLokos||[]).length})`;
-  set('an-duplokos', an.dupLokos, r=>`<tr><td>${r.lokosId}</td><td>${r.member}</td><td>${r.pg}</td><td>${r.block}</td><td style="text-align:right">${fmtRs(r.received)}</td></tr>`);
+  set('an-duplokos', an.dupLokos, r=>`<tr><td>${r.tab||''}</td><td>${r.sheetRow?'Row '+r.sheetRow:''}</td><td>${r.lokosId}</td><td>${r.member}</td><td>${r.pg}</td><td>${r.block}</td><td style="text-align:right">${fmtRs(r.received)}</td></tr>`);
 
   document.getElementById('cnt-overpaid').textContent = `(${(an.overpaid||[]).length})`;
-  set('an-overpaid', an.overpaid, r=>`<tr><td>${r.member}</td><td>${r.pg}</td><td>${r.block}</td><td style="text-align:right">${fmtRs(r.paid)}</td><td style="text-align:right">${fmtRs(r.totalToRepay)}</td><td style="text-align:right;color:var(--red);font-weight:600;">${fmtRs(r.excess)}</td></tr>`);
+  set('an-overpaid', an.overpaid, r=>`<tr><td>${r.tab||''}</td><td>${r.sheetRow?'Row '+r.sheetRow:''}</td><td>${r.member}</td><td>${r.pg}</td><td>${r.block}</td><td style="text-align:right">${fmtRs(r.paid)}</td><td style="text-align:right">${fmtRs(r.totalToRepay)}</td><td style="text-align:right;color:var(--red);font-weight:600;">${fmtRs(r.excess)}</td></tr>`);
 
   document.getElementById('cnt-overmonths').textContent = `(${(an.overMonths||[]).length})`;
-  set('an-overmonths', an.overMonths, r=>`<tr><td>${r.member}</td><td>${r.pg}</td><td>${r.block}</td><td style="text-align:right">${r.repaymentsMade}</td><td style="text-align:right">${r.tenureMonths}</td></tr>`);
+  set('an-overmonths', an.overMonths, r=>`<tr><td>${r.tab||''}</td><td>${r.sheetRow?'Row '+r.sheetRow:''}</td><td>${r.member}</td><td>${r.pg}</td><td>${r.block}</td><td style="text-align:right">${r.repaymentsMade}</td><td style="text-align:right">${r.tenureMonths}</td></tr>`);
 
   document.getElementById('cnt-early').textContent = `(${(an.earlyRepayment||[]).length})`;
-  set('an-early', an.earlyRepayment, r=>`<tr><td>${r.member}</td><td>${r.pg}</td><td style="text-align:right">${Math.round(r.monthsSince)}</td><td style="text-align:right">${r.totalPeriod}</td></tr>`);
+  set('an-early', an.earlyRepayment, r=>`<tr><td>${r.tab||''}</td><td>${r.sheetRow?'Row '+r.sheetRow:''}</td><td>${r.member}</td><td>${r.pg}</td><td style="text-align:right">${Math.round(r.monthsSince)}</td><td style="text-align:right">${r.totalPeriod}</td></tr>`);
 
   document.getElementById('cnt-noname').textContent = `(${(an.dataNoName||[]).length})`;
   set('an-noname', an.dataNoName, r=>`<tr><td>${r.source}</td><td>Row ${r.rowNum}</td><td>${r.pg}</td></tr>`);
 
   document.getElementById('cnt-nolokos').textContent = `(${(an.noLokosId||[]).length})`;
-  set('an-nolokos', an.noLokosId, r=>`<tr><td>${r.member}</td><td>${r.pg}</td></tr>`);
+  set('an-nolokos', an.noLokosId, r=>`<tr><td>${r.tab||''}</td><td>${r.sheetRow?'Row '+r.sheetRow:''}</td><td>${r.member}</td><td>${r.pg}</td></tr>`);
 
   document.getElementById('cnt-formulaerr').textContent = `(${(an.formulaErrors||[]).length} rows)`;
   set('an-formulaerr', an.formulaErrors, r=>`<tr><td>${r.block}</td><td>${r.pgCategory}</td><td>Row ${r.sheetRow}</td><td>${r.member}</td><td>${r.pg}</td><td style="color:var(--red);font-weight:600;">${r.errorTypes}</td><td style="text-align:right">${r.count}</td><td style="font-size:11.5px;">${r.cells}</td></tr>`);
@@ -3016,7 +3016,7 @@ function renderAnomalies(){
   set('an-pgnamemismatch', an.pgNameMismatch, r=>`<tr><td>${r.block}</td><td>${r.pg}</td><td>${r.dbName}</td><td>${r.pgId}</td><td>${r.how}</td><td style="text-align:right">${r.members}</td></tr>`);
 
   document.getElementById('cnt-tenurefill').textContent = `(${(an.tenureFill||[]).length})`;
-  set('an-tenurefill', an.tenureFill, r=>`<tr><td>${r.block}</td><td>${r.pg}</td><td>${r.member}</td><td style="color:var(--red);font-weight:600;">${r.inSheet}</td><td>${r.used}</td></tr>`);
+  set('an-tenurefill', an.tenureFill, r=>`<tr><td>${r.tab||''}</td><td>${r.sheetRow?'Row '+r.sheetRow:''}</td><td>${r.block}</td><td>${r.pg}</td><td>${r.member}</td><td style="color:var(--red);font-weight:600;">${r.inSheet}</td><td>${r.used}</td></tr>`);
 
   const sam = an.subActMismatch||[];
   document.getElementById('cnt-subactmismatch').textContent = `(${sam.length} row${sam.length===1?'':'s'}, ${new Set(sam.map(r=>r.block+'|'+r.pg)).size} PGs)`;
@@ -3176,21 +3176,21 @@ function anomalyExportRows(which){
   let rows, filename;
   if(which==='paidMismatch'){ rows=(an.paidMismatch||[]).map(r=>({'Sheet Tab':r.tab,'Sheet Row':r.sheetRow,Member:r.member,PG:r.pg,District:r.district,Block:r.block,'Total Paid Cell':r.paid,'Monthly Entries Total':r.monthly,Difference:r.diff})); filename='Anomaly_TotalPaidVsMonthly'; }
   else if(which==='orphan'){ rows=(an.orphan||[]).map(r=>({'Sheet Tab':r.tab,'Sheet Row':r.sheetRow,Member:r.member,PG:r.pg,District:r.district,Block:r.block,Category:r.pgCategory,Sanctioned:r.sanctioned,Disbursed:r.disbursed,Repaid:r.paid})); filename='Anomaly_RepaymentWithoutDisbursement'; }
-  else if(which==='pendMismatch'){ rows=(an.pendMismatch||[]).map(r=>({Member:r.member,PG:r.pg,District:r.district,Block:r.block,Category:r.category,'Sanctioned':r.sanctioned,'Utilized':r.utilized,'Sanctioned - Utilized':r.expected,'Pending Loan amount in sheet':r.sheetU})); filename='Anomaly_PendingColumnU_Mismatch'; }
-  else if(which==='zeroUpdate'){ rows=(an.zeroUpdate||[]).map(r=>({Member:r.member,PG:r.pg,District:r.district,Block:r.block,Category:r.category})); filename='Anomaly_ZeroRepaymentUpdates'; }
-  else if(which==='dateNoAmount'){ rows=(an.dateNoAmount||[]).map(r=>({District:r.district||'',Block:r.block||'',Category:r.category||'',Member:r.member,PG:r.pg,VC:r.vc||'',CLF:r.clf||'',Month:r.month,'Date Entered':r.date})); filename='Anomaly_DateWithoutAmount'; }
-  else if(which==='receivedOverSanctioned'){ rows=(an.receivedOverSanctioned||[]).map(r=>({Member:r.member,PG:r.pg,Sanctioned:r.sanctioned,Received:r.received,Excess:r.received-r.sanctioned})); filename='Anomaly_ReceivedOverSanctioned'; }
-  else if(which==='noSanctioned'){ rows=(an.noSanctioned||[]).map(r=>({Member:r.member,PG:r.pg,Block:r.block,Received:r.received,Paid:r.paid})); filename='Anomaly_SanctionedNotRecorded'; }
-  else if(which==='dupLokos'){ rows=(an.dupLokos||[]).map(r=>({'LokOS ID':r.lokosId,Member:r.member,PG:r.pg,Block:r.block,Received:r.received})); filename='Anomaly_DuplicateLokosId'; }
-  else if(which==='overpaid'){ rows=(an.overpaid||[]).map(r=>({Member:r.member,PG:r.pg,Block:r.block,Paid:r.paid,'Total To Repay':r.totalToRepay,Excess:r.excess})); filename='Anomaly_RepaidOverTotal'; }
-  else if(which==='overMonths'){ rows=(an.overMonths||[]).map(r=>({Member:r.member,PG:r.pg,Block:r.block,'Repayments Made':r.repaymentsMade,'Tenure Months':r.tenureMonths})); filename='Anomaly_RepaymentsBeyondTenure'; }
-  else if(which==='earlyRepayment'){ rows=(an.earlyRepayment||[]).map(r=>({Member:r.member,PG:r.pg,'Months Since Loan':r.monthsSince,'Total Loan Period':r.totalPeriod})); filename='Anomaly_EarlyRepayment'; }
-  else if(which==='dataNoName'){ rows=(an.dataNoName||[]).map(r=>({Source:r.source,'Sheet Row':r.rowNum,PG:r.pg})); filename='Anomaly_DataNoName'; }
-  else if(which==='noLokosId'){ rows=(an.noLokosId||[]).map(r=>({Member:r.member,PG:r.pg})); filename='Anomaly_NoLokosId'; }
-  else if(which==='formulaErrors'){ rows=(an.formulaErrors||[]).map(r=>({District:r.district,Block:r.block,Category:r.pgCategory,'Sheet Row':r.sheetRow,Member:r.member,PG:r.pg,Error:r.errorTypes,'Cells With Error':r.count,'Where':r.cells})); filename='Anomaly_FormulaErrors'; }
+  else if(which==='pendMismatch'){ rows=(an.pendMismatch||[]).map(r=>({Member:r.member,'Sheet Tab':r.tab,'Sheet Row':r.sheetRow,PG:r.pg,District:r.district,Block:r.block,Category:r.category,'Sanctioned':r.sanctioned,'Utilized':r.utilized,'Sanctioned - Utilized':r.expected,'Pending Loan amount in sheet':r.sheetU})); filename='Anomaly_PendingColumnU_Mismatch'; }
+  else if(which==='zeroUpdate'){ rows=(an.zeroUpdate||[]).map(r=>({Member:r.member,'Sheet Tab':r.tab,'Sheet Row':r.sheetRow,PG:r.pg,District:r.district,Block:r.block,Category:r.category})); filename='Anomaly_ZeroRepaymentUpdates'; }
+  else if(which==='dateNoAmount'){ rows=(an.dateNoAmount||[]).map(r=>({District:r.district||'',Block:r.block||'',Category:r.category||'',Member:r.member,'Sheet Tab':r.tab,'Sheet Row':r.sheetRow,PG:r.pg,VC:r.vc||'',CLF:r.clf||'',Month:r.month,'Date Entered':r.date})); filename='Anomaly_DateWithoutAmount'; }
+  else if(which==='receivedOverSanctioned'){ rows=(an.receivedOverSanctioned||[]).map(r=>({Member:r.member,'Sheet Tab':r.tab,'Sheet Row':r.sheetRow,PG:r.pg,Sanctioned:r.sanctioned,Received:r.received,Excess:r.received-r.sanctioned})); filename='Anomaly_ReceivedOverSanctioned'; }
+  else if(which==='noSanctioned'){ rows=(an.noSanctioned||[]).map(r=>({Member:r.member,'Sheet Tab':r.tab,'Sheet Row':r.sheetRow,PG:r.pg,Block:r.block,Received:r.received,Paid:r.paid})); filename='Anomaly_SanctionedNotRecorded'; }
+  else if(which==='dupLokos'){ rows=(an.dupLokos||[]).map(r=>({'LokOS ID':r.lokosId,Member:r.member,'Sheet Tab':r.tab,'Sheet Row':r.sheetRow,PG:r.pg,Block:r.block,Received:r.received})); filename='Anomaly_DuplicateLokosId'; }
+  else if(which==='overpaid'){ rows=(an.overpaid||[]).map(r=>({Member:r.member,'Sheet Tab':r.tab,'Sheet Row':r.sheetRow,PG:r.pg,Block:r.block,Paid:r.paid,'Total To Repay':r.totalToRepay,Excess:r.excess})); filename='Anomaly_RepaidOverTotal'; }
+  else if(which==='overMonths'){ rows=(an.overMonths||[]).map(r=>({Member:r.member,'Sheet Tab':r.tab,'Sheet Row':r.sheetRow,PG:r.pg,Block:r.block,'Repayments Made':r.repaymentsMade,'Tenure Months':r.tenureMonths})); filename='Anomaly_RepaymentsBeyondTenure'; }
+  else if(which==='earlyRepayment'){ rows=(an.earlyRepayment||[]).map(r=>({Member:r.member,'Sheet Tab':r.tab,'Sheet Row':r.sheetRow,PG:r.pg,'Months Since Loan':r.monthsSince,'Total Loan Period':r.totalPeriod})); filename='Anomaly_EarlyRepayment'; }
+  else if(which==='dataNoName'){ rows=(an.dataNoName||[]).map(r=>({Source:r.source,'Sheet Tab':r.tab,'Sheet Row':r.rowNum,PG:r.pg})); filename='Anomaly_DataNoName'; }
+  else if(which==='noLokosId'){ rows=(an.noLokosId||[]).map(r=>({Member:r.member,'Sheet Tab':r.tab,'Sheet Row':r.sheetRow,PG:r.pg})); filename='Anomaly_NoLokosId'; }
+  else if(which==='formulaErrors'){ rows=(an.formulaErrors||[]).map(r=>({District:r.district,Block:r.block,Category:r.pgCategory,'Sheet Tab':r.tab,'Sheet Row':r.sheetRow,Member:r.member,PG:r.pg,Error:r.errorTypes,'Cells With Error':r.count,'Where':r.cells})); filename='Anomaly_FormulaErrors'; }
   else if(which==='sheetLayouts'){ rows=(an.sheetLayouts||[]).map(r=>({District:r.district,Block:r.block,Category:r.pgCategory,Columns:r.cols,'Usual Columns':r.usualCols,Difference:r.diff,"What's Different":r.note})); filename='Anomaly_SheetLayout'; }
   else if(which==='pgNameMismatch'){ rows=(an.pgNameMismatch||[]).map(r=>({Block:r.block,'PG Name In Loan Sheet':r.pg,'PG Name In PG Database':r.dbName,'PG ID':r.pgId,'How Matched':r.how,Members:r.members})); filename='Anomaly_PGNameMismatch'; }
-  else if(which==='tenureFill'){ rows=(an.tenureFill||[]).map(r=>({Block:r.block,PG:r.pg,Member:r.member,'Tenure In Sheet':r.inSheet,'Used By Dashboard':r.used})); filename='Anomaly_TenureAutoFill'; }
+  else if(which==='tenureFill'){ rows=(an.tenureFill||[]).map(r=>({Block:r.block,PG:r.pg,Member:r.member,'Sheet Tab':r.tab,'Sheet Row':r.sheetRow,'Tenure In Sheet':r.inSheet,'Used By Dashboard':r.used})); filename='Anomaly_TenureAutoFill'; }
   else if(which==='subActMismatch'){ rows=(an.subActMismatch||[]).map(r=>({'Sheet Tab':r.tab,'Sheet Row':r.sheetRow,District:r.district,Block:r.block,PG:r.pg,Member:r.member,Category:r.category,'Type of PG':r.subCategory,'Tenure Code':r.tenure,"What's Wrong":r.problem,'Should Be':r.expected,'Loan Received':r.received,'Schedule Dashboard Is Using':r.received?r.scheduleUsed:''})); filename='Anomaly_LoanTypeNotAllowed'; }
   else if(which==='noLoanType'){ rows=(an.noLoanType||[]).map(r=>({'Sheet Tab':r.tab,'Sheet Row':r.sheetRow,District:r.district,Block:r.block,PG:r.pg,Member:r.member,Category:r.category,'Type of PG':r.subCategory,'Loan Received':r.received,'Loan Type Should Be One Of':r.expected})); filename='Anomaly_LoanTypeNotEntered'; }
   else if(which==='abMissing'){ rows=(an.abMissing||[]).map(r=>({'Sheet Tab':r.tab,'Sheet Row':r.sheetRow,District:r.district,Block:r.block,PG:r.pg,Member:r.member,Category:r.category,'Loan Received':r.received,Repaid:r.paid,'Months Since Loan':r.monthsSince!=null?Math.round(r.monthsSince):'',"What's Wrong":r.issue})); filename='Anomaly_DemandColumnAB_NotEntered'; }
